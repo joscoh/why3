@@ -30,7 +30,7 @@ module Wvs : Weakhtbl.S with type key = vsymbol
 
 val vs_compare : vsymbol -> vsymbol -> int
 val vs_equal : vsymbol -> vsymbol -> bool
-val vs_hash : vsymbol -> int
+val vs_hash : vsymbol -> BigInt.t
 
 val create_vsymbol : preid -> ty -> vsymbol
 
@@ -51,7 +51,7 @@ module Wls : Weakhtbl.S with type key = lsymbol
 
 val ls_compare : lsymbol -> lsymbol -> int
 val ls_equal : lsymbol -> lsymbol -> bool
-val ls_hash : lsymbol -> int
+val ls_hash : lsymbol -> BigInt.t
 
 val create_lsymbol : ?constr:int -> ?proj:bool -> preid -> ty list -> ty option -> lsymbol
 
@@ -162,7 +162,7 @@ val term_branch_size : term_branch -> int
 *)
 
 val t_hash_generic :
-  trigger:bool -> attr:bool -> const:bool -> term -> int
+  trigger:bool -> attr:bool -> const:bool -> term -> BigInt.t
 val t_compare_generic :
   trigger:bool -> attr:bool -> loc:bool -> const:bool
                -> term -> term -> int
@@ -184,7 +184,7 @@ val hterm_generic :
 
 val t_equal_strict : term -> term -> bool
 val t_compare_strict : term -> term -> int
-val t_hash_strict : term -> int
+val t_hash_strict : term -> BigInt.t
 
 module Mterm_strict : Extmap.S with type key = term
 module Sterm_strict : Extset.S with type M.key = term
@@ -194,7 +194,7 @@ module Hterm_strict : Exthtbl.S with type key = term
 
 val t_equal : term -> term -> bool
 val t_compare : term -> term -> int
-val t_hash : term -> int
+val t_hash : term -> BigInt.t
 
 module Mterm : Extmap.S with type key = term
 module Sterm : Extset.S with type M.key = term

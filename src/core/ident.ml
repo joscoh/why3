@@ -16,7 +16,7 @@ open Wstdlib
 
 type attribute = {
   attr_string : string;
-  attr_tag    : int;
+  attr_tag    : BigInt.t;
 }
 
 module Attr = MakeMSH (struct
@@ -31,12 +31,12 @@ module Hsattr = Hashcons.Make (struct
   type t = attribute
   let equal a1 a2 = a1.attr_string = a2.attr_string
   let hash a = Hashtbl.hash a.attr_string
-  let tag n a = { a with attr_tag = n }
+  let tag n a = { a with attr_tag = BigInt.of_int n }
 end)
 
 let create_attribute s = Hsattr.hashcons {
   attr_string = s;
-  attr_tag    = -1
+  attr_tag    = BigInt.of_int (-1)
 }
 
 let list_attributes () =
@@ -46,7 +46,7 @@ let list_attributes () =
 
 let attr_equal : attribute -> attribute -> bool = (==)
 let attr_hash a = a.attr_tag
-let attr_compare a1 a2 = Int.compare a1.attr_tag a2.attr_tag
+let attr_compare a1 a2 = BigInt.compare a1.attr_tag a2.attr_tag
 
 let sexp_of_attribute (a:attribute) =
   Mysexplib.sexp_of_string a.attr_string
@@ -178,15 +178,18 @@ type preid = {
 
 let id_equal : ident -> ident -> bool = (==)
 let id_hash id = Weakhtbl.tag_hash id.id_tag
-let id_compare id1 id2 = Int.compare (id_hash id1) (id_hash id2)
+let id_compare id1 id2 = BigInt.compare (id_hash id1) (id_hash id2)
 
 (* constructors *)
 
-let id_register = let r = ref 0 in fun id -> {
+let big_incr =
+  fun r -> r := BigInt.succ !r
+
+let id_register = let r = ref BigInt.zero in fun id -> {
   id_string = id.pre_name;
   id_attrs  = id.pre_attrs;
   id_loc    = id.pre_loc;
-  id_tag    = (incr r; Weakhtbl.create_tag !r);
+  id_tag    = (big_incr r; Weakhtbl.create_tag !r);
 }
 
 let create_ident name attrs loc = {

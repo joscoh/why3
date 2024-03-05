@@ -115,7 +115,7 @@ let print_meta_desc fmt m =
   fprintf fmt "@[%s@\n  @[%a@]@]"
     m.meta_name Pp.formatted m.meta_desc
 
-module SMmeta = MakeMSH(struct type t = meta let tag m = m.meta_tag end)
+module SMmeta = MakeMSH(struct type t = meta let tag m = BigInt.of_int (m.meta_tag) end) (*JOSH: TODO*)
 
 module Smeta = SMmeta.S
 module Mmeta = SMmeta.M
@@ -239,19 +239,19 @@ module Hstdecl = Hashcons.Make (struct
         t1 = t2 && Lists.equal eq_marg al1 al2
     | _,_ -> false
 
-  let hs_cl_ty _ ty acc = Hashcons.combine acc (ty_hash ty)
-  let hs_cl_ts _ ts acc = Hashcons.combine acc (ts_hash ts)
-  let hs_cl_ls _ ls acc = Hashcons.combine acc (ls_hash ls)
+  let hs_cl_ty _ ty acc = Hashcons.combine acc (BigInt.to_int (ty_hash ty)) (*JOSH*)
+  let hs_cl_ts _ ts acc = Hashcons.combine acc (BigInt.to_int (ts_hash ts)) (*JOSH*)
+  let hs_cl_ls _ ls acc = Hashcons.combine acc (BigInt.to_int (ls_hash ls)) (*JOSH*)
   let hs_cl_pr _ pr acc = Hashcons.combine acc (pr_hash pr)
 
   let hs_ta = function
-    | MAty ty -> ty_hash ty
-    | MAts ts -> ts_hash ts
-    | MAls ls -> ls_hash ls
+    | MAty ty -> BigInt.to_int (ty_hash ty) (*JOSH*)
+    | MAts ts -> BigInt.to_int (ts_hash ts) (*JOSH*)
+    | MAls ls -> BigInt.to_int (ls_hash ls) (*JOSH*)
     | MApr pr -> pr_hash pr
     | MAstr s -> Hashtbl.hash s
     | MAint i -> Hashtbl.hash i
-    | MAid i -> Ident.id_hash i
+    | MAid i -> BigInt.to_int (Ident.id_hash i) (*JOSH: TODO*)
 
   let hs_smap sm h =
     Mts.fold hs_cl_ty sm.sm_ty
@@ -261,8 +261,8 @@ module Hstdecl = Hashcons.Make (struct
 
   let hash td = match td.td_node with
     | Decl d -> d_hash d
-    | Use th -> id_hash th.th_name
-    | Clone (th,sm) -> hs_smap sm (id_hash th.th_name)
+    | Use th -> BigInt.to_int (id_hash th.th_name) (*JOSH: TODO*)
+    | Clone (th,sm) -> hs_smap sm (BigInt.to_int (id_hash th.th_name)) (*JOSH*)
     | Meta (t,al) -> Hashcons.combine_list hs_ta (Hashtbl.hash t) al
 
   let tag n td = { td with td_tag = n }
@@ -273,7 +273,7 @@ let mk_tdecl n = Hstdecl.hashcons { td_node = n ; td_tag = -1 }
 
 module Tdecl = MakeMSH (struct
   type t = tdecl
-  let tag td = td.td_tag
+  let tag td = BigInt.of_int td.td_tag (*JOSH*)
 end)
 
 module Stdecl = Tdecl.S

@@ -28,13 +28,13 @@ module Hfloat : Exthtbl.S with type key = float
 module type TaggedType =
 sig
   type t
-  val tag : t -> int
+  val tag : t -> BigInt.t
 end
 
 module type OrderedHashedType =
 sig
   type t
-  val hash : t -> int
+  val hash : t -> BigInt.t
   val equal : t -> t -> bool
   val compare : t -> t -> int
 end

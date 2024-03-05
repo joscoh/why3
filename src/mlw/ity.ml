@@ -113,10 +113,10 @@ let ity_equal : ity       -> ity       -> bool = (==)
 let reg_equal : region    -> region    -> bool = (==)
 let pv_equal  : pvsymbol  -> pvsymbol  -> bool = (==)
 
-let its_hash its = id_hash its.its_ts.ts_name
-let ity_hash ity = Weakhtbl.tag_hash ity.ity_tag
-let reg_hash reg = id_hash reg.reg_name
-let pv_hash  pv  = id_hash pv.pv_vs.vs_name
+let its_hash its = BigInt.to_int (id_hash its.its_ts.ts_name)
+let ity_hash ity = BigInt.to_int (Weakhtbl.tag_hash ity.ity_tag) (*JOSH TODO*)
+let reg_hash reg = BigInt.to_int (id_hash reg.reg_name)
+let pv_hash  pv  = BigInt.to_int (id_hash pv.pv_vs.vs_name)
 
 let its_compare its1 its2 = id_compare its1.its_ts.ts_name its2.its_ts.ts_name
 let ity_compare ity1 ity2 = Int.compare (ity_hash ity1) (ity_hash ity2)
@@ -136,7 +136,7 @@ module Hsity = Hashcons.Make (struct
     | _ -> false
 
   let hash ity = match ity.ity_node with
-    | Ityvar v -> tv_hash v
+    | Ityvar v -> BigInt.to_int (tv_hash v) (*JOSH*)
     | Ityreg r -> reg_hash r
     | Ityapp (s,tl,rl) ->
         Hashcons.combine_list ity_hash
@@ -151,7 +151,7 @@ module Hsity = Hashcons.Make (struct
 
   let tag n ity = { ity with
     ity_pure = pure ity;
-    ity_tag = Weakhtbl.create_tag n }
+    ity_tag = Weakhtbl.create_int_tag n } (*JOSH*)
 end)
 
 let mk_ity node = {
@@ -850,7 +850,7 @@ type xsymbol = {
 }
 
 let xs_equal : xsymbol -> xsymbol -> bool = (==)
-let xs_hash xs = id_hash xs.xs_name
+let xs_hash xs = BigInt.to_int (id_hash xs.xs_name) (*JOSH*)
 let xs_compare xs1 xs2 = id_compare xs1.xs_name xs2.xs_name
 
 let freeze_xs xs s = ity_freeze s xs.xs_ity

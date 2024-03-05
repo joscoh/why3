@@ -9,37 +9,54 @@
 (*                                                                  *)
 (********************************************************************)
 
-open Mysexplib.Std_big_int [@@warning "-33"]
-open Big_int
+(*open Mysexplib.Std_big_int [@@warning "-33"]
+open Big_int*)
+open Sexplib.Sexp
+open Sexplib.Conv
 
-type t = big_int
-[@@deriving sexp]
-let compare = compare_big_int
+type t = Z.t
 
-let zero = zero_big_int
-let one = unit_big_int
-let of_int = big_int_of_int
 
-let succ = succ_big_int
-let pred = pred_big_int
+(*Cannot derive, trying to write by hand from sexplib*)
+let exn_to_string e = to_string_hum (sexp_of_exn e)
+let t_of_sexp sexp =
+  match sexp with
+  | Atom str ->
+    (try Big_int_Z.big_int_of_string str with
+     | exc -> of_sexp_error ("big_int_of_sexp: " ^ exn_to_string exc) sexp)
+  | List _ -> of_sexp_error "big_int_of_sexp: atom needed" sexp
+;;
 
-let add_int = add_int_big_int
-let mul_int = mult_int_big_int
+let sexp_of_t n = Atom (Big_int_Z.string_of_big_int n)
 
-let add = add_big_int
-let sub = sub_big_int
-let mul = mult_big_int
-let minus = minus_big_int
+(*type t = big_int
+[@@deriving sexp]*)
+let compare = Big_int_Z.compare_big_int
 
-let sign = sign_big_int
+let zero = Big_int_Z.zero_big_int
+let one = Big_int_Z.unit_big_int
+let of_int = Big_int_Z.big_int_of_int
 
-let eq = eq_big_int
-let lt = lt_big_int
-let gt = gt_big_int
-let le = le_big_int
-let ge = ge_big_int
+let succ = Big_int_Z.succ_big_int
+let pred = Big_int_Z.pred_big_int
 
-let euclidean_div_mod x y = quomod_big_int x y
+let add_int = Big_int_Z.add_int_big_int
+let mul_int = Big_int_Z.mult_int_big_int
+
+let add = Big_int_Z.add_big_int
+let sub = Big_int_Z.sub_big_int
+let mul = Big_int_Z.mult_big_int
+let minus = Big_int_Z.minus_big_int
+
+let sign = Big_int_Z.sign_big_int
+
+let eq = Big_int_Z.eq_big_int
+let lt = Big_int_Z.lt_big_int
+let gt = Big_int_Z.gt_big_int
+let le = Big_int_Z.le_big_int
+let ge = Big_int_Z.ge_big_int
+
+let euclidean_div_mod x y = Big_int_Z.quomod_big_int x y
 
 let euclidean_div x y = fst (euclidean_div_mod x y)
 let euclidean_mod x y = snd (euclidean_div_mod x y)
@@ -56,16 +73,18 @@ let computer_div_mod x y =
 let computer_div x y = fst (computer_div_mod x y)
 let computer_mod x y = snd (computer_div_mod x y)
 
-let min = min_big_int
-let max = max_big_int
-let abs = abs_big_int
+let min = Big_int_Z.min_big_int
+let max = Big_int_Z.max_big_int
+let abs = Big_int_Z.abs_big_int
 
-let num_digits = num_digits_big_int
+let num_digits = Big_int_Z.num_digits_big_int
 
-let pow_int_pos = power_int_positive_int
-let pow_int_pos_bigint = power_int_positive_big_int
+let pow_int_pos = Big_int_Z.power_int_positive_int
+let pow_int_pos_bigint = Big_int_Z.power_int_positive_big_int
 
-let to_string = string_of_big_int
-let of_string = big_int_of_string
-let to_int = int_of_big_int
-let is_int = is_int_big_int
+let to_string = Big_int_Z.string_of_big_int
+let of_string = Big_int_Z.big_int_of_string
+let to_int = Big_int_Z.int_of_big_int
+let is_int = Big_int_Z.is_int_big_int
+
+let hash = Z.hash

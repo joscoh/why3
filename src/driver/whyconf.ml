@@ -96,14 +96,20 @@ module Prover = struct
        s1.prover_altern = s2.prover_altern )
 
   let hash s1 =
-      2 * Hashtbl.hash s1.prover_name +
+      BigInt.of_int (2 * Hashtbl.hash s1.prover_name +
       3 * Hashtbl.hash s1.prover_version +
-      5 * Hashtbl.hash s1.prover_altern
+      5 * Hashtbl.hash s1.prover_altern) (*JOSH TODO*)
 end
 
 module Mprover = Extmap.Make(Prover)
 module Sprover = Extset.MakeOfMap(Mprover)
-module Hprover = Exthtbl.Make(Prover)
+module Hprover = Exthtbl.Make(
+struct
+  type t = Prover.t
+  let compare = Prover.compare
+  let equal = Prover.equal
+  let hash x = BigInt.to_int (Prover.hash x)
+end )
 
 module Editor = struct
   type t = string

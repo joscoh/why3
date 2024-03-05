@@ -60,7 +60,7 @@ let ls_selects_def_of_ts acc ts =
   in
   let tvars = List.map t_var vars in
   (* type to int *)
-  let id = id_hash ts.ts_name in
+  let id = BigInt.to_int (id_hash ts.ts_name) in (*JOSH TODO*)
   let acc =
     let t = fs_app ls tvars ty_type in
     let f = t_equ (fs_app ls_int_of_ty [t] ty_int) (t_nat_const id) in

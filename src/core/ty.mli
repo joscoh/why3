@@ -25,7 +25,7 @@ module Htv : Exthtbl.S with type key = tvsymbol
 
 val tv_compare : tvsymbol -> tvsymbol -> int
 val tv_equal : tvsymbol -> tvsymbol -> bool
-val tv_hash : tvsymbol -> int
+val tv_hash : tvsymbol -> BigInt.t
 
 val create_tvsymbol : preid -> tvsymbol
 
@@ -70,8 +70,8 @@ val ty_compare : ty -> ty -> int
 val ts_equal : tysymbol -> tysymbol -> bool
 val ty_equal : ty -> ty -> bool
 
-val ts_hash : tysymbol -> int
-val ty_hash : ty -> int
+val ts_hash : tysymbol -> BigInt.t
+val ty_hash : ty -> BigInt.t
 
 exception BadTypeArity of tysymbol * int
 exception DuplicateTypeVar of tvsymbol
@@ -166,7 +166,7 @@ exception UnexpectedProp
 
 val oty_compare : ty option -> ty option -> int
 val oty_equal : ty option -> ty option -> bool
-val oty_hash  : ty option -> int
+val oty_hash  : ty option -> BigInt.t
 
 val oty_type : ty option -> ty
 val oty_cons : ty list -> ty option -> ty list

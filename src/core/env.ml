@@ -41,7 +41,7 @@ module Wenv = Weakhtbl.Make(struct type t = env let tag = env_tag end)
 
 let create_env = let c = ref (-1) in fun lp -> {
   env_path = Sstr.of_list lp;
-  env_tag  = (incr c; Weakhtbl.create_tag !c)
+  env_tag  = (incr c; Weakhtbl.create_int_tag !c) (*JOSH*)
 }
 
 let get_loadpath env = Sstr.elements env.env_path

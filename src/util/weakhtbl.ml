@@ -48,13 +48,15 @@ module type S = sig
 
 end
 
-type tag = int
+type tag = BigInt.t
+
+let create_int_tag : int -> tag = BigInt.of_int
 
 let create_tag tag = tag
 
-let dummy_tag = -1
+let dummy_tag = BigInt.of_int (-1)
 
-let tag_equal : tag -> tag -> bool = (==)
+let tag_equal : tag -> tag -> bool = BigInt.eq
 
 let tag_hash k = assert (k != dummy_tag); k
 
@@ -70,7 +72,7 @@ module Make (S : Weakey) : S with type key = S.t = struct
 
   module H = Ephemeron.K1.Make (struct
     type t = S.t
-    let hash k = (S.tag k)
+    let hash k = BigInt.hash (S.tag k)
     let equal k1 k2 = S.tag k1 == S.tag k2
   end)
 

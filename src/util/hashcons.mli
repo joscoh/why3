@@ -67,3 +67,8 @@ val combine3 : int -> int -> int -> int -> int
 val combine_list : ('a -> int) -> int -> 'a list -> int
 val combine_option : ('a -> int) -> 'a option -> int
 val combine_pair : ('a -> int) -> ('b -> int) -> 'a * 'b -> int
+
+val combine_big : BigInt.t -> BigInt.t -> BigInt.t
+val combine2_big : BigInt.t -> BigInt.t -> BigInt.t -> BigInt.t
+val combine_big_list : ('a -> BigInt.t) -> BigInt.t -> 'a list -> BigInt.t
+val combine_big_option : ('a -> BigInt.t) -> 'a option -> BigInt.t

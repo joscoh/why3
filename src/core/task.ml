@@ -27,7 +27,7 @@ type tdecl_set = Stdecl.t
 
 module Wtds = Weakhtbl.Make(struct
   type t = tdecl_set
-  let tag s = Weakhtbl.create_tag (Stdecl.id s)
+  let tag s = Weakhtbl.create_int_tag (Stdecl.id s) (*JOSH*)
 end)
 
 
@@ -80,7 +80,7 @@ let task_hd_equal t1 t2 = match t1.task_decl.td_node, t2.task_decl.td_node with
       pr_equal p1 p2 && t_equal_strict g1 g2
   | _ -> t1 == t2
 
-let task_hd_hash t = Weakhtbl.tag_hash t.task_tag
+let task_hd_hash t = BigInt.to_int (Weakhtbl.tag_hash t.task_tag) (*JOSH TODO*)
 
 let task_equal t1 t2 = Option.equal task_hd_equal t1 t2
 
@@ -94,7 +94,7 @@ module Hstask = Hashcons.Make (struct
 
   let hash t = Hashcons.combine (td_hash t.task_decl) (task_hash t.task_prev)
 
-  let tag i task = { task with task_tag = Weakhtbl.create_tag i }
+  let tag i task = { task with task_tag = Weakhtbl.create_int_tag i } (*JOSH*)
 end)
 
 let mk_task decl prev known clone meta = Some (Hstask.hashcons {

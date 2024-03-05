@@ -30,7 +30,7 @@ module GP = Graph.Persistent.Digraph.ConcreteLabeled(
   struct
     type t = lsymbol
     let compare = ls_compare
-    let hash = ls_hash
+    let hash x = (BigInt.hash (ls_hash x)) (*JOSH TODO: hash or to_int?*)
     let equal = ls_equal
   end)(Int_Dft)
 
@@ -38,7 +38,7 @@ module GP = Graph.Persistent.Digraph.ConcreteLabeled(
 module ExprNode = struct
     type t = Term.term
     let compare = t_compare
-    let hash = t_hash
+    let hash x = (BigInt.hash (t_hash x)) (*JOSH: same*)
     let equal = t_equal
 end
 module GC = Graph.Persistent.Graph.Concrete(ExprNode)

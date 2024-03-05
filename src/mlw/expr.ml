@@ -41,7 +41,7 @@ module Hrs = Rsym.H
 module Wrs = Rsym.W
 
 let rs_equal : rsymbol -> rsymbol -> bool = (==)
-let rs_hash rs = id_hash rs.rs_name
+let rs_hash rs = BigInt.to_int (id_hash rs.rs_name) (*JOSH: TODO*)
 let rs_compare rs1 rs2 = id_compare rs1.rs_name rs2.rs_name
 
 let mk_rs, restore_rs =

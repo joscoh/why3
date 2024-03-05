@@ -12,7 +12,10 @@
 (** {1 Wrapper for big nums, implemented either with OCaml's [Nums] or [ZArith]} *)
 
 type t
-[@@deriving sexp]
+
+val t_of_sexp: Mysexplib.sexp -> t
+val sexp_of_t : t -> Mysexplib.sexp
+(*[@@deriving sexp]*)
 
 val compare : t -> t -> int
 
@@ -87,3 +90,5 @@ val of_string : string -> t
 val to_string : t -> string
 val to_int : t -> int
 val is_int : t -> bool
+
+val hash : t -> int

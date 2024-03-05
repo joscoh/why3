@@ -61,3 +61,8 @@ let combine3 acc n1 n2 n3 = combine (combine2 acc n1 n2) n3
 let combine_list f acc l = List.fold_left (fun acc x -> combine acc (f x)) acc l
 let combine_option h = function None -> -1 | Some s -> h s
 let combine_pair h1 h2 (a1,a2) = combine (h1 a1) (h2 a2)
+
+let combine_big acc n = BigInt.add (BigInt.mul_int 65599 acc) n
+let combine2_big acc n1 n2 = combine_big (combine_big acc n1) n2
+let combine_big_list f acc l = List.fold_left (fun acc x -> combine_big acc (f x)) acc l
+let combine_big_option h = function None -> BigInt.of_int (-1) | Some s -> h s

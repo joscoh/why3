@@ -15,7 +15,7 @@
 
 type attribute = private {
   attr_string : string;
-  attr_tag    : int;
+  attr_tag    : BigInt.t;
 }
 [@@deriving sexp]
 
@@ -24,7 +24,7 @@ module Sattr : Extset.S with module M = Mattr
 
 val attr_compare : attribute -> attribute -> int
 val attr_equal : attribute -> attribute -> bool
-val attr_hash : attribute -> int
+val attr_hash : attribute -> BigInt.t
 
 val create_attribute : string -> attribute
 
@@ -78,7 +78,7 @@ module Wid : Weakhtbl.S with type key = ident
 
 val id_compare : ident -> ident -> int
 val id_equal : ident -> ident -> bool
-val id_hash : ident -> int
+val id_hash : ident -> BigInt.t
 
 (** a user-created type of unregistered identifiers *)
 type preid = {

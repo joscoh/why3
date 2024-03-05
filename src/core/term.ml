@@ -258,11 +258,11 @@ and bind_info = {
 exception CompLT
 exception CompGT
 
-type frame = int Mvs.t * term Mvs.t
+type frame = BigInt.t Mvs.t * term Mvs.t
 
 type term_or_bound =
   | Trm of term * frame list
-  | Bnd of int
+  | Bnd of BigInt.t
 
 let rec descend vml t = match t.t_node with
   | Tvar vs ->
@@ -290,7 +290,7 @@ let t_compare ~trigger ~attr ~loc ~const t1 t2 =
     | Pwild, Pwild ->
         bnd, bv1, bv2
     | Pvar v1, Pvar v2 ->
-        bnd + 1, Mvs.add v1 bnd bv1, Mvs.add v2 bnd bv2
+        BigInt.succ bnd, Mvs.add v1 bnd bv1, Mvs.add v2 bnd bv2
     | Papp (s1, l1), Papp (s2, l2) ->
         comp_raise (ls_compare s1 s2);
         List.fold_left2 pat_compare state l1 l2
@@ -317,7 +317,7 @@ let t_compare ~trigger ~attr ~loc ~const t1 t2 =
         res
     | Pas (p1, v1), Pas (p2, v2) ->
         let bnd, bv1, bv2 = pat_compare state p1 p2 in
-        bnd + 1, Mvs.add v1 bnd bv1, Mvs.add v2 bnd bv2
+        BigInt.succ bnd, Mvs.add v1 bnd bv1, Mvs.add v2 bnd bv2
     | Pwild, _  -> raise CompLT | _, Pwild  -> raise CompGT
     | Pvar _, _ -> raise CompLT | _, Pvar _ -> raise CompGT
     | Papp _, _ -> raise CompLT | _, Papp _ -> raise CompGT
@@ -349,7 +349,7 @@ let t_compare ~trigger ~attr ~loc ~const t1 t2 =
               t_compare bnd vml1 vml2 t1 t2;
               let vml1 = (Mvs.singleton v1 bnd, b1.bv_subst) :: vml1 in
               let vml2 = (Mvs.singleton v2 bnd, b2.bv_subst) :: vml2 in
-              t_compare (bnd + 1) vml1 vml2 e1 e2
+              t_compare (BigInt.succ bnd) vml1 vml2 e1 e2
           | Tcase (t1,bl1), Tcase (t2,bl2) ->
               t_compare bnd vml1 vml2 t1 t2;
               let b_compare (p1,b1,t1) (p2,b2,t2) =
@@ -361,14 +361,14 @@ let t_compare ~trigger ~attr ~loc ~const t1 t2 =
           | Teps (v1,b1,e1), Teps (v2,b2,e2) ->
               let vml1 = (Mvs.singleton v1 bnd, b1.bv_subst) :: vml1 in
               let vml2 = (Mvs.singleton v2 bnd, b2.bv_subst) :: vml2 in
-              t_compare (bnd + 1) vml1 vml2 e1 e2
+              t_compare (BigInt.succ bnd) vml1 vml2 e1 e2
           | Tquant (q1,(vl1,b1,tr1,f1)), Tquant (q2,(vl2,b2,tr2,f2)) ->
               perv_compare q1 q2;
               let rec add bnd bv1 bv2 vl1 vl2 = match vl1, vl2 with
                 | (v1::vl1), (v2::vl2) ->
                     let bv1 = Mvs.add v1 bnd bv1 in
                     let bv2 = Mvs.add v2 bnd bv2 in
-                    add (bnd + 1) bv1 bv2 vl1 vl2
+                    add (BigInt.succ bnd) bv1 bv2 vl1 vl2
                 | [], (_::_) -> raise CompLT
                 | (_::_), [] -> raise CompGT
                 | [], [] -> bnd, bv1, bv2 in
@@ -399,7 +399,7 @@ let t_compare ~trigger ~attr ~loc ~const t1 t2 =
           | Ttrue, _    -> raise CompLT | _, Ttrue    -> raise CompGT
           end
     end in
-  try t_compare 0 [] [] t1 t2; 0
+  try t_compare BigInt.zero [] [] t1 t2; 0
   with CompLT -> -1 | CompGT -> 1
 
 let t_similar t1 t2 =
@@ -420,92 +420,92 @@ let t_similar t1 t2 =
 
 let t_hash ~trigger ~attr ~const t =
   let rec pat_hash bnd bv p = match p.pat_node with
-    | Pwild -> bnd, bv, 0
-    | Pvar v -> bnd + 1, Mvs.add v bnd bv, bnd + 1
+    | Pwild -> bnd, bv, BigInt.zero
+    | Pvar v -> BigInt.succ bnd, Mvs.add v bnd bv, BigInt.succ bnd
     | Papp (s,l) ->
         let hash (bnd,bv,h) p =
           let bnd,bv,hp = pat_hash bnd bv p in
-          bnd, bv, Hashcons.combine h hp in
+          bnd, bv, Hashcons.combine_big h hp in
         List.fold_left hash (bnd,bv,ls_hash s) l
     | Por (p,q) ->
         let bnd,bv,hp = pat_hash bnd bv p in
         let rec or_hash q = match q.pat_node with
-          | Pwild -> 0
-          | Pvar v -> Mvs.find v bv + 1
-          | Papp (s,l) -> Hashcons.combine_list or_hash (ls_hash s) l
-          | Por (p,q) -> Hashcons.combine (or_hash p) (or_hash q)
-          | Pas (p,v) -> Hashcons.combine (or_hash p) (Mvs.find v bv + 1)
+          | Pwild -> BigInt.zero
+          | Pvar v -> BigInt.succ (Mvs.find v bv)
+          | Papp (s,l) -> Hashcons.combine_big_list or_hash (ls_hash s) l
+          | Por (p,q) -> Hashcons.combine_big (or_hash p) (or_hash q)
+          | Pas (p,v) -> Hashcons.combine_big (or_hash p) (BigInt.succ (Mvs.find v bv))
         in
-        bnd, bv, Hashcons.combine hp (or_hash q)
+        bnd, bv, Hashcons.combine_big hp (or_hash q)
     | Pas (p,v) ->
         let bnd,bv,hp = pat_hash bnd bv p in
-        bnd + 1, Mvs.add v bnd bv, Hashcons.combine hp (bnd + 1)
+        BigInt.succ bnd, Mvs.add v bnd bv, Hashcons.combine_big hp (BigInt.succ bnd)
   in
-  let rec t_hash bnd vml t =
+  let rec t_hash (bnd : BigInt.t) (vml: (BigInt.t Mvs.t * term Mvs.t) list)  t =
     let h = oty_hash t.t_ty in
     let h =
       if attr then
-        let comb l h = Hashcons.combine (attr_hash l) h in
+        let comb l h = Hashcons.combine_big (attr_hash l) h in
         Sattr.fold comb t.t_attrs h
       else h
     in
-    Hashcons.combine h
+    Hashcons.combine_big h
       begin match descend vml t with
-      | Bnd i -> i + 1
+      | Bnd i -> BigInt.succ i
       | Trm (t,vml) ->
           begin match t.t_node with
           | Tvar v -> vs_hash v
-          | Tconst c when const -> Hashtbl.hash c
-          | Tconst (Constant.ConstInt {Number.il_int = c}) -> Hashtbl.hash c
-          | Tconst (Constant.ConstReal {Number.rl_real = c}) -> Hashtbl.hash c
-          | Tconst (Constant.ConstStr c) -> Hashtbl.hash c
+          | Tconst c when const -> BigInt.of_int (Hashtbl.hash c) (*JOSH: make sure*)
+          | Tconst (Constant.ConstInt {Number.il_int = c}) -> BigInt.of_int (Hashtbl.hash c)
+          | Tconst (Constant.ConstReal {Number.rl_real = c}) -> BigInt.of_int (Hashtbl.hash c)
+          | Tconst (Constant.ConstStr c) -> BigInt.of_int (Hashtbl.hash c)
           | Tapp (s,l) ->
-              Hashcons.combine_list (t_hash bnd vml) (ls_hash s) l
+              Hashcons.combine_big_list (t_hash bnd vml) (ls_hash s) l
           | Tif (f,t,e) ->
               let hf = t_hash bnd vml f in
               let ht = t_hash bnd vml t in
               let he = t_hash bnd vml e in
-              Hashcons.combine2 hf ht he
+              Hashcons.combine2_big hf ht he
           | Tlet (t,(v,b,e)) ->
               let h = t_hash bnd vml t in
               let vml = (Mvs.singleton v bnd, b.bv_subst) :: vml in
-              Hashcons.combine h (t_hash (bnd + 1) vml e)
+              Hashcons.combine_big h (t_hash (BigInt.succ bnd) vml e)
           | Tcase (t,bl) ->
               let h = t_hash bnd vml t in
               let b_hash (p,b,t) =
                 let bnd,bv,hp = pat_hash bnd Mvs.empty p in
                 let vml = (bv, b.bv_subst) :: vml in
-                Hashcons.combine hp (t_hash bnd vml t) in
-              Hashcons.combine_list b_hash h bl
+                Hashcons.combine_big hp (t_hash bnd vml t) in
+              Hashcons.combine_big_list b_hash h bl
           | Teps (v,b,e) ->
               let vml = (Mvs.singleton v bnd, b.bv_subst) :: vml in
-              t_hash (bnd + 1) vml e
+              t_hash (BigInt.succ bnd) vml e
           | Tquant (q,(vl,b,tr,f)) ->
-              let h = Hashtbl.hash q in
+              let h = BigInt.of_int (Hashtbl.hash q) in (*JOSH make sure*)
               let rec add bnd bv vl = match vl with
-                | v::vl -> add (bnd + 1) (Mvs.add v bnd bv) vl
+                | v::vl -> add (BigInt.succ bnd) (Mvs.add v bnd bv) vl
                 | [] -> bnd, bv in
               let bnd, bv = add bnd Mvs.empty vl in
               let vml = (bv, b.bv_subst) :: vml in
               let h =
                 if trigger then
                   List.fold_left
-                    (Hashcons.combine_list (t_hash bnd vml)) h tr
+                    (Hashcons.combine_big_list (t_hash bnd vml)) h tr
                 else h
               in
-              Hashcons.combine h (t_hash bnd vml f)
+              Hashcons.combine_big h (t_hash bnd vml f)
           | Tbinop (op,f,g) ->
-              let ho = Hashtbl.hash op in
+              let ho = BigInt.of_int (Hashtbl.hash op) in (*JOSH make sure*)
               let hf = t_hash bnd vml f in
               let hg = t_hash bnd vml g in
-              Hashcons.combine2 ho hf hg
+              Hashcons.combine2_big ho hf hg
           | Tnot f ->
-              Hashcons.combine 1 (t_hash bnd vml f)
-          | Ttrue -> 2
-          | Tfalse -> 3
+              Hashcons.combine_big BigInt.one (t_hash bnd vml f)
+          | Ttrue -> BigInt.of_int 2
+          | Tfalse -> BigInt.of_int 3
           end
     end in
-  t_hash 0 [] t
+  t_hash BigInt.zero [] t
 
 let t_hash_generic ~trigger ~attr ~const t =
   t_hash ~trigger ~attr ~const t
@@ -530,7 +530,7 @@ let hterm_generic ~trigger ~attr ~loc ~const
     : (module (Exthtbl.S with type key = term)) =
   (module (Exthtbl.Make(struct
       type t = term
-      let hash t = t_hash ~trigger ~attr ~const t
+      let hash t = BigInt.hash (t_hash ~trigger ~attr ~const t) (*JOSH: to_int or hash here?*)
       let equal t1 t2 = t_compare ~trigger ~attr ~loc ~const t1 t2 = 0
     end)))
 

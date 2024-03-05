@@ -80,7 +80,7 @@ let ts_hash ts = id_hash ts.ts_name
 let ty_hash ty = Weakhtbl.tag_hash ty.ty_tag
 
 let ts_compare ts1 ts2 = id_compare ts1.ts_name ts2.ts_name
-let ty_compare ty1 ty2 = Int.compare (ty_hash ty1) (ty_hash ty2)
+let ty_compare ty1 ty2 = BigInt.compare (ty_hash ty1) (ty_hash ty2)
 
 let mk_ts name args def = {
   ts_name      = id_register name;
@@ -97,11 +97,11 @@ module Hsty = Hashcons.Make (struct
         ts_equal s1 s2 && List.for_all2 ty_equal l1 l2
     | _ -> false
 
-  let hash ty = match ty.ty_node with
+  let hash ty = BigInt.hash (match ty.ty_node with
     | Tyvar v -> tv_hash v
-    | Tyapp (s,tl) -> Hashcons.combine_list ty_hash (ts_hash s) tl
+    | Tyapp (s,tl) -> Hashcons.combine_big_list ty_hash (ts_hash s) tl) (*JOSH MAKE SURE*)
 
-  let tag n ty = { ty with ty_tag = Weakhtbl.create_tag n }
+  let tag n ty = { ty with ty_tag = (Weakhtbl.create_int_tag n) }
 end)
 
 module Ty = MakeMSHW (struct
@@ -299,7 +299,7 @@ exception UnexpectedProp
 let oty_type = function Some ty -> ty | None -> raise UnexpectedProp
 
 let oty_equal v1 v2 = Option.equal ty_equal v1 v2
-let oty_hash o = Option.fold ~some:ty_hash ~none:1 o
+let oty_hash o = Option.fold ~some:ty_hash ~none:BigInt.one o
 
 let oty_compare o1 o2 = Option.compare ty_compare o1 o2
 

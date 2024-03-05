@@ -15,11 +15,13 @@ type tag
 
 val dummy_tag : tag
 
-val create_tag : int -> tag
+val create_tag : BigInt.t -> tag
+
+val create_int_tag : int -> tag 
 
 val tag_equal : tag -> tag -> bool
 
-val tag_hash : tag -> int
+val tag_hash : tag -> BigInt.t
 
 module type S = sig
 
