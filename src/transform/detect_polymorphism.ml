@@ -57,9 +57,9 @@ let check_ls ign_ls ls =
 
 let detect_polymorphism_in_decl ign_ts ign_ls ign_pr d =
   Debug.dprintf debug "|sts|=%d |sls|=%d |spr|=%d@."
-                (Ty.Sts.cardinal ign_ts)
-                (Term.Sls.cardinal ign_ls)
-                (Spr.cardinal ign_pr);
+                (BigInt.to_int (Ty.Sts.cardinal ign_ts)) (*JOSH: to_int*)
+                (BigInt.to_int (Term.Sls.cardinal ign_ls))
+                (BigInt.to_int (Spr.cardinal ign_pr));
   Debug.dprintf debug "decl %a@."
                 Pretty.print_decl d;
   match d.d_node with

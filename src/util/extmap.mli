@@ -112,7 +112,7 @@ module type S =
         predicate [p], and [m2] is the map with all the bindings of
         [s] that do not satisfy [p]. *)
 
-    val cardinal: 'a t -> int
+    val cardinal: 'a t -> BigInt.t
     (** Return the number of bindings of a map. *)
 
     val bindings: 'a t -> (key * 'a) list

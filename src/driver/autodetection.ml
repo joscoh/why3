@@ -626,9 +626,9 @@ let run_auto_detection env main skeletons =
   let detected =
     List.fold_left (expand_partial env main) Mprover.empty skeletons
   in
-  let length_recognized = Mprover.cardinal detected in
+  let length_recognized = BigInt.to_int (Mprover.cardinal detected) in
   let detected = detect_unknown env main detected in
-  let length_detected = Mprover.cardinal detected in
+  let length_detected = BigInt.to_int (Mprover.cardinal detected) in (*JOSH: to_int*)
   if length_detected > length_recognized then
     print_info
       "%d prover(s) added (including %d prover(s) with an unrecognized version)@."

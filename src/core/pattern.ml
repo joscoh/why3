@@ -36,7 +36,7 @@ let compile ~get_constructors ~mk_case ~mk_let tl rl =
         in
         (* if bare, only check fs.ls_constr *)
         let is_constr fs =
-          fs.ls_constr > 0 && (bare || Sls.mem fs css)
+          BigInt.pos fs.ls_constr && (bare || Sls.mem fs css)
         in
         (* map every constructor occurring at the head
          * of the pattern list to the list of its args *)
@@ -118,7 +118,7 @@ let compile ~get_constructors ~mk_case ~mk_let tl rl =
             let no_wilds =
               if bare then
                 let cs,_ = Mls.choose types in
-                Mls.cardinal types = cs.ls_constr
+                BigInt.eq (Mls.cardinal types) (cs.ls_constr)
               else
                 Mls.set_submap css types
             in

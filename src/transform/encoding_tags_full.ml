@@ -41,7 +41,7 @@ let deco_term kept tvar =
     | Tvar v ->
         if is_protected_vs kept v
         then t else decorate tvar t
-    | Tapp (ls,_) when not (ls.ls_value = None || ls.ls_constr > 0 ||
+    | Tapp (ls,_) when not (ls.ls_value = None || BigInt.pos ls.ls_constr ||
                             ls.ls_proj || is_protected_ls kept ls) ->
         decorate tvar (expl t)
     | Tconst _ ->

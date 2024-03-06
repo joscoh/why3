@@ -62,7 +62,7 @@ let rec detect svs t = match t.t_node with
   | _ -> assert false (* match and epsilon gone, the rest is prop *)
 
 let rec expl_term info svs sign t = match t.t_node with
-  | Tapp (ls,tl) when not (ls_equal ls ps_equ || ls.ls_constr > 0 || ls.ls_proj) ->
+  | Tapp (ls,tl) when not (ls_equal ls ps_equ || BigInt.pos ls.ls_constr || ls.ls_proj) ->
       let tv_to_ty = ls_app_inst ls tl t.t_ty in
       let tl = List.map (expl_term info svs sign) tl in
       let add _ ty tl = term_of_ty info.varm ty :: tl in

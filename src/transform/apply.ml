@@ -84,7 +84,7 @@ let with_terms ~trans_name subst_ty subst lv withed_terms =
   let lv = List.rev lv in
 
   (* Length checking for nice errors *)
-  let diff = Svs.cardinal slv - List.length withed_terms in
+  let diff = BigInt.to_int (Svs.cardinal slv) - List.length withed_terms in (*JOSH: to_int*)
   match diff with
   | _ when diff < 0 ->
       Debug.dprintf debug_matching "Too many withed terms@.";

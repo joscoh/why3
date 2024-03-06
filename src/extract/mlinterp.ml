@@ -594,7 +594,7 @@ let rec matching info v pat =
      | Vconstr ({rs_logic = RLls ls2}, l) ->
         if ls_equal ls ls2 then
           List.fold_left2 matching info (List.map field_get l) pl
-        else if ls2.ls_constr > 0 then raise NoMatch
+        else if BigInt.pos ls2.ls_constr then raise NoMatch
         else assert false
      | Vbool b ->
         let ls2 = if b then fs_bool_true else fs_bool_false in
@@ -826,7 +826,7 @@ let rec value_of_term kn t =
   match t.t_node with
   | Ttrue -> Vbool true
   | Tfalse -> Vbool false
-  | Term.Tapp (ls, lp) when ls.ls_constr > 0 ->
+  | Term.Tapp (ls, lp) when BigInt.pos ls.ls_constr ->
      let rs = restore_rs ls in
      if is_rs_tuple rs
      then Vtuple (List.map (value_of_term kn) lp)

@@ -478,32 +478,33 @@ let cont_stack_size (c:(cont * term * int) list) : int =
   | (_, _, n)::_ -> n
 
 let subst_size sigma =
-  Mvs.fold (fun _ t acc -> acc + Term.term_size t) sigma 0
+  Mvs.fold (fun _ t acc -> acc + BigInt.to_int (Term.term_size t)) sigma 0
 
+  (*JOSH TODO make sure to_int ok (sizes should not be that big)*)
 let cont_size (c:cont) : int =
   match c with
   | Kapp _ -> 1
   | Kif(t2,t3,s) ->
-      let n2 = Term.term_size t2 in
-      let n3 = Term.term_size t3 in
+      let n2 = BigInt.to_int (Term.term_size t2) in
+      let n3 = BigInt.to_int (Term.term_size t3) in
       let s = subst_size s in
       1+n2+n3+s
   | Klet(_,t,s) ->
-      let n = Term.term_size t in
+      let n = BigInt.to_int (Term.term_size t) in
       let s = subst_size s in
       1+n+s
   | Kcase(tbl,s) ->
       let s = subst_size s in
       List.fold_left (fun acc tb ->
           let _,t = Term.t_open_branch tb in
-          let n = Term.term_size t in acc+n)
+          let n = BigInt.to_int (Term.term_size t) in acc+n)
         (1+s) tbl
   | Keps _ -> 1
   | Kquant _ -> 1
   | Kbinop _ -> 1
   | Knot -> 1
   | Keval(t,s) ->
-      let n = Term.term_size t in
+      let n = BigInt.to_int (Term.term_size t) in
       let s = subst_size s in
       1+n+s
 
@@ -749,7 +750,7 @@ let rec matching ((mt,mv) as sigma) t p =
         if ls_equal ls1 ls2 then
           List.fold_left2 matching sigma tl pl
         else
-          if ls2.ls_constr > 0 then raise (NoMatch None)
+          if BigInt.pos ls2.ls_constr then raise (NoMatch None)
           else raise Undetermined
       | _ -> raise Undetermined
 
@@ -857,7 +858,7 @@ let rec reduce engine c =
   | _, [] -> assert false
   | st, (Keval (t,sigma),orig,_) :: rem -> (
       let limit = engine.params.compute_max_quantifier_domain in
-      let nt = Term.term_size t in
+      let nt = BigInt.to_int (Term.term_size t) in
       try reduce_bounded_quant engine.ls_lt limit t nt sigma st rem with Exit ->
         reduce_eval engine st t ~orig sigma rem)
   | [], (Kif _, _, _) :: _ -> assert false
@@ -866,12 +867,12 @@ let rec reduce engine c =
       match v with
       | Term { t_node = Ttrue } ->
         incr(rec_step_limit);
-        let n' = n - Term.term_size t3 in
+        let n' = n - BigInt.to_int (Term.term_size t3) in
         let c = mk_config st ((Keval(t2,sigma),t_attr_copy orig t2, n')  :: rem) in
         c
       | Term { t_node = Tfalse } ->
         incr(rec_step_limit);
-        let n' = n - Term.term_size t2 in
+        let n' = n - BigInt.to_int (Term.term_size t2) in
         let c = mk_config st ((Keval(t3,sigma),t_attr_copy orig t3, n') :: rem) in
         c
       | Term t1 -> begin
@@ -900,7 +901,7 @@ let rec reduce engine c =
     (* we know that n = cont_size rem + 1 + term_size t2 + subst_size sigma
        we need to add the size of t1 in sigma
     *)
-    let n = n + Term.term_size t1 in
+    let n = n + BigInt.to_int (Term.term_size t1) in
     let c =
       mk_config st ((Keval(t2, Mvs.add v t1 sigma), t_attr_copy orig t2, n) :: rem)
     in c
@@ -971,7 +972,7 @@ and reduce_match st u ~orig tbl sigma cont =
         Format.eprintf "@]@.";
 *)
         incr(rec_step_limit);
-        let n_t = Term.term_size t in
+        let n_t = BigInt.to_int (Term.term_size t) in
         let n_mv = subst_size mv'' in
         let n' = cont_stack_size cont + n_t + 1 + n_mv in
         let c =
@@ -1035,9 +1036,9 @@ and reduce_eval eng st t ~orig sigma rem =
             in c
     end
   | Tif(t1,t2,t3) ->
-    let n1 = Term.term_size t1 in
-    let n2 = Term.term_size t2 in
-    let n3 = Term.term_size t3 in
+    let n1 = BigInt.to_int (Term.term_size t1) in
+    let n2 = BigInt.to_int (Term.term_size t2) in
+    let n3 = BigInt.to_int (Term.term_size t3) in
     let n_sigma = subst_size sigma in
     let n_if = n_rem + n2 + n3 + 1 + n_sigma in
     let n_eval = n_if + n1 + 1 + n_sigma in
@@ -1047,8 +1048,8 @@ and reduce_eval eng st t ~orig sigma rem =
     in c
   | Tlet(t1,tb) ->
     let v,t2 = t_open_bound tb in
-    let n1 = Term.term_size t1 in
-    let n2 = Term.term_size t2 in
+    let n1 = BigInt.to_int (Term.term_size t1) in
+    let n2 = BigInt.to_int (Term.term_size t2) in
     let n_sigma = subst_size sigma in
     let n_let = n_rem + n2 + 1 + n_sigma in
     let n_eval = n_let + n1 + 1 + n_sigma in
@@ -1056,9 +1057,9 @@ and reduce_eval eng st t ~orig sigma rem =
                           (Klet(v,t2,sigma),orig,n_let) :: rem)
     in c
   | Tcase(t1,tbl) ->
-    let n1 = Term.term_size t1 in
+    let n1 = BigInt.to_int (Term.term_size t1) in
     let ntbl =
-      List.fold_left (fun acc tb -> acc + Term.term_branch_size tb) 0 tbl
+      List.fold_left (fun acc tb -> acc + BigInt.to_int (Term.term_branch_size tb)) 0 tbl
     in
     let n_sigma = subst_size sigma in
     let n_case = n_rem + ntbl + 1 + n_sigma in
@@ -1068,8 +1069,8 @@ and reduce_eval eng st t ~orig sigma rem =
                     (Kcase(tbl,sigma),orig,n_case) :: rem)
     in c
   | Tbinop(op,t1,t2) ->
-    let n1 = Term.term_size t1 in
-    let n2 = Term.term_size t2 in
+    let n1 = BigInt.to_int (Term.term_size t1) in
+    let n2 = BigInt.to_int (Term.term_size t2) in
     let n_sigma = subst_size sigma in
     let n_binop = n_rem + 1 in
     let n_eval2 = n_binop + n2 + 1 + n_sigma in
@@ -1079,7 +1080,7 @@ and reduce_eval eng st t ~orig sigma rem =
                           (Kbinop op, orig, n_binop) :: rem)
     in c
   | Tnot t1 ->
-    let n1 = Term.term_size t1 in
+    let n1 = BigInt.to_int (Term.term_size t1) in
     let n_sigma = subst_size sigma in
     let n_not = n_rem + 1 in
     let n_eval = n_not + n1 + 1 + n_sigma in
@@ -1088,7 +1089,7 @@ and reduce_eval eng st t ~orig sigma rem =
         in c
   | Teps tb ->
     let v,t1 = t_open_bound tb in
-    let n1 = Term.term_size t1 in
+    let n1 = BigInt.to_int (Term.term_size t1) in
     let n_sigma = subst_size sigma in
     let n_eps = n_rem + 1 in
     let n_eval = n_eps + n1 + 1 + n_sigma in
@@ -1097,7 +1098,7 @@ and reduce_eval eng st t ~orig sigma rem =
     in c
   | Tquant(q,tq) ->
     let vl,tr,t1 = t_open_quant tq in
-    let n1 = Term.term_size t1 in
+    let n1 = BigInt.to_int (Term.term_size t1) in
     let n_quant = n_rem + 1 in
     let n_sigma = subst_size sigma in
     let n_eval = n_quant + n1 + 1 + n_sigma in
@@ -1112,7 +1113,7 @@ and reduce_eval eng st t ~orig sigma rem =
     let _,args =
       List.fold_left
         (fun (n,acc) t ->
-           let nt = Term.term_size t in
+           let nt = BigInt.to_int (Term.term_size t) in
            let n = n + nt + 1 + nsigma in
            (n,(Keval(t,sigma),t,n)::acc))
         (n_app,ct)
@@ -1198,8 +1199,8 @@ and reduce_func_app ~orig _ty rem_st t1 t2 rem_cont =
               let eq = equ lhs body in
               let tq = t_quant Tforall (t_close_quant vl trig eq) in
               let body = t_attr_copy t (t_eps_close fc2 tq) in
-              let n_body = Term.term_size body in
-              let n2 = Term.term_size t2 in
+              let n_body = BigInt.to_int (Term.term_size body) in
+              let n2 = BigInt.to_int (Term.term_size t2) in
               let n = n_body + 1 + n2 + cont_stack_size rem_cont in
               let c =
                 mk_config rem_st ((Keval(body,Mvs.add vh t2 Mvs.empty),
@@ -1214,8 +1215,8 @@ and reduce_func_app ~orig _ty rem_st t1 t2 rem_cont =
           | Tapp (ls1,[lhs;body]) when ls_equal ls1 ps_equ ->
             let equ lhs body = t_attr_copy t (t_app ps_equ [lhs;body] None) in
             let elim body vh t2 =
-              let n_body = Term.term_size body in
-              let n2 = Term.term_size t2 in
+              let n_body = BigInt.to_int (Term.term_size body) in
+              let n2 = BigInt.to_int (Term.term_size t2) in
               let n = n_body + 1 + n2 + cont_stack_size rem_cont in
               let c =
                 mk_config rem_st ((Keval(body,Mvs.add vh t2 Mvs.empty),
@@ -1232,8 +1233,8 @@ and reduce_func_app ~orig _ty rem_st t1 t2 rem_cont =
               t_attr_copy t (t_binary Tiff lhs body) in
             let elim body vh t2 =
               let body = t_if body t_bool_true t_bool_false in
-              let n_body = Term.term_size body in
-              let n2 = Term.term_size t2 in
+              let n_body = BigInt.to_int (Term.term_size body) in
+              let n2 = BigInt.to_int (Term.term_size t2) in
               let n = n_body + 1 + n2 + cont_stack_size rem_cont in
               let c =
                 mk_config rem_st ((Keval(body,Mvs.add vh t2 Mvs.empty),
@@ -1306,9 +1307,9 @@ and reduce_app_no_equ engine st ls ~orig ty rem_cont =
             Format.eprintf "@.";
 *)
           let mv,rhs = t_subst_types mt mv rhs in
-          let n_rhs = Term.term_size rhs in
+          let n_rhs = BigInt.to_int (Term.term_size rhs) in
           let n_mv = subst_size mv in
-          let n = Term.term_size orig + n_rhs + n_mv + 1 + cont_stack_size rem_cont in
+          let n = BigInt.to_int (Term.term_size orig) + n_rhs + n_mv + 1 + cont_stack_size rem_cont in
           incr(rec_step_limit);
           let c=
             mk_config rem_st ((Keval(rhs,mv),orig,n) :: rem_cont)
@@ -1333,7 +1334,7 @@ and reduce_app_no_equ engine st ls ~orig ty rem_cont =
           let (mt,mv) = List.fold_left2 add (Ty.Mtv.empty, Mvs.empty) vl args in
           let mt = Ty.oty_match mt e.t_ty ty in
           let mv,e = t_subst_types mt mv e in
-          let n_e = Term.term_size e in
+          let n_e = BigInt.to_int (Term.term_size e) in
           let n_mv = subst_size mv in
           let n = n_e + 1 + n_mv + cont_stack_size rem_cont in
           let c=
@@ -1453,7 +1454,7 @@ and reduce_term_equ ~orig st t1 t2 cont =
         in c
       | _ -> raise Undetermined
     end
-  | Tapp(ls1,tl1), Tapp(ls2,tl2) when ls1.ls_constr > 0 && ls2.ls_constr > 0 ->
+  | Tapp(ls1,tl1), Tapp(ls2,tl2) when BigInt.pos ls1.ls_constr && BigInt.pos ls2.ls_constr ->
     if ls_equal ls1 ls2 then
       let rec aux sigma t tyl l1 l2 =
         match tyl,l1,l2 with
@@ -1472,7 +1473,7 @@ and reduce_term_equ ~orig st t1 t2 cont =
       in
       let () = incr(rec_step_limit) in
       let n_sigma = subst_size sigma in
-      let n_t = Term.term_size t in
+      let n_t = BigInt.to_int (Term.term_size t) in
       let n = n_t + 1 + n_sigma + cont_stack_size cont in
       let c =
         mk_config st ((Keval(t,sigma),orig,n) :: cont)
@@ -1533,7 +1534,7 @@ let warn_reduction_aborted = Loc.register_warning "reduction_aborted"
   "Warn when aborting term reduction"
 
 let normalize ?(max_growth=1000) ?step_limit ~limit engine sigma t0 =
-  let n0 = Term.term_size t0 in
+  let n0 = BigInt.to_int (Term.term_size t0) in
   let cont_size_init = n0+1 in
   let c = mk_config [] [Keval(t0,sigma),t0,cont_size_init] in
   let cont_size_max = max_growth * cont_size_init in

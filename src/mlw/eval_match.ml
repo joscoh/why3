@@ -18,7 +18,7 @@ open Pdecl
 
 (* helper functions for algebraic types *)
 
-let is_projection ls = ls.ls_constr = 0 &&
+let is_projection ls = BigInt.is_zero ls.ls_constr &&
   try (restore_rs ls).rs_field <> None
   with Not_found -> false
 
@@ -149,7 +149,7 @@ let rec dive_to_constructor ~keep_trace fn env t =
     | Tlet (t1,tb) -> let_map ~keep_trace dive env t1 tb
     | Tcase (t1,bl) -> branch_map dive env t1 bl
     | Tif (f,t1,t2) -> t_if_simp f (dive env t1) (dive env t2)
-    | Tapp (ls,tl) when ls.ls_constr > 0 -> fn env t ls tl
+    | Tapp (ls,tl) when BigInt.pos ls.ls_constr -> fn env t ls tl
     | _ -> raise Exit)
 
 let rec cs_equ ~keep_trace env t1 t2 =

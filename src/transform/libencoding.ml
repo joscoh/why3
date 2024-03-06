@@ -140,7 +140,7 @@ let t_monomorph ty_base kept lsmap consts vmap t =
         let ls = ls_of_const ty_base t in
         consts := Sls.add ls !consts;
         fs_app ls [] ty_base
-    | Tapp (ls,tl) when ls.ls_constr > 0 || ls.ls_proj || ls_equal ls ps_equ ->
+    | Tapp (ls,tl) when BigInt.pos ls.ls_constr || ls.ls_proj || ls_equal ls ps_equ ->
         t_app ls (List.map (t_mono vmap) tl) t.t_ty
     | Tapp (ls,tl) ->
         let ls = lsmap ls in

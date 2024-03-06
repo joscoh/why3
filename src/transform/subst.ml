@@ -204,7 +204,7 @@ let t_is_proxy t =
  *)
 let find_equalities ~subst_proxy filter =
   let valid ls =
-    ls.ls_args = [] && ls.ls_constr = 0 && ls.ls_value <> None &&
+    ls.ls_args = [] && BigInt.is_zero ls.ls_constr && ls.ls_value <> None &&
     List.for_all Ty.ty_closed (Ty.oty_cons ls.ls_args ls.ls_value) &&
     filter ls
   in

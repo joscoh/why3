@@ -92,3 +92,7 @@ val to_int : t -> int
 val is_int : t -> bool
 
 val hash : t -> int
+
+(* 3. Convenience*)
+val is_zero : t -> bool
+val pos : t -> bool

@@ -195,8 +195,8 @@ let create_constructor ~constr id s fl =
   let exn = Invalid_argument "Expr.create_constructor" in
   let fs = List.fold_right (Spv.add_new exn) fl Spv.empty in
   if List.exists (fun f -> not (Spv.mem f fs)) s.its_mfields ||
-    s.its_private || s.its_def <> NoDef || constr < 1 ||
-    (s.its_mutable && constr > 1) then raise exn;
+    s.its_private || s.its_def <> NoDef || BigInt.lt constr BigInt.one ||
+    (s.its_mutable && BigInt.gt constr BigInt.one) then raise exn;
   let argl = List.map (fun a -> a.pv_vs.vs_ty) fl in
   let tyl = List.map ity_var s.its_ts.ts_args in
   let rgl = List.map ity_reg s.its_regions in
@@ -217,7 +217,7 @@ let rs_of_ls ls =
   let t_args = List.map (fun v -> t_var v.pv_vs) v_args in
   let q = make_post (t_app ls t_args ls.ls_value) in
   let ity = ity_of_ty (t_type q) and eff = eff_empty in
-  let eff = if ls.ls_constr = 0 then eff_spoil eff ity else eff in
+  let eff = if BigInt.is_zero ls.ls_constr then eff_spoil eff ity else eff in
   let c = create_cty v_args [] [q] Mxs.empty Mpv.empty eff ity in
   mk_rs ls.ls_name c (RLls ls) None
 
@@ -258,8 +258,8 @@ let create_prog_pattern pp ity mask =
   let mark {pre_name = nm} gh mask =
     if gh || mask_ghost mask then Hstr.replace hg nm () in
   let rec scan gp mask = function
-    | PPapp ({rs_logic = RLls ls} as rs, pl) when ls.ls_constr > 0 ->
-        if mask = MaskGhost && ls.ls_constr > 1 && !fail <> PGfail
+    | PPapp ({rs_logic = RLls ls} as rs, pl) when BigInt.pos ls.ls_constr ->
+        if mask = MaskGhost && BigInt.compare ls.ls_constr BigInt.one > 0 && !fail <> PGfail
         then fail := gp; (* we do not replace PGfail with PGlast *)
         let ml = match mask with
           | MaskGhost -> List.map (Util.const MaskGhost) ls.ls_args

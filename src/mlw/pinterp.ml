@@ -487,7 +487,7 @@ let rec matching env (v : value) p =
       | Vconstr (Some {rs_logic= RLls ls2}, _, tl) ->
           if ls_equal ls ls2 then
             List.fold_left2 matching env (List.map field_get tl) pl
-          else if ls2.ls_constr > 0 then
+          else if BigInt.pos ls2.ls_constr then
             raise NoMatch
           else
             raise Undetermined
@@ -579,7 +579,7 @@ let value_of_term ctx t =
     | Ttrue -> bool_value true
     | Tfalse -> bool_value false
     | Tconst c -> value_of_constant ty c
-    | Tapp (ls, ts) when ls.ls_constr > 0 ->
+    | Tapp (ls, ts) when BigInt.pos ls.ls_constr ->
         let rs = try restore_rs ls with Not_found -> raise Exit in
         let fs = match (ity_of_ty ty).ity_node with
           | Ityapp (its, _, _) | Ityreg {reg_its= its} ->

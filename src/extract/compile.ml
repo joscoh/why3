@@ -103,7 +103,7 @@ module Translate = struct
         let pat_pl = List.fold_left2 mk [] args pl in
         let no_ghost_mut = match rs.rs_cty.cty_result.ity_node with
           | Ityreg {reg_its = s} | Ityapp (s,_,_) ->
-              ls.ls_constr = 1 && s.its_ofields <> [] &&
+              BigInt.eq ls.ls_constr BigInt.one && s.its_ofields <> [] &&
               List.for_all (fun v -> v.pv_ghost) s.its_mfields
           | _ -> assert false (* should never happen *) in
         begin match pat_pl with

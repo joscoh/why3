@@ -38,7 +38,7 @@ module type S =
     val exists: (key -> 'a -> bool) -> 'a t -> bool
     val filter: (key -> 'a -> bool) -> 'a t -> 'a t
     val partition: (key -> 'a -> bool) -> 'a t -> 'a t * 'a t
-    val cardinal: 'a t -> int
+    val cardinal: 'a t -> BigInt.t
     val bindings: 'a t -> (key * 'a) list
     val min_binding: 'a t -> (key * 'a)
     val max_binding: 'a t -> (key * 'a)
@@ -388,8 +388,8 @@ module Make(Ord: OrderedType) = struct
       in equal_aux (cons_enum m1 End) (cons_enum m2 End)
 
     let rec cardinal = function
-        Empty -> 0
-      | Node(l, _, _, r, _) -> cardinal l + 1 + cardinal r
+        Empty -> BigInt.zero
+      | Node(l, _, _, r, _) -> BigInt.succ (BigInt.add (cardinal l) (cardinal r))
 
     let rec keys_aux accu = function
         Empty -> accu

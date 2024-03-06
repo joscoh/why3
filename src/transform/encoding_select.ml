@@ -156,7 +156,7 @@ module Alginst = struct
   let add_alginst_app acc ls tyl tyv =
     if ls_equal ls ps_equ ||
        List.exists (fun ty -> not (ty_closed ty)) (oty_cons tyl tyv)then acc
-    else if ls.ls_constr > 0 then
+    else if BigInt.pos ls.ls_constr then
       match tyv with
       | Some ({ty_node = Tyapp (tys, tyl)}) -> add tys tyl acc
       | _ -> assert false

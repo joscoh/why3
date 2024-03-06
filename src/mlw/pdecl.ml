@@ -86,7 +86,7 @@ let create_plain_record_decl ~priv ~mut id args fdl invl witn =
   let pjl = List.map (create_projection (invl = [] && not priv) s) fdl in
   let csl = if priv then [] else if invl <> [] then
     [create_semi_constructor cid s fdl pjl invl] else
-    [create_constructor ~constr:1 cid s fdl] in
+    [create_constructor ~constr:BigInt.one cid s fdl] in
   if witn <> None then begin
     let ty = Ty.ty_tuple @@ List.map (fun fd -> fd.pv_vs.vs_ty) fdl in
     Option.iter (fun ({e_loc = loc} as e) ->
@@ -108,7 +108,7 @@ let create_rec_record_decl s fdl =
   let attrs = Sattr.singleton builtin_attr in
   let cid = id_fresh ~attrs ?loc:id.id_loc (id.id_string ^ "'mk") in
   List.iter (check_field (Stv.of_list s.its_ts.ts_args)) fdl;
-  let cs = create_constructor ~constr:1 cid s fdl in
+  let cs = create_constructor ~constr:BigInt.one cid s fdl in
   let pjl = List.map (create_projection true s) fdl in
   mk_itd s pjl [cs] [] None
 
@@ -128,7 +128,7 @@ let create_variant_decl exn get_its csl =
   let add_fd fds (_, fd) = Spv.add_new exn fd fds in
   let get_fds (_, fdl) = List.fold_left add_fd Spv.empty fdl in
   (* and now we can create the type symbol and the constructors *)
-  let s = get_its (List.map get_fds csl) and constr = List.length csl in
+  let s = get_its (List.map get_fds csl) and constr = BigInt.of_int (List.length csl) in
   let mk_cs (id, fdl) = create_constructor ~constr id s (List.map snd fdl) in
   mk_itd s (List.map (create_projection true s) pjl) (List.map mk_cs csl) [] None
 

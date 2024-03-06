@@ -39,7 +39,7 @@ let check_tl ty t = ty_equal_check ty (t_type t)
 
 let make_ls_defn ls vl t =
   (* check ls *)
-  if ls.ls_constr <> 0 || ls.ls_proj then raise (UnexpectedProjOrConstr ls);
+  if not (BigInt.is_zero ls.ls_constr) || ls.ls_proj then raise (UnexpectedProjOrConstr ls);
   (* check for duplicate arguments *)
   let add_v s v = Svs.add_new (DuplicateVar v) v s in
   ignore (List.fold_left add_v Svs.empty vl);
@@ -466,10 +466,12 @@ let create_data_decl tdl =
   let tss = List.fold_left add Sts.empty tdl in
   let check_proj tyv s tya ls = match ls with
     | None -> s
-    | Some ({ls_args = [ptyv]; ls_value = Some ptya; ls_constr = 0; ls_proj=true} as ls) ->
-        ty_equal_check tyv ptyv;
+    | Some ({ls_args = [ptyv]; ls_value = Some ptya; ls_constr = b; ls_proj=true} as ls) ->
+        if BigInt.is_zero b then
+        (ty_equal_check tyv ptyv;
         ty_equal_check tya ptya;
-        Sls.add_new (DuplicateRecordField ls) ls s
+        Sls.add_new (DuplicateRecordField ls) ls s)
+        else raise (BadRecordField ls)
     | Some ls -> raise (BadRecordField ls)
   in
   let check_constr tys ty cll pjs news (fs,pl) =
@@ -479,7 +481,7 @@ let create_data_decl tdl =
       with Invalid_argument _ -> raise (BadConstructor fs) in
     if not (Sls.equal pjs fs_pjs) then
       raise (RecordFieldMissing (Sls.choose (Sls.diff pjs fs_pjs)));
-    if fs.ls_constr <> cll then raise (BadConstructor fs);
+    if not (BigInt.eq fs.ls_constr cll) then raise (BadConstructor fs);
     let vs = ty_freevars Stv.empty ty in
     let rec check seen ty = match ty.ty_node with
       | Tyvar v when Stv.mem v vs -> ()
@@ -494,7 +496,7 @@ let create_data_decl tdl =
     news_id news fs.ls_name
   in
   let check_decl news (ts,cl) =
-    let cll = List.length cl in
+    let cll = BigInt.of_int (List.length cl) in
     if cl = [] then raise (EmptyAlgDecl ts);
     if ts.ts_def <> NoDef then raise (IllegalTypeAlias ts);
     let news = news_id news ts.ts_name in
@@ -512,7 +514,7 @@ let syms_param_decl ls =
   List.fold_left syms_ty syms ls.ls_args
 
 let create_param_decl ls =
-  if ls.ls_constr <> 0 || ls.ls_proj then raise (UnexpectedProjOrConstr ls);
+  if not (BigInt.is_zero ls.ls_constr) || ls.ls_proj then raise (UnexpectedProjOrConstr ls);
   let news = Sid.singleton ls.ls_name in
   mk_decl (Dparam ls) news
 
@@ -528,7 +530,7 @@ let create_logic_decl ldl =
   if ldl = [] then raise EmptyDecl;
   let check_decl news (ls,(s,_,_)) =
     if not (ls_equal s ls) then raise (BadLogicDecl (ls, s));
-    if ls.ls_constr <> 0 || ls.ls_proj then raise (UnexpectedProjOrConstr ls);
+    if not (BigInt.is_zero ls.ls_constr) || ls.ls_proj then raise (UnexpectedProjOrConstr ls);
     news_id news ls.ls_name
   in
   let news = List.fold_left check_decl Sid.empty ldl in

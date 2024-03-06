@@ -287,7 +287,7 @@ end = struct
 
   let add ls tyl tyv lsmap =
     if ls_equal ls ps_equ then lsmap
-    else if ls.ls_proj || ls.ls_constr > 0 then lsmap
+    else if ls.ls_proj || BigInt.pos ls.ls_constr then lsmap
     else if not (List.for_all Ty.ty_closed (oty_cons tyl tyv)) then lsmap else
     let newls = function
       | None -> Some (ls_inst ls tyl tyv)

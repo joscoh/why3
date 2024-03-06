@@ -27,13 +27,13 @@ let its_solid s =
   List.for_all (fun f -> f.its_frozen) s.its_reg_flg
 
 let is_trusted_constructor _kn ls =
-  ls.ls_constr > 0 &&
+  BigInt.pos ls.ls_constr &&
   match (Option.get ls.ls_value).ty_node with
   | Tyapp (s,_) -> not (its_solid (restore_its s))
   | _ -> assert false
 
 let is_trusted_projection kn ls ity =
-  ls.ls_constr = 0 &&
+  BigInt.is_zero ls.ls_constr &&
   try let rs = restore_rs ls in
       if rs.rs_field = None then false else
       match (List.hd rs.rs_cty.cty_args).pv_ity.ity_node with
@@ -212,7 +212,7 @@ let inspect kn tl =
     | P n, pj::pjl ->
         let pin = Mint.find n !rpins in
         unwind (Mls.find pj pin.p_fields) pjl
-    | C css, pj::pjl when Mls.cardinal css = 1 ->
+    | C css, pj::pjl when BigInt.eq (Mls.cardinal css) BigInt.one ->
         let cs, fl = Mls.choose css in
         let fdl = Eval_match.cs_fields kn cs in
         let c = Eval_match.select_field pj fdl fl in
@@ -414,7 +414,7 @@ let cap_of_term kn uf pins caps t =
         else let pin = Mint.find n pins in
           let v, c = Mls.find pj pin.p_vars in
           unwind (t_attr_copy t0 (t_var v)) c pjl
-    | C css, (pj,t0)::pjl when Mls.cardinal css = 1 ->
+    | C css, (pj,t0)::pjl when BigInt.eq (Mls.cardinal css) BigInt.one ->
         let cs, fl = Mls.choose css in
         let fdl = Eval_match.cs_fields kn cs in
         let c = Eval_match.select_field pj fdl fl in
@@ -440,7 +440,7 @@ let cap_of_term kn uf pins caps t =
           | Some fl -> add_branch cs fdl fl acc
           | None -> acc in
         let bb = match Mls.choose css with
-          | {ls_constr = len}, _ when len > Mls.cardinal css ->
+          | {ls_constr = len}, _ when BigInt.gt len (Mls.cardinal css) ->
               let v = create_vsymbol (id_fresh "q") ty in
               [t_close_branch (pat_var v) (unroll (t_var v) pjl0)]
           | _ -> [] in
@@ -552,7 +552,7 @@ let cap_equality kn uf pins f t1 c1 t2 c2 =
           let fl, uf = commit tv c fl uf in
           t_equ tv t :: fl, uf in
         Mls.fold add p.p_vars (fl,uf)
-    | C css when (fst (Mls.choose css)).ls_constr = 1 ->
+    | C css when (BigInt.eq (fst (Mls.choose css)).ls_constr (BigInt.one)) ->
         (* css cannot be empty and has at most one elt *)
         let cs, cl = Mls.choose css in
         let tl = find_term_fields kn cs t in
@@ -570,7 +570,7 @@ let cap_equality kn uf pins f t1 c1 t2 c2 =
           let pl, fl, _ = List.fold_right2 add cs.ls_args cl ([],[],uf) in
           t_close_branch (pat_app cs pl ty) (t_and_l fl) :: bl in
         let bb = match Mls.choose css with
-          | {ls_constr = len}, _ when len > Mls.cardinal css ->
+          | {ls_constr = len}, _ when BigInt.gt len (Mls.cardinal css) ->
               [t_close_branch (pat_wild ty) t_true]
           | _ -> [] in
         t_case t (Mls.fold branch css bb) :: fl, uf
@@ -596,7 +596,7 @@ let cap_equality kn uf pins f t1 c1 t2 c2 =
           let fl, uf = down t1 c1 t2 c2 fl uf in
           t_equ t1 t2 :: fl, uf in
         Mls.fold2_inter add p1.p_vars p2.p_vars (fl,uf)
-    | C css1, C css2 when (fst (Mls.choose css1)).ls_constr = 1 ->
+    | C css1, C css2 when (BigInt.eq (fst (Mls.choose css1)).ls_constr BigInt.one) ->
         (* css1 and css2 cannot be empty and have at most one elt *)
         let cs, cl1 = Mls.choose css1 in
         let _,  cl2 = Mls.choose css2 in

@@ -646,6 +646,8 @@ module Checksum = struct
   let char (_,_,_,buf) c = Buffer.add_char buf c
   let int (_,_,_,buf as b) i =
     char b 'i'; Buffer.add_string buf (string_of_int i)
+  let big_int (_,_,_,buf as b) i =
+    char b 'i'; Buffer.add_string buf (BigInt.to_string i)
   let string (_,_,_,buf as b) s =
     char b '"'; Buffer.add_string buf (String.escaped s); char b '"'
   let option e b = function None -> char b 'n' | Some x -> char b 's'; e b x
@@ -746,7 +748,7 @@ module Checksum = struct
     ident b ls.ls_name;
     list ty b ls.ls_args;
     option ty b ls.ls_value;
-    int b ls.ls_constr
+    big_int b ls.ls_constr
 
   (* start: T G F D R L I P (C M) *)
   let decl b d = match d.Decl.d_node with

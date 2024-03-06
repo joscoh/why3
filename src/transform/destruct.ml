@@ -235,7 +235,7 @@ type is_destructed =
 let destruct_fmla ~recursive (t: term) =
   (* Standard way to know that a lsymbol is a constructor TODO ? *)
   let is_constructor l =
-    l.ls_constr <> 0
+    not (BigInt.is_zero l.ls_constr)
   in
 
   (* Main recursive function:

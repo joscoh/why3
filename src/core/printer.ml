@@ -214,7 +214,7 @@ let syntax_arity s =
 let check_syntax_logic ls s =
   let len = List.length ls.ls_args in
   let ret = ls.ls_value <> None in
-  let nfv = Stv.cardinal (ls_ty_freevars ls) in
+  let nfv = BigInt.to_int (Stv.cardinal (ls_ty_freevars ls)) in (*JOSH; to int*)
   let arg s b e =
     match s.[b] with
     | 't' ->

@@ -88,7 +88,7 @@ let conv_app tenv fs tl tty =
 (* FIXME? in quantifiers we might generate triggers
    with unnecessary bridge functions over them *)
 let rec rewrite tenv t = match t.t_node with
-  | Tapp (ls,tl) when ls_equal ls ps_equ || ls.ls_constr > 0 || ls.ls_proj ->
+  | Tapp (ls,tl) when ls_equal ls ps_equ || BigInt.pos ls.ls_constr || ls.ls_proj ->
       t_attr_copy t (t_app ls (List.map (rewrite tenv) tl) t.t_ty)
   | Tapp (ls,tl) ->
       let tl = List.map (rewrite tenv) tl in

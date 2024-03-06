@@ -97,7 +97,7 @@ let print_vset vset =
     Format.printf "] "
   in
   Format.printf "************** t_candidates_lex *****************\n";
-  Format.printf "Candidates found: %d @." (Svsl.cardinal vset);
+  Format.printf "Candidates found: %d @." (BigInt.to_int (Svsl.cardinal vset)); (*JOSH; to_int*)
   Format.printf "Candidates: [ ";
   Svsl.iter (fun vl -> aux vl) vset;
   Format.printf "]\n@.";

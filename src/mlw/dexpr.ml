@@ -731,7 +731,7 @@ let dpattern ?loc node =
         let dity = dity_fresh () in
         let vars = Mstr.singleton id.pre_name (dity, id_dref id dity) in
         mk_dpat (PPvar (id,gh)) dity vars
-    | DPapp ({rs_logic = RLls ls} as rs, dpl) when ls.ls_constr > 0 ->
+    | DPapp ({rs_logic = RLls ls} as rs, dpl) when BigInt.pos ls.ls_constr ->
         let argl, res = specialize_rs rs in
         dity_unify_app ls dpat_expected_type dpl argl;
         let join n _ _ = raise (Dterm.DuplicateVar n) in

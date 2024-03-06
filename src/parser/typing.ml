@@ -645,7 +645,7 @@ let parse_record ~loc muc get_val fl =
 
 let find_constructor muc q =
   let test rs = match rs.rs_logic with
-    | RLls {ls_constr = c} -> c > 0
+    | RLls {ls_constr = c} -> BigInt.pos c
     | _ -> false in
   find_special muc test "constructor" q
 

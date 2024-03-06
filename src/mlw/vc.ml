@@ -1358,7 +1358,7 @@ let wrt_rename quant vl f =
         v, sbs (* no write sites, strange *)
     | loc,attrs ->
         let id =
-          if Sattr.cardinal attrs = 1 then (* single write site *)
+          if BigInt.eq (Sattr.cardinal attrs) BigInt.one then (* single write site *)
             id_user ~attrs:v.vs_name.id_attrs v.vs_name.id_string loc
           else (* multiple write sites *)
             id_clone ~attrs v.vs_name in

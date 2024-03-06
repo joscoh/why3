@@ -161,7 +161,7 @@ let specialize_fs ls =
 *)
 
 let specialize_cs ls =
-  if ls.ls_constr = 0 then raise (ConstructorExpected ls);
+  if BigInt.is_zero ls.ls_constr then raise (ConstructorExpected ls);
   let dtyl, dty = specialize_ls ls in
   dtyl, Option.get dty
 

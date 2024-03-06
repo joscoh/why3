@@ -126,7 +126,7 @@ let rec rewriteT kn state t = match t.t_node with
       in
       (* Preserve attributes and location of t *)
       t_attr_copy t res
-  | Tapp (ls, args) when ls.ls_constr > 0 && enc_ty state t.t_ty ->
+  | Tapp (ls, args) when BigInt.pos ls.ls_constr && enc_ty state t.t_ty ->
       let args = List.map (rewriteT kn state) args in
       t_attr_copy t (t_app (Mls.find ls state.cc_map) args t.t_ty)
   | Tapp (ls, [arg]) when ls.ls_proj && enc_ty state arg.t_ty ->
@@ -518,7 +518,7 @@ let fold_rewrite_metas state t task = match t.task_decl.td_node with
   | Meta (m, mal) ->
     let map_arg ma = match ma with
     | MAls ({ ls_value = Some({ty_node = Tyapp(ts, _)}) } as ls)
-        when ls.ls_constr > 0 && not (Mts.mem ts state.kept_m) ->
+        when BigInt.pos ls.ls_constr && not (Mts.mem ts state.kept_m) ->
       MAls (Mls.find_def ls ls state.cc_map)
     | MAls ({ ls_proj = true; ls_args = [{ty_node = Tyapp(ts, _)}] } as ls)
         when not (Mts.mem ts state.kept_m) ->

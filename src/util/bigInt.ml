@@ -88,3 +88,7 @@ let to_int = Big_int_Z.int_of_big_int
 let is_int = Big_int_Z.is_int_big_int
 
 let hash = Z.hash
+
+(*For convenience*)
+let is_zero (x: t) : bool = eq x zero
+let pos (x: t) : bool = compare x zero > 0

@@ -40,7 +40,7 @@ type lsymbol = private {
   ls_name   : ident;
   ls_args   : ty list;
   ls_value  : ty option;
-  ls_constr : int;
+  ls_constr : BigInt.t;
   ls_proj   : bool;
 }
 
@@ -53,9 +53,9 @@ val ls_compare : lsymbol -> lsymbol -> int
 val ls_equal : lsymbol -> lsymbol -> bool
 val ls_hash : lsymbol -> BigInt.t
 
-val create_lsymbol : ?constr:int -> ?proj:bool -> preid -> ty list -> ty option -> lsymbol
+val create_lsymbol : ?constr:BigInt.t -> ?proj:bool -> preid -> ty list -> ty option -> lsymbol
 
-val create_fsymbol : ?constr:int -> ?proj:bool -> preid -> ty list -> ty -> lsymbol
+val create_fsymbol : ?constr:BigInt.t -> ?proj:bool -> preid -> ty list -> ty -> lsymbol
 (** ~constr is the number of constructors of the type in which the
    symbol is a constructor otherwise it must be the default 0. *)
 
@@ -145,10 +145,10 @@ and term_quant
 
 and trigger = term list list
 
-val term_size : term -> int
+val term_size : term -> BigInt.t
 (** [term_size t] is the size, i.e. the number of [term_node] constructors occuring in [t] *)
 
-val term_branch_size : term_branch -> int
+val term_branch_size : term_branch -> BigInt.t
 (** [term_branch_size t] is the size of the term in the given term branch *)
 
 (** {2 Generic term equality} *)

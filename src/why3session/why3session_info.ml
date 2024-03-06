@@ -191,7 +191,7 @@ let rec stats_of_goal ~root prefix_name stats hpn ses goal =
         stats.nb_proved_root_goals <- stats.nb_proved_root_goals + 1
       else
         stats.nb_proved_sub_goals <- stats.nb_proved_sub_goals + 1;
-      if Mprover.cardinal proof_list = 1 then
+      if BigInt.eq (Mprover.cardinal proof_list) BigInt.one then
         let (prover, _) = Mprover.choose proof_list in
         stats.only_one_proof <-
           Sstr.add
@@ -245,7 +245,7 @@ let rec stats2_of_goal ~nb_proofs ses g : goal_stat =
   in
   if match nb_proofs with
     | 0 -> not (pn_proved ses g)
-    | 1 -> Mprover.cardinal proof_list = 1
+    | 1 -> BigInt.eq (Mprover.cardinal proof_list) BigInt.one
     | _ -> assert false
       then Yes(proof_list,l) else No(l)
 

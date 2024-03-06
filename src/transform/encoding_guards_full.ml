@@ -163,7 +163,7 @@ module Transform = struct
     | Tapp(p,terms) when t.t_ty = None ->
       let terms = List.map (term_transform kept varM) terms in
       ps_app (findL p) terms
-    | Tapp(f,terms) when not (f.ls_constr > 0 || f.ls_proj) ->
+    | Tapp(f,terms) when not (BigInt.pos f.ls_constr || f.ls_proj) ->
       let terms = args_transform kept varM f terms (t_type t) in
       t_app (findL f) terms t.t_ty
     | Tquant(q,_) ->

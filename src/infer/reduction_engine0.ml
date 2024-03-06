@@ -383,7 +383,7 @@ let rec matching ((mt,mv) as sigma) t p =
         if ls_equal ls1 ls2 then
           List.fold_left2 matching sigma tl pl
         else
-          if ls2.ls_constr > 0 then raise NoMatch
+          if BigInt.pos ls2.ls_constr then raise NoMatch
           else raise Undetermined
       | _ -> raise Undetermined
 
@@ -855,7 +855,7 @@ and reduce_term_equ ~orig st t1 t2 cont =
          }
       | _ -> raise Undetermined
     end
-  | Tapp(ls1,tl1), Tapp(ls2,tl2) when ls1.ls_constr > 0 && ls2.ls_constr > 0 ->
+  | Tapp(ls1,tl1), Tapp(ls2,tl2) when BigInt.pos ls1.ls_constr && BigInt.pos ls2.ls_constr ->
     if ls_equal ls1 ls2 then
       let rec aux sigma t tyl l1 l2 =
         match tyl,l1,l2 with

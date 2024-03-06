@@ -61,7 +61,7 @@ val create_rsymbol : preid -> ?ghost:bool -> ?kind:rs_kind -> cty -> rsymbol
     type is not [ity_unit], an existential premise is generated. *)
 
 val create_constructor :
-  constr:int -> preid -> itysymbol -> pvsymbol list -> rsymbol
+  constr:BigInt.t -> preid -> itysymbol -> pvsymbol list -> rsymbol
 
 val create_projection : bool -> itysymbol -> pvsymbol -> rsymbol
 

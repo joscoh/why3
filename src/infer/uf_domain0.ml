@@ -297,7 +297,7 @@ module Make(S:sig
   let ident_ret = Ident.{pre_name = "$pat"; pre_label = Ident.Slab.empty; pre_loc = None; }
   let access_field constr constr_args a i (proj, t) =
       match a.t_node with
-      | Tapp (func, args) when func.ls_constr = 1 ->
+      | Tapp (func, args) when BigInt.eq func.ls_constr BigInt.one ->
         List.nth args i
       | Tvar _ | _ ->
         match proj with
@@ -450,7 +450,7 @@ module Make(S:sig
         | Not_found ->
           try
             let t = TermToVar.to_terms b.uf_to_var a in
-            assert (Mterm.cardinal t >= 1);
+            assert (BigInt.ge (Mterm.cardinal t) BigInt.one);
             Mterm.filter (fun i _ -> not (is_in i)) t |> Mterm.choose |> fst
 
           with

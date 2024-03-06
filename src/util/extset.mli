@@ -92,7 +92,7 @@ module type S =
         predicate [p], and [s2] is the map with all the elements
         of [s] that do not satisfy [p]. *)
 
-    val cardinal: t -> int
+    val cardinal: t -> BigInt.t
     (** Return the number of elements in a set. *)
 
     val elements: t -> elt list

@@ -336,7 +336,7 @@ let is_predicate info d = match d.d_node with
 
 let ls_arity fmt d = match d.d_node with
   | Dparam ls ->
-      let ntv = Stv.cardinal (ls_ty_freevars ls) in
+      let ntv = BigInt.to_int (Stv.cardinal (ls_ty_freevars ls)) in (*JOSH: to_int*)
       let na = List.length ls.ls_args in
       if ntv = 0 then fprintf fmt "(%a, %d)" print_symbol ls.ls_name na
       else fprintf fmt "(%a, %d+%d)" print_symbol ls.ls_name ntv na

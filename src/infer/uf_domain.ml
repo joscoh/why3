@@ -385,7 +385,7 @@ module Make(S:sig
 
   let access_field constr constr_args t arg_index (proj, ty) =
       match t.t_node with
-      | Tapp (func, args) when func.ls_constr = 1 ->
+      | Tapp (func, args) when BigInt.eq func.ls_constr BigInt.one ->
          List.nth args arg_index
       | Tvar _ | _ ->
          match proj with

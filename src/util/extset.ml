@@ -30,7 +30,7 @@ module type S = sig
   val exists: (elt -> bool) -> t -> bool
   val filter: (elt -> bool) -> t -> t
   val partition: (elt -> bool) -> t -> t * t
-  val cardinal: t -> int
+  val cardinal: t -> BigInt.t
   val elements: t -> elt list
   val min_elt: t -> elt
   val max_elt: t -> elt

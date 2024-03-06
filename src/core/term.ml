@@ -45,7 +45,7 @@ type lsymbol = {
   ls_name   : ident;
   ls_args   : ty list;
   ls_value  : ty option;
-  ls_constr : int;
+  ls_constr : BigInt.t;
   ls_proj   : bool;
 }
 
@@ -64,14 +64,14 @@ let ls_hash ls = id_hash ls.ls_name
 let ls_compare ls1 ls2 = id_compare ls1.ls_name ls2.ls_name
 
 let check_constr constr _args value =
-  if constr = 0 || (constr > 0 && value <> None)
+  if BigInt.is_zero constr || (BigInt.pos constr && value <> None)
   then constr else invalid_arg "Term.create_lsymbol"
 
 let check_proj proj constr args value =
-  if not proj || (constr = 0  && value <> None && List.length args = 1)
+  if not proj || (BigInt.is_zero constr  && value <> None && List.length args = 1)
   then proj else invalid_arg "Term.create_lsymbol"
 
-let create_lsymbol ?(constr=0) ?(proj=false) name args value = {
+let create_lsymbol ?(constr=BigInt.zero) ?(proj=false) name args value = {
   ls_name   = id_register name;
   ls_args   = args;
   ls_value  = value;
@@ -170,7 +170,7 @@ let pat_app fs pl ty =
   let mtch s ty p = ty_match s ty p.pat_ty in
   ignore (try List.fold_left2 mtch s fs.ls_args pl with
     | Invalid_argument _ -> raise (BadArity (fs, List.length pl)));
-  if fs.ls_constr = 0 then raise (ConstructorExpected fs);
+  if BigInt.is_zero fs.ls_constr then raise (ConstructorExpected fs);
   pat_app fs pl ty
 
 let pat_as p v =
@@ -1021,8 +1021,8 @@ let ps_ignore =
 let t_equ t1 t2 = ps_app ps_equ [t1; t2]
 let t_neq t1 t2 = t_not (ps_app ps_equ [t1; t2])
 
-let fs_bool_true  = create_fsymbol ~constr:2 (id_fresh "True")  [] ty_bool
-let fs_bool_false = create_fsymbol ~constr:2 (id_fresh "False") [] ty_bool
+let fs_bool_true  = create_fsymbol ~constr:(BigInt.of_int 2) (id_fresh "True")  [] ty_bool
+let fs_bool_false = create_fsymbol ~constr:(BigInt.of_int 2) (id_fresh "False") [] ty_bool
 
 let t_bool_true  = fs_app fs_bool_true [] ty_bool
 let t_bool_false = fs_app fs_bool_false [] ty_bool
@@ -1043,12 +1043,12 @@ let fs_tuple = Hint.memo 17 (fun n ->
   let ty = ty_app ts tl in
   let attrs = Sattr.singleton builtin_attr in
   let id = id_fresh ~attrs ("Tuple" ^ string_of_int n) in
-  let fs = create_fsymbol ~constr:1 id tl ty in
+  let fs = create_fsymbol ~constr:BigInt.one id tl ty in
   Hid.add fs_tuple_ids fs.ls_name n;
   fs)
 
 let is_fs_tuple fs =
-  fs.ls_constr = 1 && Hid.mem fs_tuple_ids fs.ls_name
+  BigInt.eq fs.ls_constr BigInt.one && Hid.mem fs_tuple_ids fs.ls_name
 
 let is_fs_tuple_id id =
   try Some (Hid.find fs_tuple_ids id) with Not_found -> None
@@ -1839,10 +1839,10 @@ end
 
 let term_size t =
   let rec aux acc t =
-    let acc' = acc+1 in
-    assert (acc' > acc); (* to avoid integer overflow *)
+    let acc' = BigInt.succ acc in
+    assert (acc' > acc); (* to avoid integer overflow *) (*JOSH - don't need*)
     t_fold_unsafe aux acc' t
-  in aux 0 t
+  in aux BigInt.zero t
 
 let term_branch_size (_,_,t) = term_size t
 
