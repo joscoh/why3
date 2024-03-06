@@ -19,7 +19,7 @@ open Theory
 
 module Stdecl = Hcpt.MakeSet(struct
   type t = tdecl
-  let id td = BigInt.to_int td.td_tag (*JOSH TODO make sure to_int OK*)
+  let id td = BigInt.to_int td.td_tag 
 end)
 module HStdecl = Stdecl
 
@@ -27,7 +27,7 @@ type tdecl_set = Stdecl.t
 
 module Wtds = Weakhtbl.Make(struct
   type t = tdecl_set
-  let tag s = Weakhtbl.create_int_tag (Stdecl.id s) (*JOSH*)
+  let tag s = Weakhtbl.create_int_tag (Stdecl.id s)
 end)
 
 
@@ -80,11 +80,11 @@ let task_hd_equal t1 t2 = match t1.task_decl.td_node, t2.task_decl.td_node with
       pr_equal p1 p2 && t_equal_strict g1 g2
   | _ -> t1 == t2
 
-let task_hd_hash t = BigInt.to_int (Weakhtbl.tag_hash t.task_tag) (*JOSH TODO*)
+let task_hd_hash t = Weakhtbl.tag_hash t.task_tag
 
 let task_equal t1 t2 = Option.equal task_hd_equal t1 t2
 
-let task_hash t = Option.fold ~some:(fun t -> task_hd_hash t + 1) ~none:0 t
+let task_hash t = Option.fold ~some:(fun t -> BigInt.succ (task_hd_hash t)) ~none:BigInt.zero t
 
 module Hstask = Hashcons.Make (struct
   type t = task_hd
@@ -92,9 +92,9 @@ module Hstask = Hashcons.Make (struct
   let equal t1 t2 = td_equal t1.task_decl t2.task_decl &&
                   task_equal t1.task_prev t2.task_prev
 
-  let hash t = Hashcons.combine (BigInt.to_int (td_hash t.task_decl)) (task_hash t.task_prev) (*JOSH TODO to_int*)
+  let hash t = BigInt.hash (Hashcons.combine_big (td_hash t.task_decl) (task_hash t.task_prev))
 
-  let tag i task = { task with task_tag = Weakhtbl.create_int_tag i } (*JOSH*)
+  let tag i task = { task with task_tag = Weakhtbl.create_int_tag i }
 end)
 
 let mk_task decl prev known clone meta = Some (Hstask.hashcons {

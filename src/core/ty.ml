@@ -99,8 +99,7 @@ module Hsty = Hashcons.Make (struct
 
   let hash ty = BigInt.hash (match ty.ty_node with
     | Tyvar v -> tv_hash v
-    | Tyapp (s,tl) -> Hashcons.combine_big_list ty_hash (ts_hash s) tl) (*JOSH MAKE SURE*)
-
+    | Tyapp (s,tl) -> Hashcons.combine_big_list ty_hash (ts_hash s) tl)
   let tag n ty = { ty with ty_tag = (Weakhtbl.create_int_tag n) }
 end)
 
