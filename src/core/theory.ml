@@ -108,14 +108,14 @@ type meta = {
   meta_type : meta_arg_type list;
   meta_excl : bool;
   meta_desc : Pp.formatted;
-  meta_tag  : int;
+  meta_tag  : BigInt.t;
 }
 
 let print_meta_desc fmt m =
   fprintf fmt "@[%s@\n  @[%a@]@]"
     m.meta_name Pp.formatted m.meta_desc
 
-module SMmeta = MakeMSH(struct type t = meta let tag m = BigInt.of_int (m.meta_tag) end) (*JOSH: TODO*)
+module SMmeta = MakeMSH(struct type t = meta let tag m = m.meta_tag end)
 
 module Smeta = SMmeta.S
 module Mmeta = SMmeta.M
@@ -132,14 +132,18 @@ exception MetaTypeMismatch of meta * meta_arg_type * meta_arg_type
 
 let meta_table = Hstr.create 17
 
+(*JOSH TODO reduce duplication*)
+let big_incr =
+  fun r -> r := BigInt.succ !r
+
 let mk_meta =
-  let c = ref (-1) in
+  let c = ref (BigInt.of_int (-1)) in
   fun desc s al excl -> {
     meta_name = s;
     meta_type = al;
     meta_excl = excl;
     meta_desc = desc;
-    meta_tag  = (incr c; !c);
+    meta_tag  = (big_incr c; !c);
   }
 
 let register_meta ~desc s al excl =
@@ -193,7 +197,7 @@ type theory = {
 
 and tdecl = {
   td_node : tdecl_node;
-  td_tag  : int;
+  td_tag  : BigInt.t;
 }
 
 and tdecl_node =
@@ -239,19 +243,19 @@ module Hstdecl = Hashcons.Make (struct
         t1 = t2 && Lists.equal eq_marg al1 al2
     | _,_ -> false
 
-  let hs_cl_ty _ ty acc = Hashcons.combine acc (BigInt.to_int (ty_hash ty)) (*JOSH*)
-  let hs_cl_ts _ ts acc = Hashcons.combine acc (BigInt.to_int (ts_hash ts)) (*JOSH*)
-  let hs_cl_ls _ ls acc = Hashcons.combine acc (BigInt.to_int (ls_hash ls)) (*JOSH*)
-  let hs_cl_pr _ pr acc = Hashcons.combine acc (pr_hash pr)
+  let hs_cl_ty _ ty acc = Hashcons.combine_big acc (ty_hash ty)
+  let hs_cl_ts _ ts acc = Hashcons.combine_big acc (ts_hash ts)
+  let hs_cl_ls _ ls acc = Hashcons.combine_big acc (ls_hash ls)
+  let hs_cl_pr _ pr acc = Hashcons.combine_big acc (pr_hash pr)
 
   let hs_ta = function
-    | MAty ty -> BigInt.to_int (ty_hash ty) (*JOSH*)
-    | MAts ts -> BigInt.to_int (ts_hash ts) (*JOSH*)
-    | MAls ls -> BigInt.to_int (ls_hash ls) (*JOSH*)
+    | MAty ty -> ty_hash ty
+    | MAts ts -> ts_hash ts
+    | MAls ls -> ls_hash ls
     | MApr pr -> pr_hash pr
-    | MAstr s -> Hashtbl.hash s
-    | MAint i -> Hashtbl.hash i
-    | MAid i -> BigInt.to_int (Ident.id_hash i) (*JOSH: TODO*)
+    | MAstr s -> BigInt.of_int (Hashtbl.hash s)
+    | MAint i -> BigInt.of_int (Hashtbl.hash i)
+    | MAid i -> Ident.id_hash i
 
   let hs_smap sm h =
     Mts.fold hs_cl_ty sm.sm_ty
@@ -259,21 +263,21 @@ module Hstdecl = Hashcons.Make (struct
         (Mls.fold hs_cl_ls sm.sm_ls
           (Mpr.fold hs_cl_pr sm.sm_pr h)))
 
-  let hash td = match td.td_node with
-    | Decl d -> d_hash d
-    | Use th -> BigInt.to_int (id_hash th.th_name) (*JOSH: TODO*)
-    | Clone (th,sm) -> hs_smap sm (BigInt.to_int (id_hash th.th_name)) (*JOSH*)
-    | Meta (t,al) -> Hashcons.combine_list hs_ta (Hashtbl.hash t) al
+  let hash td = BigInt.hash (match td.td_node with
+    | Decl d -> d_hash d 
+    | Use th -> id_hash th.th_name 
+    | Clone (th,sm) -> hs_smap sm  (id_hash th.th_name)
+    | Meta (t,al) -> Hashcons.combine_big_list hs_ta (BigInt.of_int (Hashtbl.hash t)) al) 
 
-  let tag n td = { td with td_tag = n }
+  let tag n td = { td with td_tag = BigInt.of_int n }
 
 end)
 
-let mk_tdecl n = Hstdecl.hashcons { td_node = n ; td_tag = -1 }
+let mk_tdecl n = Hstdecl.hashcons { td_node = n ; td_tag = BigInt.of_int(-1) }
 
 module Tdecl = MakeMSH (struct
   type t = tdecl
-  let tag td = BigInt.of_int td.td_tag (*JOSH*)
+  let tag td = td.td_tag
 end)
 
 module Stdecl = Tdecl.S

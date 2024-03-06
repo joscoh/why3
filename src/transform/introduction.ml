@@ -47,7 +47,7 @@ module Hsdecl = Hashcons.Make (struct
     | Dprop (k,pr,f) -> Hashcons.combine (Hashcons.combine
         (Hashtbl.hash pr.pr_name.id_string) (BigInt.hash (t_hash_strict f))) (*JOSH TODO*)
         (match k with Plemma -> 11 | Paxiom -> 13 | Pgoal -> 17)
-    | _ -> d_hash d
+    | _ -> BigInt.to_int (d_hash d) (*JOSH - big_int*)
 
   let tag _ d = d
 end)

@@ -19,7 +19,7 @@ open Theory
 
 module Stdecl = Hcpt.MakeSet(struct
   type t = tdecl
-  let id td = td.td_tag
+  let id td = BigInt.to_int td.td_tag (*JOSH TODO make sure to_int OK*)
 end)
 module HStdecl = Stdecl
 
@@ -92,7 +92,7 @@ module Hstask = Hashcons.Make (struct
   let equal t1 t2 = td_equal t1.task_decl t2.task_decl &&
                   task_equal t1.task_prev t2.task_prev
 
-  let hash t = Hashcons.combine (td_hash t.task_decl) (task_hash t.task_prev)
+  let hash t = Hashcons.combine (BigInt.to_int (td_hash t.task_decl)) (task_hash t.task_prev) (*JOSH TODO to_int*)
 
   let tag i task = { task with task_tag = Weakhtbl.create_int_tag i } (*JOSH*)
 end)

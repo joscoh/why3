@@ -80,7 +80,7 @@ val create_prsymbol : preid -> prsymbol
 
 val pr_equal : prsymbol -> prsymbol -> bool
 
-val pr_hash : prsymbol -> int
+val pr_hash : prsymbol -> BigInt.t
 
 (** {2 Inductive predicate declaration} *)
 
@@ -123,7 +123,7 @@ module Wdecl : Weakhtbl.S with type key = decl
 module Hdecl : Exthtbl.S with type key = decl
 
 val d_equal : decl -> decl -> bool
-val d_hash : decl -> int
+val d_hash : decl -> BigInt.t
 
 (** {2 Declaration constructors} *)
 

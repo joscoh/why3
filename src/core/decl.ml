@@ -299,7 +299,7 @@ module Wpr = Prop.W
 
 let pr_equal : prsymbol -> prsymbol -> bool = (==)
 
-let pr_hash pr = BigInt.to_int (id_hash pr.pr_name) (*TODO: JOSH*)
+let pr_hash pr = id_hash pr.pr_name
 
 let create_prsymbol n = { pr_name = id_register n }
 
@@ -368,26 +368,26 @@ module Hsdecl = Hashcons.Make (struct
     | _,_ -> false
 
   let cs_hash (cs,pl) =
-    BigInt.hash (Hashcons.combine_big_list (Hashcons.combine_big_option ls_hash) (ls_hash cs) pl) (*JOSH*)
+    (Hashcons.combine_big_list (Hashcons.combine_big_option ls_hash) (ls_hash cs) pl) 
 
-  let hs_td (ts,td) = Hashcons.combine_list cs_hash (BigInt.hash (ts_hash ts)) td (*JOSH*)
+  let hs_td (ts,td) = Hashcons.combine_big_list cs_hash (ts_hash ts) td
 
-  let hs_ld (ls,(_,f,_)) = BigInt.hash (Hashcons.combine_big (ls_hash ls) (t_hash_strict f)) (*JOSH*)
+  let hs_ld (ls,(_,f,_)) = Hashcons.combine_big (ls_hash ls) (t_hash_strict f)
 
-  let hs_prop (pr,f) = Hashcons.combine (pr_hash pr) (BigInt.hash (t_hash_strict f))
+  let hs_prop (pr,f) = Hashcons.combine_big (pr_hash pr)(t_hash_strict f)
 
-  let hs_ind (ps,al) = Hashcons.combine_list hs_prop (BigInt.hash (ls_hash ps)) al (*JOSH*)
+  let hs_ind (ps,al) = Hashcons.combine_big_list hs_prop (ls_hash ps) al
 
   let hs_kind = function
-    | Plemma -> 11 | Paxiom -> 13 | Pgoal -> 17
+    | Plemma -> BigInt.of_int 11 | Paxiom -> BigInt.of_int 13 | Pgoal -> BigInt.of_int 17
 
-  let hash d = match d.d_node with
-    | Dtype  s -> BigInt.to_int (ts_hash s) (*JOSH*)
-    | Ddata  l -> Hashcons.combine_list hs_td 3 l
-    | Dparam s -> BigInt.to_int (ls_hash s) (*JOSH*)
-    | Dlogic l -> Hashcons.combine_list hs_ld 5 l
-    | Dind (_,l) -> Hashcons.combine_list hs_ind 7 l
-    | Dprop (k,pr,f) -> Hashcons.combine (hs_kind k) (hs_prop (pr,f))
+  let hash d = BigInt.hash (match d.d_node with
+    | Dtype  s -> ts_hash s
+    | Ddata  l -> Hashcons.combine_big_list hs_td (BigInt.of_int 3) l
+    | Dparam s -> ls_hash s
+    | Dlogic l -> Hashcons.combine_big_list hs_ld (BigInt.of_int 5) l
+    | Dind (_,l) -> Hashcons.combine_big_list hs_ind (BigInt.of_int 7) l
+    | Dprop (k,pr,f) -> Hashcons.combine_big (hs_kind k) (hs_prop (pr,f)))
 
   let tag n d = { d with d_tag = Weakhtbl.create_int_tag n }
 
@@ -405,7 +405,7 @@ module Hdecl = Decl.H
 
 let d_equal : decl -> decl -> bool = (==)
 
-let d_hash d = BigInt.to_int (Weakhtbl.tag_hash d.d_tag) (*JOSH: TODO*)
+let d_hash d = Weakhtbl.tag_hash d.d_tag
 
 (** Declaration constructors *)
 

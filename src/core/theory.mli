@@ -59,7 +59,7 @@ type meta = private {
   meta_type : meta_arg_type list;
   meta_excl : bool;
   meta_desc : Pp.formatted;
-  meta_tag  : int;
+  meta_tag  : BigInt.t;
 }
 
 val print_meta_desc : Pp.formatter -> meta -> unit
@@ -69,7 +69,7 @@ module Smeta : Extset.S with module M = Mmeta
 module Hmeta : Exthtbl.S with type key = meta
 
 val meta_equal : meta -> meta -> bool
-val meta_hash : meta -> int
+val meta_hash : meta -> BigInt.t
 
 val register_meta :
   desc:Pp.formatted -> string -> meta_arg_type list -> meta
@@ -113,7 +113,7 @@ type theory = private {
 
 and tdecl = private {
   td_node : tdecl_node;
-  td_tag  : int;
+  td_tag  : BigInt.t;
 }
 
 and tdecl_node =
@@ -134,7 +134,7 @@ module Stdecl : Extset.S with module M = Mtdecl
 module Htdecl : Exthtbl.S with type key = tdecl
 
 val td_equal : tdecl -> tdecl -> bool
-val td_hash : tdecl -> int
+val td_hash : tdecl -> BigInt.t
 
 (** {2 Constructors and utilities} *)
 

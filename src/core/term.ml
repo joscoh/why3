@@ -530,7 +530,7 @@ let hterm_generic ~trigger ~attr ~loc ~const
     : (module (Exthtbl.S with type key = term)) =
   (module (Exthtbl.Make(struct
       type t = term
-      let hash t = BigInt.hash (t_hash ~trigger ~attr ~const t) (*JOSH: to_int or hash here?*)
+      let hash t = BigInt.hash (t_hash ~trigger ~attr ~const t)
       let equal t1 t2 = t_compare ~trigger ~attr ~loc ~const t1 t2 = 0
     end)))
 
