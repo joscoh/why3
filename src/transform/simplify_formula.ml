@@ -121,7 +121,7 @@ let rec fmla_quant ~keep_model_vars sign f = function
   | [] -> [], f
   | vs::l ->
      let vsl, f = fmla_quant ~keep_model_vars sign f l in
-     if t_v_occurs vs f = 0 then
+     if BigInt.is_zero (t_v_occurs vs f) then
       vsl, f
      else
       try

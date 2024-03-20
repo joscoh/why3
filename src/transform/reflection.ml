@@ -126,7 +126,7 @@ let rec reify_term renv t rt =
        renv, t
     | Papp (cs, pl), _,_
          when compat_h f t
-              && Svs.for_all (fun v -> t_v_occurs v f = 1) p.pat_vars
+              && Svs.for_all (fun v -> BigInt.eq (t_v_occurs v f) BigInt.one) p.pat_vars
               && List.for_all is_pvar pl
                               (* could remove this with a bit more work in term reconstruction *)
       ->
@@ -135,8 +135,8 @@ let rec reify_term renv t rt =
          assert (not (Mvs.mem v acc));
          Debug.dprintf debug_reification "rt_of_var %a %a@."
                                      Pretty.print_vs v Pretty.print_term f;
-         if t_v_occurs v f = 1
-            && Svs.for_all (fun v' -> vs_equal v v' || t_v_occurs v' f = 0) svs
+         if BigInt.eq (t_v_occurs v f) BigInt.one
+            && Svs.for_all (fun v' -> vs_equal v v' || BigInt.is_zero (t_v_occurs v' f)) svs
          then let renv, rt = invert_pat vl renv (pat_var v, f) t in
               renv, Mvs.add v rt acc
          else
@@ -145,7 +145,7 @@ let rec reify_term renv t rt =
               let rec aux la1 la2 =
                 match la1, la2 with
                 | f'::l1, t'::l2 ->
-                   if t_v_occurs v f' = 1 then rt_of_var svs f' t' v (renv, acc)
+                   if BigInt.eq (t_v_occurs v f') BigInt.one then rt_of_var svs f' t' v (renv, acc)
                    else aux l1 l2
                 | _ -> assert false in
               aux la1 la2
@@ -161,14 +161,14 @@ let rec reify_term renv t rt =
        let rec check_nonvar f t =
          match f.t_node, t.t_node with
          | Tapp (ls1, la1), Tapp (ls2, la2) ->
-            if Svs.for_all (fun v -> t_v_occurs v f = 0) p.pat_vars
+            if Svs.for_all (fun v -> BigInt.is_zero (t_v_occurs v f)) p.pat_vars
             then (if not (ls_equal ls1 ls2)
                   then raise NoReification);
             if ls_equal ls1 ls2 then List.iter2 check_nonvar la1 la2;
          | Tapp (ls,_), Tconst _ ->
             (* reject constants that do not match the
                definitions of logic constants*)
-            if Svs.for_all (fun v -> t_v_occurs v f = 0) p.pat_vars
+            if Svs.for_all (fun v -> BigInt.is_zero (t_v_occurs v f)) p.pat_vars
             then
               match find_logic_definition renv.kn ls with
               | None -> raise NoReification
@@ -189,23 +189,23 @@ let rec reify_term renv t rt =
                                     | _ -> assert false) pl in
        renv, t_app cs lrt (Some p.pat_ty)
     | Pvar v, Tapp (ls1, la1), Tapp(ls2, la2)
-         when ls_equal ls1 ls2 && t_v_occurs v f = 1
+         when ls_equal ls1 ls2 && BigInt.eq (t_v_occurs v f) BigInt.one
       -> Debug.dprintf debug_reification "case app_var@.";
          let renv, rt =
            List.fold_left2
              (fun (renv, acc) f t ->
                if acc = None
-               then if t_v_occurs v f > 0
+               then if BigInt.pos (t_v_occurs v f)
                     then let renv, rt = (invert_pat vl renv (p, f) t) in
                          renv, Some rt
                     else renv, acc
-               else (assert (t_v_occurs v f = 0);
+               else (assert (BigInt.is_zero (t_v_occurs v f));
                      renv, acc))
              (renv,None) la1 la2 in
          renv, Option.get rt
     | Pvar v, Tquant(Tforall, tq1), Tquant(Tforall, tq2)
       | Pvar v, Tquant(Texists, tq1), Tquant(Texists, tq2)
-         when t_v_occurs v f = 1 ->
+         when BigInt.eq (t_v_occurs v f) BigInt.one ->
        Debug.dprintf debug_reification "case quant_var@.";
        let _,_,t1 = t_open_quant tq1 in
        let vl,_,t2 = t_open_quant tq2 in

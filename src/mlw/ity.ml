@@ -1521,13 +1521,13 @@ let cty_exec_post_raw c =
       | _ -> t_subst_single v res_al h in
     let rec conv h = t_attr_copy h (match h.t_node with
       | Tapp (ps, [{t_node = Tvar u}; {t_node = Tapp(s, tl)} as t])
-        when ls_equal ps ps_equ && vs_equal v u && t_v_occurs v t = 0 ->
+        when ls_equal ps ps_equ && vs_equal v u && BigInt.is_zero (t_v_occurs v t) ->
           down h s (List.rev tl) (List.rev al)
       | Tbinop (Tiff, {t_node =
           Tapp (ps, [{t_node = Tvar u}; {t_node = Tapp (fs, [])}])},
           ({t_node = Tapp (s, tl)} as f))
         when ls_equal ps ps_equ && vs_equal v u &&
-             ls_equal fs fs_bool_true && t_v_occurs v f = 0 ->
+             ls_equal fs fs_bool_true && BigInt.is_zero (t_v_occurs v f) ->
           down h s (List.rev tl) (List.rev al)
       | Tbinop (Tand, f, g) -> t_and (conv f) (conv g)
       | _ -> t_subst_single v res_al h) in
@@ -1730,14 +1730,14 @@ let print_spec args pre post xpost oldies eff fmt ity =
   let print_post fmt q =
     let v, q = open_post q in
     let n = asprintf "%a" print_vs v in
-    if n = default_result_name || t_v_occurs v q = 0 then
+    if n = default_result_name || BigInt.is_zero (t_v_occurs v q) then
       fprintf fmt "@\nensures  { @[%a@] }" print_term q else
       fprintf fmt "@\nreturns  { %s ->@ @[%a@] }" n print_term q;
     forget_var v in
   let print_xpost xs fmt q =
     let v, q = open_post q in
     fprintf fmt "@\nraises   { %a%a ->@ @[%a@] }" print_xs xs
-      (fun fmt v -> if not (ty_equal v.vs_ty ty_unit && t_v_occurs v q = 0)
+      (fun fmt v -> if not (ty_equal v.vs_ty ty_unit && BigInt.is_zero (t_v_occurs v q))
         then fprintf fmt " %a" print_vs v) v print_term q;
     forget_var v in
   let print_xpost fmt (xs,ql) =

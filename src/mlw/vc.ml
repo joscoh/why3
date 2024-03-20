@@ -527,7 +527,7 @@ let term_of_kode env res k =
   | Some (t, f) ->
       let unwind t ({pv_vs = v}, d) = match d with
         | Some d -> t_let_close_simp env v d t
-        | None when t_v_occurs v t > 0 -> raise Exit
+        | None when BigInt.pos (t_v_occurs v t) -> raise Exit
         | None -> t in
       let t = List.fold_left unwind t st in
       let f = if t_closed f then f else

@@ -249,7 +249,7 @@ and term_quant  = vsymbol list * bind_info * trigger * term
 and trigger = term list list
 
 and bind_info = {
-  bv_vars  : int Mvs.t;   (* free variables *)
+  bv_vars  : BigInt.t Mvs.t;   (* free variables *)
   bv_subst : term Mvs.t   (* deferred substitution *)
 }
 
@@ -602,12 +602,12 @@ let bnd_map_fold fn acc bv =
 
 (* hash-consing for terms and formulas *)
 
-let vars_union s1 s2 = Mvs.union (fun _ m n -> Some (m + n)) s1 s2
+let vars_union s1 s2 = Mvs.union (fun _ m n -> Some (BigInt.add m n)) s1 s2
 
 let add_b_vars s (_,b,_) = vars_union s b.bv_vars
 
 let rec t_vars t = match t.t_node with
-  | Tvar v -> Mvs.singleton v 1
+  | Tvar v -> Mvs.singleton v BigInt.one
   | Tconst _ -> Mvs.empty
   | Tapp (_,tl) -> List.fold_left add_t_vars Mvs.empty tl
   | Tif (f,t,e) -> add_t_vars (add_t_vars (t_vars f) t) e
@@ -622,7 +622,7 @@ let rec t_vars t = match t.t_node with
 and add_t_vars s t = vars_union s (t_vars t)
 
 let add_nt_vars _ n t s = vars_union s
-  (if n = 1 then t_vars t else Mvs.map (( * ) n) (t_vars t))
+  (if BigInt.eq n BigInt.one then t_vars t else Mvs.map (BigInt.mul n) (t_vars t))
 
 (* hash-consing constructors for terms *)
 
@@ -1445,7 +1445,7 @@ let bnd_v_count fn acc b = Mvs.fold (fun v n acc -> fn acc v n) b.bv_vars acc
 let bound_v_count fn acc (_,b,_) = bnd_v_count fn acc b
 
 let rec t_v_count fn acc t = match t.t_node with
-  | Tvar v -> fn acc v 1
+  | Tvar v -> fn acc v BigInt.one
   | Tlet (e,b) -> bound_v_count fn (t_v_count fn acc e) b
   | Tcase (e,bl) -> List.fold_left (bound_v_count fn) (t_v_count fn acc e) bl
   | Teps b -> bound_v_count fn acc b
@@ -1453,7 +1453,7 @@ let rec t_v_count fn acc t = match t.t_node with
   | _ -> t_fold_unsafe (t_v_count fn) acc t
 
 let t_v_occurs v t =
-  t_v_count (fun c u n -> if vs_equal u v then c + n else c) 0 t
+  t_v_count (fun c u n -> if vs_equal u v then BigInt.add c n else c) BigInt.zero t
 
 (* replaces variables with terms in term [t] using map [m] *)
 
@@ -1521,7 +1521,7 @@ let t_open_lambda t = match t.t_ty, t.t_node with
       let rec check h xl = match h.t_node, xl with
         | Tapp (fs,[h;{t_node = Tvar u}]), x::xl
           when ls_equal fs fs_func_app && vs_equal u x -> check h xl
-        | Tvar u, [] when vs_equal u fc && t_v_occurs u e = 0 -> vl, trl, e
+        | Tvar u, [] when vs_equal u fc && BigInt.is_zero (t_v_occurs u e) -> vl, trl, e
         | _ -> [], [], t in
       check h (List.rev vl)
   | _ -> [], [], t
@@ -1688,11 +1688,11 @@ let v_copy_unused v =
 
 let t_let_simp_keep_var ~keep e ((v,b,t) as bt) =
   let n = t_v_occurs v t in
-  if n = 0 then
+  if BigInt.is_zero n then
     let t = t_subst_unsafe b.bv_subst t in
     if keep then t_let_close (v_copy_unused v) e t else t
   else
-  if n = 1 || small e then begin
+  if BigInt.eq n BigInt.one || small e then begin
     vs_check v e;
     let t = t_subst_unsafe (Mvs.add v e b.bv_subst) t in
     if keep then t_let_close (v_copy_unused v) e t else t
@@ -1703,10 +1703,10 @@ let t_let_simp = t_let_simp_keep_var ~keep:false
 
 let t_let_close_simp_keep_var ~keep v e t =
   let n = t_v_occurs v t in
-  if n = 0 then
+  if BigInt.is_zero n then
     if keep then t_let_close (v_copy_unused v) e t else t
   else
-  if n = 1 || small e then
+  if BigInt.eq n BigInt.one || small e then
     let t = t_subst_single v e t in
     if keep then t_let_close (v_copy_unused v) e t else t
   else

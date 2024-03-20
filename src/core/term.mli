@@ -565,9 +565,9 @@ val t_v_fold : ('a -> vsymbol -> 'a) -> 'a -> term -> 'a
 val t_v_all : (vsymbol -> bool) -> term -> bool
 val t_v_any : (vsymbol -> bool) -> term -> bool
 
-val t_v_count : ('a -> vsymbol -> int -> 'a) -> 'a -> term -> 'a
+val t_v_count : ('a -> vsymbol -> BigInt.t -> 'a) -> 'a -> term -> 'a
 
-val t_v_occurs : vsymbol -> term -> int
+val t_v_occurs : vsymbol -> term -> BigInt.t
 
 (** {2 Variable substitution} *)
 
@@ -593,9 +593,9 @@ val t_subst_types : ty Mtv.t -> term Mvs.t -> term -> term Mvs.t * term
 
 val t_closed : term -> bool
 
-val t_vars : term -> int Mvs.t
+val t_vars : term -> BigInt.t Mvs.t
 
-val t_freevars : int Mvs.t -> term -> int Mvs.t
+val t_freevars : BigInt.t Mvs.t -> term -> BigInt.t Mvs.t
 
 val t_ty_freevars : Stv.t -> term -> Stv.t
 

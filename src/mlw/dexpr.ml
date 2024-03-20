@@ -1264,7 +1264,7 @@ let check_unused_variable_fun (bl: Ity.pvsymbol list) (dsp: dspec_final) eff_rea
     (* Add variables that are marked read by the function. Those are considered
        used in particular when we only have the spec of a function.  *)
     let fvars_uc =
-      List.fold_left (fun fvars_uc pv -> Mvs.add pv.pv_vs 1 fvars_uc)
+      List.fold_left (fun fvars_uc pv -> Mvs.add pv.pv_vs BigInt.one fvars_uc) (*JOSH*)
         fvars_uc dsp.ds_reads in
     (* Add terms that are marked writes *)
     let fvars_uc =
@@ -1272,7 +1272,7 @@ let check_unused_variable_fun (bl: Ity.pvsymbol list) (dsp: dspec_final) eff_rea
     (* Add variables used in the body of the function (if there is one) *)
     let fvars_uc =
       Opt.fold (fun fvars_uc eff ->
-          List.fold_left (fun fvars_uc pv -> Mvs.add pv.pv_vs 1 fvars_uc)
+          List.fold_left (fun fvars_uc pv -> Mvs.add pv.pv_vs BigInt.one fvars_uc)
             fvars_uc eff) fvars_uc eff_reads in
     let check_present pv = Mvs.mem pv.pv_vs fvars_uc in
     let check_used pv =

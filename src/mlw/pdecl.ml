@@ -522,7 +522,7 @@ let rec t_insert hd t = match t.t_node with
 
 let rec t_subst_fmla v t f = t_attr_copy f (match f.t_node with
   | Tapp (ps, [{t_node = Tvar u}; t1])
-    when ls_equal ps ps_equ && vs_equal v u && t_v_occurs v t1 = 0 ->
+    when ls_equal ps ps_equ && vs_equal v u && BigInt.is_zero (t_v_occurs v t1) ->
       t_iff_simp t (t_equ_simp t1 t_bool_true)
   | Tvar u when vs_equal u v -> t_if t t_bool_true t_bool_false
   | _ -> t_map (t_subst_fmla v t) f)

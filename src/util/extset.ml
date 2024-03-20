@@ -45,7 +45,7 @@ module type S = sig
   val fold2_union : (elt -> 'a -> 'a) -> t -> t -> 'a -> 'a
   val translate : (elt -> elt) -> t -> t
   val add_new : exn -> elt -> t -> t
-  val is_num_elt : int -> t -> bool
+  val is_num_elt : BigInt.t -> t -> bool
   val of_list : elt list -> t
   val contains: t -> elt -> bool
   val add_left: t -> elt -> t

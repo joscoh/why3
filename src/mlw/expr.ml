@@ -560,12 +560,12 @@ let fmla_of_term t = match t.t_node with
 
 let rec pure_of_post prop v h = match h.t_node with
   | Tapp (ps, [{t_node = Tvar u}; t])
-    when ls_equal ps ps_equ && vs_equal u v && t_v_occurs v t = 0 ->
+    when ls_equal ps ps_equ && vs_equal u v && BigInt.is_zero (t_v_occurs v t) ->
       (if prop then fmla_of_term t else t), t_true
   | Tbinop (Tiff, {t_node =
       Tapp (ps, [{t_node = Tvar u}; {t_node = Tapp (fs,[])}])}, f)
     when ls_equal ps ps_equ && vs_equal v u &&
-         ls_equal fs fs_bool_true && t_v_occurs v f = 0 ->
+         ls_equal fs fs_bool_true && BigInt.is_zero (t_v_occurs v f) ->
       (if prop then f else term_of_fmla f), t_true
   | Tbinop (Tand, f, g) ->
       let t, f = pure_of_post prop v f in
@@ -997,7 +997,7 @@ let e_for_raw v ((f,_,t) as bounds) i inv e =
   if not (pv_equal v i) then begin
     if not i.pv_ghost then Loc.errorm
       "The internal for-loop index mush be ghost";
-    let check f = if t_v_occurs v.pv_vs f > 0 then Loc.errorm
+    let check f = if BigInt.pos (t_v_occurs v.pv_vs f) then Loc.errorm
       "The external for-loop index cannot occur in the invariant" in
     List.iter check inv;
     match v.pv_ity.ity_node with

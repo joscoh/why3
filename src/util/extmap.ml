@@ -83,7 +83,7 @@ module type S =
     val contains: 'a t -> key -> bool
     val domain : 'a t -> unit t
     val subdomain : (key -> 'a -> bool) -> 'a t -> unit t
-    val is_num_elt : int -> 'a t -> bool
+    val is_num_elt : BigInt.t -> 'a t -> bool
     type 'a enumeration
     val val_enum : 'a enumeration -> (key * 'a) option
     val start_enum : 'a t -> 'a enumeration
@@ -601,7 +601,7 @@ module Make(Ord: OrderedType) = struct
 
     let is_num_elt n m =
       try
-        fold (fun _ _ n -> if n < 0 then raise Exit else n-1) m n = 0
+        fold (fun _ _ n -> if BigInt.lt n BigInt.zero then raise Exit else BigInt.sub n BigInt.one) m n = BigInt.zero
       with Exit -> false
 
     let start_enum s = cons_enum s End

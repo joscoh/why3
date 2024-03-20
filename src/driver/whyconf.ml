@@ -827,7 +827,7 @@ let filter_provers whyconf fp =
 
 let filter_one_prover whyconf fp =
   let provers = filter_provers whyconf fp in
-  if Mprover.is_num_elt 1 provers then
+  if Mprover.is_num_elt BigInt.one provers then
     snd (Mprover.choose provers)
   else if Mprover.is_empty provers then
     raise (ProverNotFound (whyconf,fp))

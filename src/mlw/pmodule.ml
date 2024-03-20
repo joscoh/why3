@@ -1124,7 +1124,7 @@ let clone_type_record cl s d s' d' =
     raise (BadInstance (BadI_ty_alias s.its_ts));
   (* if we refine a mutable type, then all new regions in the invariant
      come from the new fields (no invariant strengthening on the old ones) *)
-  let pj_occurs pj f = t_v_occurs pj.pv_vs f > 0 in
+  let pj_occurs pj f = BigInt.pos (t_v_occurs pj.pv_vs f)in
   let check_opj' pj' pj =
     if not pj'.pv_ity.ity_pure &&
        List.exists (pj_occurs pj') d'.itd_invariant &&

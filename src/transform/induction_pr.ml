@@ -158,7 +158,7 @@ let partition ctx vsi =
         let fvs = t_vars t in
         if Mvs.is_empty (Mvs.set_inter fvs vsi_acc)
         then aux ctx2 vsi_acc (add cindep) cdep
-        else aux ctx2 (Mvs.add vs 1 vsi_acc) cindep (add cdep)
+        else aux ctx2 (Mvs.add vs BigInt.one vsi_acc) cindep (add cdep)
   in
   let hole = make_context_ctx Hole ctx in
   aux ctx vsi hole hole

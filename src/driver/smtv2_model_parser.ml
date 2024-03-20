@@ -1781,7 +1781,7 @@ module FromModelToTerm = struct
         let _, t'_concrete = maybe_convert_epsilon_terms env (t',t'_concrete) in
         ([], t'_concrete)
     in
-    if t_v_occurs vs t' = 0 then
+    if BigInt.is_zero (t_v_occurs vs t') then
       let _,t'_concrete = maybe_convert_epsilon_terms env (t',t'_concrete) in
       Some ([],t'_concrete)
     else

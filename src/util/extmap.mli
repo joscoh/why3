@@ -283,7 +283,7 @@ module type S =
     (** [subdomain pr m] returns the set of keys of bindings in [m]
         that satisfy predicate [pr] *)
 
-    val is_num_elt : int -> 'a t -> bool
+    val is_num_elt : BigInt.t -> 'a t -> bool
     (** check if the map has the given number of elements *)
 
     type 'a enumeration

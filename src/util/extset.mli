@@ -156,7 +156,7 @@ module type S =
     (** [add_new e x s] adds [x] to [s] if [s] does not contain [x],
         and raises [e] otherwise. *)
 
-    val is_num_elt : int -> t -> bool
+    val is_num_elt : BigInt.t -> t -> bool
     (** check if the map has the given number of elements *)
 
     val of_list: elt list -> t
