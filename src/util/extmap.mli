@@ -40,7 +40,7 @@ module type S =
     type key
     (** The type of the map keys. *)
 
-    type (+'a) t
+    type ('a) t (*JOSH changed variance*)
     (** The type of maps from type [key] to type ['a]. *)
 
     val empty: 'a t
@@ -103,7 +103,7 @@ module type S =
     (** [for_all p m] checks if all the bindings of the map
         satisfy the predicate [p]. *)
 
-    val exists: (key -> 'a -> bool) -> 'a t -> bool
+    val exists_: (key -> 'a -> bool) -> 'a t -> bool
     (** [exists p m] checks if at least one binding of the map
         satisfy the predicate [p]. *)
 
@@ -140,7 +140,7 @@ module type S =
         the map is empty. Which binding is chosen is unspecified,
         but equal bindings will be chosen for equal maps. *)
 
-    val split: key -> 'a t -> 'a t * 'a option * 'a t
+    (* val split: key -> 'a t -> 'a t * 'a option * 'a t *)
     (** [split x m] returns a triple [(l, data, r)], where
           [l] is the map with all the bindings of [m] whose key
         is strictly less than [x];
@@ -250,7 +250,7 @@ module type S =
       (key -> 'a option -> 'b option -> 'c -> 'c) -> 'a t -> 'b t -> 'c -> 'c
     (** fold the keys which appear in one of the two maps *)
 
-    val translate : (key -> key) -> 'a t -> 'a t
+    (* val translate : (key -> key) -> 'a t -> 'a t *)
     (** [translate f m] translates the keys in the map [m] by the
         function [f]. [f] must be strictly monotone on the key of [m].
         Otherwise it raises invalid_arg *)

@@ -83,6 +83,8 @@ module Sint = Extset.Make (struct
   type t = label
 
   let compare a b = String.compare a.id_str b.id_str
+  let tag x = BigInt.of_int (Hashtbl.hash x) (*JOSH TODO hash*)
+  let equal = (==) (*JOSH TODO equal*)
 end)
 
 let _graph_is_reducible (g : G.t) (dom : G.V.t -> G.V.t -> bool) (entry : label) =

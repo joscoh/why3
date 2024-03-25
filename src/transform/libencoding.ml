@@ -185,7 +185,7 @@ let d_monomorph ty_base kept lsmap d =
   let t_mono = t_monomorph ty_base kept lsmap consts in
   let dl = match d.d_node with
     | Dtype { ts_def = Alias _ } -> []
-    | Dtype ts when not (Sty.exists (ty_s_any (ts_equal ts)) kept) -> []
+    | Dtype ts when not (Sty.exists_ (ty_s_any (ts_equal ts)) kept) -> []
     | Dtype ts ->
         [create_ty_decl ts]
     | Ddata _ -> [d]

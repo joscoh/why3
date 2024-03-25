@@ -204,7 +204,7 @@ let print_expl fmt expl =
   Format.pp_print_string fmt (Strings.remove_prefix "expl:" expl.attr_string)
 
 let attrs_has_expl attrs =
-  Sattr.exists (fun a -> Strings.has_prefix "expl:" a.attr_string) attrs
+  Sattr.exists_ (fun a -> Strings.has_prefix "expl:" a.attr_string) attrs
 
 let annot_attrs = Sattr.add stop_split (Sattr.singleton annot_attr)
 

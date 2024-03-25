@@ -62,7 +62,7 @@ let syntactic_transform transf =
       match meta_arg with
       | [Theory.MAls ls; Theory.MAstr _; Theory.MAint _] -> Sls.add ls acc
       | _ -> assert false) decl metas in
-    let keep ls =  Sls.exists (ls_equal ls) symbols in
+    let keep ls =  Sls.exists_ (ls_equal ls) symbols in
     Trans.compose (transf keep)
       (Trans.decl (fun d -> match d.d_node with
            | Dparam l when not (keep l || l.ls_args = []) -> []

@@ -94,7 +94,7 @@ let elim le_int le_real neg_real type_kept kn range_metas float_metas d
     (known_lit, task) =
   match d.d_node with
   | Dtype ts
-    when Mts.exists (fun ts' _ -> ts_equal ts ts') range_metas
+    when Mts.exists_ (fun ts' _ -> ts_equal ts ts') range_metas
          && not (Sts.mem ts type_kept) ->
     let to_int = Mts.find ts range_metas in
     let ir =
@@ -125,7 +125,7 @@ let elim le_int le_real neg_real type_kept kn range_metas float_metas d
     (*FIXME*)
     (known_lit, List.fold_left add_decl task [ ty_decl; ls_decl; ax_decl ])
   | Dtype ts
-    when Mts.exists (fun ts' _ -> ts_equal ts ts') float_metas
+    when Mts.exists_ (fun ts' _ -> ts_equal ts ts') float_metas
          && not (Sts.mem ts type_kept) ->
     let to_real, is_finite = Mts.find ts float_metas in
     let fp =

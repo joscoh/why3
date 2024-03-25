@@ -1579,7 +1579,7 @@ let default_hook r =
 let hook_report = ref default_hook
 
 let infer_loop_invs attrs env tkn mkn e cty =
-  if not (Ident.Sattr.exists (fun a -> Strings.has_prefix "bddinfer" a.Ident.attr_string) attrs)
+  if not (Ident.Sattr.exists_ (fun a -> Strings.has_prefix "bddinfer" a.Ident.attr_string) attrs)
   then []
   else
     begin

@@ -248,6 +248,13 @@ ifeq (@enable_re@,no)
 LIB_UTIL += re
 endif
 
+#awful hack
+LIB_BIGINT = bigInt
+
+LIB_COQUTIL = Datatypes base fin_maps option0 numbers BinNums ErrorMonad \
+		Specif pmap Basics zmap BinPos BinInt List0 decidable \
+		CoqUtil StateMonad path ssrbool ZCompat Ctr CoqHashtbl IntFuncs
+
 LIB_CORE = \
 	ident ty term pattern decl coercion theory \
 	parser_tokens keywords \
@@ -305,7 +312,9 @@ LIB_SESSION = compress xml termcode session_itp \
 
 LIB_CMIONLY = driver/driver_ast
 
-LIBMODULES =  $(addprefix src/util/, $(LIB_UTIL)) \
+LIBMODULES =  $(addprefix src/util/, $(LIB_BIGINT)) \
+			$(addprefix src/coq-util/, $(LIB_COQUTIL)) \
+			$(addprefix src/util/, $(LIB_UTIL)) \
 	      $(addprefix src/core/, $(LIB_CORE)) \
 	      $(addprefix src/driver/, $(LIB_DRIVER)) \
 	      $(addprefix src/mlw/, $(LIB_MLW)) \
@@ -317,7 +326,7 @@ LIBMODULES =  $(addprefix src/util/, $(LIB_UTIL)) \
 	      $(addprefix src/printer/, $(LIB_PRINTER)) \
 	      $(addprefix src/session/, $(LIB_SESSION))
 
-LIBDIRS = util core driver mlw extract parser transform printer session
+LIBDIRS = coq-util util core driver mlw extract parser transform printer session
 
 ifeq (@enable_infer@,yes)
 	LIBDIRS += infer

@@ -19,7 +19,7 @@ let meta_elim_ls = register_meta "ls:eliminate" [MTlsymbol]
 let eliminate_symbol _env =
   Trans.on_tagged_ls meta_elim_ls
     (fun ls_elim ->
-       let elim_ls ls = Sls.exists (ls_equal ls) ls_elim in
+       let elim_ls ls = Sls.exists_ (ls_equal ls) ls_elim in
        let rec elim (t:term) =
          match t.t_node with
          | Tvar _ | Tconst _ | Ttrue | Tfalse -> false

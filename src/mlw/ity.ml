@@ -719,10 +719,10 @@ let create_plain_record_itysymbol ~priv ~mut id args flds invl =
       (nfr && not (Sreg.subset rexp rfrz)) in
   let frg = if priv || (nfr && not mut) then false else
     if nfr && mut then (* non-free mutable *)
-      Mpv.exists (fun f m -> m || ity_liquid true f.pv_ity) flbl ||
-      Mpv.exists (fun f m -> m && ity_fragile true f.pv_ity) fout
+      Mpv.exists_ (fun f m -> m || ity_liquid true f.pv_ity) flbl ||
+      Mpv.exists_ (fun f m -> m && ity_fragile true f.pv_ity) fout
     else (* free: can have undetectable broken fields *)
-      Mpv.exists (fun f _ -> ity_fragile true f.pv_ity) flds in
+      Mpv.exists_ (fun f _ -> ity_fragile true f.pv_ity) flds in
   let afrz = if priv then sargs else if nfr && not mut
                                 then collect ity_rch_vars flds Stv.empty
                                 else collect ity_frz_vars flds Stv.empty in
@@ -962,7 +962,7 @@ let check_taints tnt pvs =
 
 let visible_writes e =
   Mreg.subdomain (fun {reg_its = {its_private = priv}} fs ->
-    priv || Spv.exists (fun fd -> not fd.pv_ghost) fs) e.eff_writes
+    priv || Spv.exists_ (fun fd -> not fd.pv_ghost) fs) e.eff_writes
 
 let reset_taints e =
   let vwr = visible_writes e in

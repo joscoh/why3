@@ -27,7 +27,7 @@ module type S = sig
   val iter: (elt -> unit) -> t -> unit
   val fold: (elt -> 'a -> 'a) -> t -> 'a -> 'a
   val for_all: (elt -> bool) -> t -> bool
-  val exists: (elt -> bool) -> t -> bool
+  val exists_: (elt -> bool) -> t -> bool
   val filter: (elt -> bool) -> t -> t
   val partition: (elt -> bool) -> t -> t * t
   val cardinal: t -> BigInt.t
@@ -35,7 +35,7 @@ module type S = sig
   val min_elt: t -> elt
   val max_elt: t -> elt
   val choose: t -> elt
-  val split: elt -> t -> t * bool * t
+  (* val split: elt -> t -> t * bool * t *)
   val change : (bool -> bool) -> elt -> t -> t
   val union : t -> t -> t
   val inter : t -> t -> t
@@ -43,7 +43,7 @@ module type S = sig
   val fold_left : ('b -> elt -> 'b) -> 'b -> t -> 'b
   val fold2_inter : (elt -> 'a -> 'a) -> t -> t -> 'a -> 'a
   val fold2_union : (elt -> 'a -> 'a) -> t -> t -> 'a -> 'a
-  val translate : (elt -> elt) -> t -> t
+  (* val translate : (elt -> elt) -> t -> t *)
   val add_new : exn -> elt -> t -> t
   val is_num_elt : BigInt.t -> t -> bool
   val of_list : elt list -> t
@@ -75,7 +75,7 @@ module MakeOfMap (M: Extmap.S) = struct
   let iter f s = M.iter (fun e _ -> f e) s
   let fold f s acc = M.fold (fun e _ -> f e) s acc
   let for_all f s = M.for_all (fun e _ -> f e) s
-  let exists f s = M.exists (fun e _ -> f e) s
+  let exists_ f s = M.exists_ (fun e _ -> f e) s
   let filter f s = M.filter (fun e _ -> f e) s
   let partition f s = M.partition (fun e _ -> f e) s
   let cardinal = M.cardinal
@@ -83,7 +83,7 @@ module MakeOfMap (M: Extmap.S) = struct
   let min_elt t = fst (M.min_binding t)
   let max_elt t = fst (M.max_binding t)
   let choose t = fst (M.choose t)
-  let split e t = let l,m,r = M.split e t in l,(m <> None),r
+  (* let split e t = let l,m,r = M.split e t in l,(m <> None),r *)
   let change f x s = M.change (fun a -> is_true (f (a <> None))) x s
   let union = M.set_union
   let inter = M.set_inter
@@ -91,7 +91,7 @@ module MakeOfMap (M: Extmap.S) = struct
   let fold_left f acc s = M.fold_left (fun acc k () -> f acc k) acc s
   let fold2_inter f s t acc = M.fold2_inter (fun k _ _ acc -> f k acc) s t acc
   let fold2_union f s t acc = M.fold2_union (fun k _ _ acc -> f k acc) s t acc
-  let translate = M.translate
+  (* let translate = M.translate *)
   let add_new e x s = M.add_new e x () s
   let is_num_elt n m = M.is_num_elt n m
   let of_list l = List.fold_left (fun acc a -> add a acc) empty l

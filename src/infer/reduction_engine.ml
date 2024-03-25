@@ -984,7 +984,7 @@ let extract_rule _km t =
   let check_vars acc t1 t2 =
     (* check that quantified variables all appear in the lefthand side *)
     let vars_lhs = t_vars t1 in
-    if Svs.exists (fun vs -> not (Mvs.mem vs vars_lhs)) acc
+    if Svs.exists_ (fun vs -> not (Mvs.mem vs vars_lhs)) acc
     then raise (NotARewriteRule "lhs should contain all variables");
     (* check the same with type variables *)
     if not

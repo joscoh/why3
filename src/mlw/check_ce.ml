@@ -424,7 +424,7 @@ let find_rs pm loc =
   let in_cty cty =
     List.exists (find_in_term loc) cty.cty_pre ||
     List.exists (find_in_term loc) cty.cty_post ||
-    Mxs.exists (fun _ -> List.exists (find_in_term loc)) cty.cty_xpost in
+    Mxs.exists_ (fun _ -> List.exists (find_in_term loc)) cty.cty_xpost in
   let rec in_e e =
     Option.equal Loc.equal (Some loc) e.e_loc ||
     match e.e_node with

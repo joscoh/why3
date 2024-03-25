@@ -1616,7 +1616,7 @@ let extract_rule _km t =
        (quantified variables not appearing could be removed and those appearing
        on right hand side cannot be guessed during rewriting). *)
     let vars_lhs = t_vars t1 in
-    if Svs.exists (fun vs -> not (Mvs.mem vs vars_lhs)) acc
+    if Svs.exists_ (fun vs -> not (Mvs.mem vs vars_lhs)) acc
     then raise (NotARewriteRule "lhs should contain all variables");
     (* check the same with type variables *)
     if not

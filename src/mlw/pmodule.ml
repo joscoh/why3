@@ -1503,7 +1503,7 @@ let decl_impl uc d =
   | _ -> uc
 
 let need_copy m =
-  Sid.exists (fun id -> Hid.mem mod_table id) m.mod_theory.th_used
+  Sid.exists_ (fun id -> Hid.mem mod_table id) m.mod_theory.th_used
 
 let pdecl_impl inst uc d =
   let uc = clone_pdecl None inst impl_cl uc d in
