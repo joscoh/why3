@@ -35,7 +35,7 @@ type env = {
 
 let env_tag env = env.env_tag
 
-module Wenv = Weakhtbl.Make(struct type t = env let tag = env_tag end)
+module Wenv = Weakhtbl.Make(struct type t = env let tag = env_tag let equal = (==) (*JOSH TODO equal*) end)
 
 (** Environment construction and utilisation *)
 

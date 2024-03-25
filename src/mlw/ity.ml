@@ -69,21 +69,25 @@ and pvsymbol = {
 module Itsym = MakeMSHW (struct
   type t = itysymbol
   let tag its = its.its_ts.ts_name.id_tag
+  let equal = (==) (*JOSH TODO equal*)
 end)
 
 module Ity = MakeMSHW (struct
   type t = ity
   let tag ity = ity.ity_tag
+  let equal = (==) (*JOSH TODO equal*)
 end)
 
 module Reg = MakeMSHW (struct
   type t = region
   let tag reg = reg.reg_name.id_tag
+  let equal = (==) (*JOSH TODO equal*)
 end)
 
 module PVsym = MakeMSHW (struct
   type t = pvsymbol
   let tag pv = pv.pv_vs.vs_name.id_tag
+  let equal = (==) (*JOSH TODO equal*)
 end)
 
 module Sits = Itsym.S
@@ -863,6 +867,7 @@ let create_xsymbol id ?(mask=MaskVisible) ity =
 module Exn = MakeMSH (struct
   type t = xsymbol
   let tag xs = Weakhtbl.tag_hash xs.xs_name.id_tag
+  let equal = (==) (*JOSH TODO equal*)
 end)
 
 module Sxs = Exn.S

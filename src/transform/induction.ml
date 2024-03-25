@@ -72,6 +72,7 @@ type vlex =
 module VsList = Wstdlib.TaggedList(struct
   type t = vsymbol
   let tag = vs_hash
+  let equal = (==) (*JOSH TODO equal*)
 end)
 module Mvsl = Extmap.Make(VsList)
 module Svsl = Extset.MakeOfMap(Mvsl)

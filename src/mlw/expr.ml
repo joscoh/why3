@@ -33,6 +33,7 @@ and rs_logic =
 module Rsym = MakeMSHW (struct
   type t = rsymbol
   let tag rs = rs.rs_name.id_tag
+  let equal = (==) (*JOSH TODO equal*)
 end)
 
 module Srs = Rsym.S

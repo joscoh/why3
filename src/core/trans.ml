@@ -47,6 +47,7 @@ let par (l:task trans list) x = List.map (fun f -> f x) l
 module Wtask = Weakhtbl.Make (struct
   type t = task_hd
   let tag t = t.task_tag
+  let equal = (==) (*JOSH TODO equal*)
 end)
 
 let store fn = let tr = Wtask.memoize_option 63 fn in fun t -> match t with
@@ -355,6 +356,7 @@ open Env
 module Wenv = Weakhtbl.Make (struct
   type t = env
   let tag = env_tag
+  let equal = (==) (*JOSH TODO equal*)
 end)
 
 exception UnknownTrans of string

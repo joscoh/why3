@@ -20,6 +20,7 @@ open Task
 module OHTyl = TaggedList(struct
   type t = ty
   let tag = ty_hash
+  let equal = (==) (*JOSH TODO equal*)
 end)
 module Mtyl = Extmap.Make(OHTyl)
 

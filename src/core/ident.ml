@@ -22,6 +22,7 @@ type attribute = {
 module Attr = MakeMSH (struct
   type t = attribute
   let tag a = a.attr_tag
+  let equal = (==) (*JOSH TODO equal*)
 end)
 
 module Sattr = Attr.S
@@ -163,6 +164,7 @@ type ident = {
 module Id = MakeMSHW (struct
   type t = ident
   let tag id = id.id_tag
+  let equal = (==) (*JOSH TODO equal*)
 end)
 
 module Sid = Id.S

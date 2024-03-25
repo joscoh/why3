@@ -117,6 +117,7 @@ module Editor = struct
   type t = string
   let compare = String.compare
   let tag x = BigInt.of_int (Hashtbl.hash x) (*JOSH TODO hash*)
+  let equal = (==) (*JOSH TODO equal*)
 end
 
 module Meditor = Extmap.Make(Editor)

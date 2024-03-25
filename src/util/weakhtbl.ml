@@ -64,6 +64,7 @@ module type Weakey =
 sig
   type t
   val tag : t -> tag
+  val equal : t -> t -> bool (*JOSH ADDED equal*)
 end
 
 module Make (S : Weakey) : S with type key = S.t = struct

@@ -15,6 +15,7 @@ module type TaggedType =
 sig
   type t
   val tag : t -> BigInt.t
+  val equal : t -> t -> bool
 end
 
 (* This file originates from the OCaml v 3.12 Standard Library. Since

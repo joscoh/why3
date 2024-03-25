@@ -21,6 +21,7 @@ type tvsymbol = {
 module Tvar = MakeMSHW (struct
   type t = tvsymbol
   let tag tv = tv.tv_name.id_tag
+  let equal = (==) (*JOSH TODO equal*)
 end)
 
 module Stv = Tvar.S
@@ -66,6 +67,7 @@ and ty_node =
 module Tsym = MakeMSHW (struct
   type t = tysymbol
   let tag ts = ts.ts_name.id_tag
+  let equal = (==) (*JOSH TODO equal*)
 end)
 
 module Sts = Tsym.S
@@ -106,6 +108,7 @@ end)
 module Ty = MakeMSHW (struct
   type t = ty
   let tag ty = ty.ty_tag
+  let equal = (==) (*JOSH TODO equal*)
 end)
 
 module Sty = Ty.S
