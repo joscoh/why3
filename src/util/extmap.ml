@@ -27,7 +27,7 @@ end
 module type S =
   sig
     type key
-    type +'a t
+    type 'a t
     val empty: 'a t
     val is_empty: 'a t -> bool
     val mem:  key -> 'a t -> bool
@@ -42,7 +42,7 @@ module type S =
     val iter: (key -> 'a -> unit) -> 'a t -> unit
     val fold: (key -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
     val for_all: (key -> 'a -> bool) -> 'a t -> bool
-    val exists: (key -> 'a -> bool) -> 'a t -> bool
+    val exists_: (key -> 'a -> bool) -> 'a t -> bool
     val filter: (key -> 'a -> bool) -> 'a t -> 'a t
     val partition: (key -> 'a -> bool) -> 'a t -> 'a t * 'a t
     val cardinal: 'a t -> BigInt.t
@@ -50,7 +50,7 @@ module type S =
     val min_binding: 'a t -> (key * 'a)
     val max_binding: 'a t -> (key * 'a)
     val choose: 'a t -> (key * 'a)
-    val split: key -> 'a t -> 'a t * 'a option * 'a t
+    (* val split: key -> 'a t -> 'a t * 'a option * 'a t *)
     val find: key -> 'a t -> 'a
     val map: ('a -> 'b) -> 'a t -> 'b t
     val mapi: (key -> 'a -> 'b) -> 'a t -> 'b t
@@ -81,7 +81,7 @@ module type S =
     val fold2_inter: (key -> 'a -> 'b -> 'c -> 'c) -> 'a t -> 'b t -> 'c -> 'c
     val fold2_union:
       (key -> 'a option -> 'b option -> 'c -> 'c) -> 'a t -> 'b t -> 'c -> 'c
-    val translate : (key -> key) -> 'a t -> 'a t
+    (* val translate : (key -> key) -> 'a t -> 'a t *)
     val add_new : exn -> key -> 'a -> 'a t -> 'a t
     val replace : exn -> key -> 'a -> 'a t -> 'a t
     val keys: 'a t -> key list
@@ -252,9 +252,9 @@ module Make(Ord: TaggedType) = struct
         Empty -> true
       | Node(l, v, d, r, _) -> p v d && for_all p l && for_all p r
 
-    let rec exists p = function
+    let rec exists_ p = function
         Empty -> false
-      | Node(l, v, d, r, _) -> p v d || exists p l || exists p r
+      | Node(l, v, d, r, _) -> p v d || exists_ p l || exists_ p r
 
     (* Beware: those two functions assume that the added k is *strictly*
        smaller (or bigger) than all the present keys in the tree; it
