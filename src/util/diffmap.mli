@@ -12,7 +12,7 @@
 exception Duplicate
 
 (** Input signature of the functor {!Diffmap.Make}. *)
-module type OrderedType = Map.OrderedType
+module type TaggedType = Extmap.TaggedType
 
 (** Output signature of the functor {!Diffmap.Make}. *)
 module type S = sig
@@ -49,6 +49,6 @@ module MakeOfMap (M : Extmap.S): S with module M = M
 (** Functor building an implementation of the map structure
     given a map type. *)
 
-module Make (Ord: OrderedType): S with type M.key = Ord.t
+module Make (Ord: TaggedType): S with type M.key = Ord.t
 (** Functor building an implementation of the map structure
     given a totally ordered type. *)

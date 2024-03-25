@@ -212,7 +212,7 @@ let d_monomorph ty_base kept lsmap d =
   let add ls acc = create_param_decl ls :: acc in
   Sls.fold add !consts dl
 
-module OHTyl = Wstdlib.OrderedHashedList(struct
+module OHTyl = Wstdlib.TaggedList(struct
   type t = ty
   let tag = ty_hash
 end)

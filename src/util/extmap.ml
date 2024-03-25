@@ -11,6 +11,12 @@
 (*                                                                     *)
 (***********************************************************************)
 
+module type TaggedType =
+sig
+  type t
+  val tag : t -> BigInt.t
+end
+
 (* This file originates from the OCaml v 3.12 Standard Library. Since
    then it has been adapted to OCaml 4.04 Standard Library. It was
    extended and modified for the needs of the Why3 project. It is
@@ -92,10 +98,12 @@ module type S =
     val next_ge_enum : key -> 'a enumeration -> 'a enumeration
   end
 
-module type OrderedType = Map.OrderedType
-module Make(Ord: OrderedType) = struct
+(* module type OrderedType = Map.OrderedType *)
+module Make(Ord: TaggedType) = struct
 
     type key = Ord.t
+
+    let key_compare k1 k2 : int = BigInt.compare (Ord.tag k1) (Ord.tag k2)
 
     type 'a t =
         Empty
@@ -149,7 +157,7 @@ module Make(Ord: OrderedType) = struct
         Empty ->
           Node(Empty, x, data, Empty, 1)
       | Node(l, v, d, r, h) as m ->
-          let c = Ord.compare x v in
+          let c = key_compare x v in
           if c = 0 then
             if d == data then m else Node(l, x, data, r, h)
           else if c < 0 then
@@ -163,7 +171,7 @@ module Make(Ord: OrderedType) = struct
         Empty ->
           raise Not_found
       | Node(l, v, d, r, _) ->
-          let c = Ord.compare x v in
+          let c = key_compare x v in
           if c = 0 then d
           else find x (if c < 0 then l else r)
 
@@ -171,7 +179,7 @@ module Make(Ord: OrderedType) = struct
         Empty ->
           false
       | Node(l, v, _, r, _) ->
-          let c = Ord.compare x v in
+          let c = key_compare x v in
           c = 0 || mem x (if c < 0 then l else r)
 
     let rec min_binding = function
@@ -203,7 +211,7 @@ module Make(Ord: OrderedType) = struct
         Empty ->
           Empty
       | (Node(l, v, d, r, _) as t) ->
-          let c = Ord.compare x v in
+          let c = key_compare x v in
           if c = 0 then merge l r
           else if c < 0 then
             let ll = remove x l in if l == ll then t else bal ll v d r
@@ -298,7 +306,7 @@ module Make(Ord: OrderedType) = struct
         Empty ->
           (Empty, None, Empty)
       | Node(l, v, d, r, _) ->
-          let c = Ord.compare x v in
+          let c = key_compare x v in
           if c = 0 then (l, Some d, r)
           else if c < 0 then
             let (ll, pres, rl) = split x l in (ll, pres, join rl v d r)
@@ -369,7 +377,7 @@ module Make(Ord: OrderedType) = struct
         | (End, _)  -> -1
         | (_, End) -> 1
         | (More(v1, d1, r1, e1), More(v2, d2, r2, e2)) ->
-            let c = Ord.compare v1 v2 in
+            let c = key_compare v1 v2 in
             if c <> 0 then c else
             let c = cmp d1 d2 in
             if c <> 0 then c else
@@ -383,7 +391,7 @@ module Make(Ord: OrderedType) = struct
         | (End, _)  -> false
         | (_, End) -> false
         | (More(v1, d1, r1, e1), More(v2, d2, r2, e2)) ->
-            Ord.compare v1 v2 = 0 && cmp d1 d2 &&
+            key_compare v1 v2 = 0 && cmp d1 d2 &&
             equal_aux (cons_enum r1 e1) (cons_enum r2 e2)
       in equal_aux (cons_enum m1 End) (cons_enum m2 End)
 
@@ -423,7 +431,7 @@ module Make(Ord: OrderedType) = struct
           | Some d -> Node(Empty, x, d, Empty, 1)
         end
       | Node(l, v, d, r, h) ->
-          let c = Ord.compare x v in
+          let c = key_compare x v in
           if c = 0 then
             (* concat or bal *)
             match f (Some d) with
@@ -460,7 +468,7 @@ module Make(Ord: OrderedType) = struct
       | Empty, _ -> true
       | _, Empty -> false
       | Node (l1, v1, d1, r1, _), (Node (l2, v2, d2, r2, _) as t2) ->
-          let c = Ord.compare v1 v2 in
+          let c = key_compare v1 v2 in
           if c = 0 then
             pr v1 d1 d2 && submap pr l1 l2 && submap pr r1 r2
           else if c < 0 then
@@ -474,7 +482,7 @@ module Make(Ord: OrderedType) = struct
       | Empty, _ -> true
       | _, Empty -> true
       | Node (l1, v1, d1, r1, _), (Node (l2, v2, d2, r2, _) as t2) ->
-          let c = Ord.compare v1 v2 in
+          let c = key_compare v1 v2 in
           if c = 0 then
             pr v1 d1 d2 && disjoint pr l1 l2 && disjoint pr r1 r2
           else if c < 0 then
@@ -494,21 +502,21 @@ module Make(Ord: OrderedType) = struct
     let rec find_def def x = function
         Empty -> def
       | Node(l, v, d, r, _) ->
-          let c = Ord.compare x v in
+          let c = key_compare x v in
           if c = 0 then d
           else find_def def x (if c < 0 then l else r)
 
     let rec find_opt x = function
         Empty -> None
       | Node(l, v, d, r, _) ->
-          let c = Ord.compare x v in
+          let c = key_compare x v in
           if c = 0 then Some d
           else find_opt x (if c < 0 then l else r)
 
     let rec find_exn exn x = function
         Empty -> raise exn
       | Node(l, v, d, r, _) ->
-          let c = Ord.compare x v in
+          let c = key_compare x v in
           if c = 0 then d
           else find_exn exn x (if c < 0 then l else r)
 
@@ -538,7 +546,7 @@ module Make(Ord: OrderedType) = struct
         | (End, _)  -> acc
         | (_, End) -> acc
         | (More(v1, d1, r1, e1), More(v2, d2, r2, e2)) ->
-          let c = Ord.compare v1 v2 in
+          let c = key_compare v1 v2 in
           if c = 0 then
             aux (f v1 d1 d2 acc) (cons_enum r1 e1) (cons_enum r2 e2)
           else if c < 0 then
@@ -556,7 +564,7 @@ module Make(Ord: OrderedType) = struct
         | (More(v1, d1, r1, e1), End) ->
           aux (f v1 (Some d1) None acc) (cons_enum r1 e1) End
         | (More(v1, d1, r1, e1), More(v2, d2, r2, e2)) ->
-          let c = Ord.compare v1 v2 in
+          let c = key_compare v1 v2 in
           if c = 0 then
             aux (f v1 (Some d1) (Some d2) acc)
               (cons_enum r1 e1) (cons_enum r2 e2)
@@ -575,7 +583,7 @@ module Make(Ord: OrderedType) = struct
           begin match last with
             | None -> ()
             | Some last ->
-              if Ord.compare last v >= 0
+              if key_compare last v >= 0
               then invalid_arg "Map.translate: invalid function parameter"
           end;
           let r,last = aux (Some v) r in
@@ -618,7 +626,7 @@ module Make(Ord: OrderedType) = struct
       match m with
         Empty -> e
       | Node(l, v, d, r, _) ->
-        let c = Ord.compare k v in
+        let c = key_compare k v in
         if c = 0 then More(v,d,r,e)
         else if c < 0 then cons_ge_enum k l (More(v, d, r, e))
         else (* c > 0 *) cons_ge_enum k r e
@@ -628,7 +636,7 @@ module Make(Ord: OrderedType) = struct
     let rec next_ge_enum k r0 = function
       | End -> start_ge_enum k r0
       | More(v,_,r,e) as e0 ->
-        let c = Ord.compare k v in
+        let c = key_compare k v in
         if c = 0 then e0
         else if c < 0 then cons_ge_enum k r0 e0
         else (*  c > 0  *) next_ge_enum k r  e

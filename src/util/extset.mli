@@ -12,7 +12,7 @@
 (** {1 Sets over ordered types} *)
 
 (** Input signature of the functor {!Extset.Make}. *)
-module type OrderedType = Set.OrderedType
+module type TaggedType = Extmap.TaggedType
 
 (** Output signature of the functor {!Extset.Make}. *)
 module type S =
@@ -179,6 +179,6 @@ module MakeOfMap (M : Extmap.S) : S with module M = M
 (** Functor building an implementation of the set structure
     given a totally ordered type. *)
 
-module Make (Ord : OrderedType) : S with type M.key = Ord.t
+module Make (Ord : TaggedType) : S with type M.key = Ord.t
 (** Functor building an implementation of the set structure
     given a totally ordered type. *)

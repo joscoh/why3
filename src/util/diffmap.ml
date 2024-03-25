@@ -61,6 +61,6 @@ module MakeOfMap (M: Extmap.S) = struct
       y
 end
 
-module type OrderedType = Map.OrderedType
+module type TaggedType = Extmap.TaggedType
 
-module Make (Ord: OrderedType) = MakeOfMap(Extmap.Make(Ord))
+module Make (Ord: TaggedType) = MakeOfMap(Extmap.Make(Ord))

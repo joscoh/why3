@@ -161,6 +161,7 @@ and Mv : Extmap.S with type key = Value.value =
   Extmap.Make (struct
     type t = Value.value
     let compare = Value.compare_values
+    let tag x = BigInt.of_int (Hashtbl.hash x) (*JOSH TODO hash - BAD dont know if hash function will work*)
   end)
 
 include Value

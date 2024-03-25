@@ -518,7 +518,8 @@ let mterm_generic ~trigger ~attr ~loc ~const
     : (module (Extmap.S with type key = term)) =
   (module (Extmap.Make(struct
       type t = term
-      let compare t1 t2 = t_compare ~trigger ~attr ~loc ~const t1 t2
+      let tag t = t_hash ~trigger ~attr ~const t (*TODO JOSH hash*)
+      (* let compare t1 t2 = t_compare ~trigger ~attr ~loc ~const t1 t2 *)
     end)))
 
 let sterm_generic ~trigger ~attr ~loc ~const
