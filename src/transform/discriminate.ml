@@ -96,7 +96,7 @@ let meta_select_alginst_default =
   register_meta_excl "select_alginst_default" [MTstring]
   ~desc:"Default@ setting@ for@ select_alginst"
 
-module OHTyl = OrderedHashedList(struct
+module OHTyl = TaggedList(struct
   type t = ty
   let tag = ty_hash
 end)

@@ -99,6 +99,8 @@ module Prover = struct
       BigInt.of_int (2 * Hashtbl.hash s1.prover_name +
       3 * Hashtbl.hash s1.prover_version +
       5 * Hashtbl.hash s1.prover_altern) (*JOSH TODO*)
+
+  let tag = hash 
 end
 
 module Mprover = Extmap.Make(Prover)
@@ -114,6 +116,7 @@ end )
 module Editor = struct
   type t = string
   let compare = String.compare
+  let tag x = BigInt.of_int (Hashtbl.hash x) (*JOSH TODO hash*)
 end
 
 module Meditor = Extmap.Make(Editor)

@@ -16,6 +16,7 @@ module Int = struct
   let compare (x : int) y = Stdlib.compare x y
   let equal (x : int) y = x = y
   let hash  (x : int) = BigInt.of_int x
+  let tag t = BigInt.of_int t
 end
 
 module Mint = Extmap.Make(Int)
@@ -27,7 +28,13 @@ module Hint = Exthtbl.Make(struct
   let hash x = x
 end)
 
-module Mstr = Extmap.Make(String)
+module Str = struct
+  type t = string
+  (*JOSH TODO bad could overwrite*)
+  let tag (s: string) : BigInt.t = (BigInt.of_int (Hashtbl.hash s))
+end
+
+module Mstr = Extmap.Make(Str)
 module Sstr = Extset.MakeOfMap(Mstr)
 module Hstr = Exthtbl.Make(struct
   type t    = String.t
@@ -38,6 +45,8 @@ end)
 
 module Float = struct
   type t = float
+  (* JOSH TODO Same with hash*)
+  let tag (x: float) : BigInt.t = BigInt.of_int (Exthtbl.hash x)
   let compare (x : float) y = Stdlib.compare x y
   let equal (x : float) y = x = y
   let hash  (x : float) = Exthtbl.hash x
@@ -72,6 +81,14 @@ struct
   let compare ts1 ts2 = BigInt.compare (X.tag ts1) (X.tag ts2)
 end
 
+module TaggedList (X: TaggedType) =
+struct
+  type t = X.t list
+  let tag = Hashcons.combine_big_list X.tag (BigInt.of_int 3)
+  let equ_ts ts1 ts2 = X.tag ts1 == X.tag ts2
+  let eq = Lists.equal equ_ts
+end
+
 module OrderedHashedList (X : TaggedType) =
 struct
   type t = X.t list
@@ -93,7 +110,7 @@ end
 module MakeMSH (X : TaggedType) =
 struct
   module T = OrderedHashed(X)
-  module M = Extmap.Make(T)
+  module M = Extmap.Make(X)
   module S = Extset.MakeOfMap(M)
   module O = OrderedIntHashed(T)
   module H = Exthtbl.Make(O)
@@ -107,8 +124,9 @@ end
 
 module MakeMSHW (X : Weakhtbl.Weakey) =
 struct
-  module T = OrderedHashed(MakeTagged(X))
-  module M = Extmap.Make(T)
+  module Tg = MakeTagged(X)
+  module T = OrderedHashed(Tg)
+  module M = Extmap.Make(Tg)
   module S = Extset.MakeOfMap(M)
   module O = OrderedIntHashed(T)
   module H = Exthtbl.Make(O)

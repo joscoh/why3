@@ -27,7 +27,11 @@
 *)
 
 (** Input signature of the functor {!Extmap.Make}. *)
-module type OrderedType = Map.OrderedType
+module type TaggedType = sig
+  type t
+  val tag : t -> BigInt.t
+end
+(* module type OrderedType = Map.OrderedType *)
 
 (** Output signature of the functor {!Extmap.Make}. *)
 module type S =
@@ -308,6 +312,6 @@ module type S =
         greater or equal to the given key *)
   end
 
-module Make (Ord : OrderedType) : S with type key = Ord.t
+module Make (Ord : TaggedType) : S with type key = Ord.t
 (** Functor building an implementation of the map structure
     given a totally ordered type. *)

@@ -42,6 +42,9 @@ end
 module OrderedHashed (X : TaggedType) :
   OrderedHashedType with type t = X.t
 
+module TaggedList (X: TaggedType) :
+  TaggedType with type t = X.t list
+
 module OrderedHashedList (X : TaggedType) :
   OrderedHashedType with type t = X.t list
 

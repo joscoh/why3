@@ -17,7 +17,7 @@ open Decl
 open Theory
 open Task
 
-module OHTyl = OrderedHashedList(struct
+module OHTyl = TaggedList(struct
   type t = ty
   let tag = ty_hash
 end)
