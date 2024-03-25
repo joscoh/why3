@@ -991,7 +991,7 @@ let while_loop_kind vc_attrs var_loc =
   let is_inv_pres a =
     a.attr_string = "expl:loop invariant preservation" ||
     a.attr_string = "expl:loop variant decrease" in
-  if Sattr.exists is_inv_pres vc_attrs then
+  if Sattr.exists_ is_inv_pres vc_attrs then
     let loop_loc =
       let is_while a = Strings.has_prefix "loop:" a.attr_string in
       let attr = Sattr.choose (Sattr.filter is_while vc_attrs) in

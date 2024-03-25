@@ -591,7 +591,7 @@ let print_axiom fmt (pr, f) =
 
 let print_prop_decl fmt (k,pr,f) =
   if shorten_axioms && k == Paxiom &&
-       not (Sattr.exists (Ident.attr_equal Ident.useraxiom_attr) pr.pr_name.id_attrs) then
+       not (Sattr.exists_ (Ident.attr_equal Ident.useraxiom_attr) pr.pr_name.id_attrs) then
     print_axiom fmt (pr, f)
   else
     (fprintf fmt "@[<hov 2>%a %a%a :@ %a@]" print_pkind k

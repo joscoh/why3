@@ -410,7 +410,7 @@ let is_counterexample_attr a =
   is_written_attr a || is_eid_attr a
 
 let has_a_model_attr id =
-  Sattr.exists is_counterexample_attr id.id_attrs
+  Sattr.exists_ is_counterexample_attr id.id_attrs
 
 let relevant_for_counterexample id =
   (id.id_loc <> None && not (Sattr.mem proxy_attr id.id_attrs))
@@ -441,7 +441,7 @@ let get_model_trace_attr ~attrs =
   Sattr.choose (Sattr.filter is_model_trace_attr attrs)
 
 let has_rac_assume =
-  Sattr.exists (fun a -> a.attr_string = "RAC:assume")
+  Sattr.exists_ (fun a -> a.attr_string = "RAC:assume")
 
 let transform_model_trace_attr attrs trans_fun =
   try

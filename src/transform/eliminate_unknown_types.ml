@@ -23,7 +23,7 @@ let syntactic_transform =
       match meta_arg with
       | [MAts ts; MAstr _; MAint _] -> Sts.add ts acc
       | _ -> assert false) Sts.empty metas in
-      Trans.return (fun ts -> Sts.exists (ts_equal ts) symbols))
+      Trans.return (fun ts -> Sts.exists_ (ts_equal ts) symbols))
 
 let remove_terms keep =
   let keep_ls ls =

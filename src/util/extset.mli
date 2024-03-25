@@ -78,7 +78,7 @@ module type S =
     (** [for_all p s] checks if all the elements of [s] satisfy
         the predicate [p]. *)
 
-    val exists: (elt -> bool) -> t -> bool
+    val exists_: (elt -> bool) -> t -> bool
     (** [exists p s] checks if at least one element of [s] satisfies
         the predicate [p]. *)
 
@@ -112,7 +112,7 @@ module type S =
         the set is empty. Which element is chosen is unspecified,
         but equal elements will be chosen for equal sets. *)
 
-    val split: elt -> t -> t * bool * t
+    (* val split: elt -> t -> t * bool * t *)
     (** [split x s] returns a triple [(l, mem, r)], where
         [l] is the set with all the elements of [s] that are
         strictly less than [x];
@@ -147,7 +147,7 @@ module type S =
         where [e1 ... eN] are the elements of [union s1 s2]
         in increasing order. *)
 
-    val translate : (elt -> elt) -> t -> t
+    (* val translate : (elt -> elt) -> t -> t *)
     (** [translate f s] translates the elements in the set [s] by the
         function [f]. [f] must be strictly monotone on the elements of [s].
         Otherwise it raises [Invalid_arg]. *)

@@ -96,3 +96,5 @@ val hash : t -> int
 (* 3. Convenience*)
 val is_zero : t -> bool
 val pos : t -> bool
+val to_Z : t -> Z.t
+val of_Z : Z.t -> t

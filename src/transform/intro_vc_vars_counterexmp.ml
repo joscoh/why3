@@ -39,7 +39,7 @@ let check_enter_vc_term t info =
      postcondition or precondition of a function, extract the name of
      the corresponding function.
   *)
-  if Sattr.exists is_model_vc_attr t.t_attrs then
+  if Sattr.exists_ is_model_vc_attr t.t_attrs then
     begin
       info.vc_inside <- true;
       info.vc_loc <- t.t_loc;
@@ -67,12 +67,12 @@ let same_line_locs loc1 ls =
     | _ -> false
   in
   is_same ||
-  Sattr.exists (fun x ->
+  Sattr.exists_ (fun x ->
       let loc = get_written_loc x in
       same_line_loc loc loc1) ls.id_attrs
 
 let add_model_trace_attr name attrs =
-  if Sattr.exists is_model_trace_attr attrs then
+  if Sattr.exists_ is_model_trace_attr attrs then
     attrs
   else
     let mt_attr = create_attribute ("model_trace:" ^ name) in

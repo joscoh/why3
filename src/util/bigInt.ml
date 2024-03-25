@@ -92,3 +92,5 @@ let hash = Z.hash
 (*For convenience*)
 let is_zero (x: t) : bool = eq x zero
 let pos (x: t) : bool = compare x zero > 0
+let to_Z (x: t) : Z.t = x
+let of_Z (x: Z.t) : t = x

@@ -1270,7 +1270,7 @@ module FromModelToTerm = struct
   let is_vs_in_prover_vars vs prover_vars =
     List.exists
       (fun mvs ->
-        Ty.Mty.exists
+        Ty.Mty.exists_
           (fun ty vs' -> Ty.ty_equal ty vs.vs_ty && Term.vs_equal vs' vs)
           mvs)
       (Mstr.values prover_vars)

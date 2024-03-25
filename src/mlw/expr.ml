@@ -431,7 +431,7 @@ let localize_ghost_write v r el =
   let taints eff = Mreg.mem r eff.eff_taints in
   let writes eff = match Mreg.find_opt r eff.eff_writes with
     | Some fds -> r.reg_its.its_private ||
-        Spv.exists (fun fd -> not fd.pv_ghost) fds
+        Spv.exists_ (fun fd -> not fd.pv_ghost) fds
     | None -> false in
   (* check if some component taints region r *)
   List.iter (fun e -> if taints e.e_effect then
