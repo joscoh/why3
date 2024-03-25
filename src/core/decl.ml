@@ -290,6 +290,7 @@ type prsymbol = {
 module Prop = MakeMSHW (struct
   type t = prsymbol
   let tag pr = pr.pr_name.id_tag
+  let equal = (==) (*JOSH TODO equal*)
 end)
 
 module Spr = Prop.S
@@ -396,6 +397,7 @@ end)
 module Decl = MakeMSHW (struct
   type t = decl
   let tag d = d.d_tag
+  let equal = (==) (*JOSH TODO equal*)
 end)
 
 module Sdecl = Decl.S

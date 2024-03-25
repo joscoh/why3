@@ -115,7 +115,7 @@ let print_meta_desc fmt m =
   fprintf fmt "@[%s@\n  @[%a@]@]"
     m.meta_name Pp.formatted m.meta_desc
 
-module SMmeta = MakeMSH(struct type t = meta let tag m = m.meta_tag end)
+module SMmeta = MakeMSH(struct type t = meta let tag m = m.meta_tag let equal = (==) (*JOSH TODO equal*) end)
 
 module Smeta = SMmeta.S
 module Mmeta = SMmeta.M
@@ -278,6 +278,7 @@ let mk_tdecl n = Hstdecl.hashcons { td_node = n ; td_tag = BigInt.of_int(-1) }
 module Tdecl = MakeMSH (struct
   type t = tdecl
   let tag td = td.td_tag
+  let equal = (==) (*JOSH TODO equal*)
 end)
 
 module Stdecl = Tdecl.S

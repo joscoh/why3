@@ -23,6 +23,7 @@ type vsymbol = {
 module Vsym = MakeMSHW (struct
   type t = vsymbol
   let tag vs = vs.vs_name.id_tag
+  let equal = (==) (*JOSH TODO equal*)
 end)
 
 module Svs = Vsym.S
@@ -52,6 +53,7 @@ type lsymbol = {
 module Lsym = MakeMSHW (struct
   type t = lsymbol
   let tag ls = ls.ls_name.id_tag
+  let equal = (==) (*JOSH TODO equal*)
 end)
 
 module Sls = Lsym.S
@@ -520,6 +522,7 @@ let mterm_generic ~trigger ~attr ~loc ~const
       type t = term
       let tag t = t_hash ~trigger ~attr ~const t (*TODO JOSH hash*)
       (* let compare t1 t2 = t_compare ~trigger ~attr ~loc ~const t1 t2 *)
+      let equal x y = (t_compare ~trigger ~attr ~loc ~const x y = 0) (*JOSH TODO equal*)
     end)))
 
 let sterm_generic ~trigger ~attr ~loc ~const

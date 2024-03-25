@@ -28,6 +28,7 @@ type tdecl_set = Stdecl.t
 module Wtds = Weakhtbl.Make(struct
   type t = tdecl_set
   let tag s = Weakhtbl.create_int_tag (Stdecl.id s)
+  let equal = (==) (*JOSH TODO equal*)
 end)
 
 

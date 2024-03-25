@@ -99,6 +99,7 @@ let meta_select_alginst_default =
 module OHTyl = TaggedList(struct
   type t = ty
   let tag = ty_hash
+  let equal = (==) (*JOSH TODO equal*)
 end)
 
 module Styl = Extset.Make(OHTyl)
