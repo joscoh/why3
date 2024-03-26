@@ -12,13 +12,13 @@ module MakeCtr =
   let create =
     fun x -> ctr_ref := x
 
-  (** val incr : unit ctr **)
+  (** val incr : unit -> unit ctr **)
 
-  let incr =
+  let incr _ =
     (ctr_ref := BigInt.succ !ctr_ref)
 
-  (** val get : BigInt.t ctr **)
+  (** val get : unit -> BigInt.t ctr **)
 
-  let get =
+  let get _ =
     !ctr_ref
  end

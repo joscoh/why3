@@ -91,6 +91,7 @@ type preid = {
 val id_register : preid -> ident
 
 (** create a fresh pre-ident *)
+val id_fresh1 : string -> preid
 val id_fresh : ?attrs:Sattr.t -> ?loc:Loc.position -> string -> preid
 
 (** create a localized pre-ident *)
@@ -107,6 +108,15 @@ val id_derive : ?attrs:Sattr.t -> string -> ident -> preid
 
 (* DEPRECATED : retrieve preid name without registering *)
 val preid_name : preid -> string
+
+(*JOSH - builtin symbols*)
+val id_int : ident
+val id_real : ident
+val id_bool : ident
+val id_str : ident
+val id_a : ident
+val id_b : ident
+val id_fun : ident
 
 (** Unique persistent names for pretty printing *)
 
