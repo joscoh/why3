@@ -1,38 +1,97 @@
-(********************************************************************)
-(*                                                                  *)
-(*  The Why3 Verification Platform   /   The Why3 Development Team  *)
-(*  Copyright 2010-2023 --  Inria - CNRS - Paris-Saclay University  *)
-(*                                                                  *)
-(*  This software is distributed under the terms of the GNU Lesser  *)
-(*  General Public License version 2.1, with the special exception  *)
-(*  on linking described in file LICENSE.                           *)
-(*                                                                  *)
-(********************************************************************)
+open BinNums
+open Weakhtbl
+open ErrorMonad
+open Specif
+open Base
+open Extmap
+open Extset
+open Pmap
+open Zmap
+
+module OrderedHashed =
+ functor (X:TaggedType) ->
+ struct
+  type t = X.t
+
+  (** val hash : X.t -> BigInt.t **)
+
+  let hash =
+    X.tag
+
+  (** val equal : X.t -> X.t -> bool **)
+
+  let equal ts1 ts2 =
+    BigInt.eq (X.tag ts1) (X.tag ts2)
+
+  (** val compare : X.t -> X.t -> Int.t **)
+
+  let compare ts1 ts2 =
+    BigInt.compare (X.tag ts1) (X.tag ts2)
+ end
+
+module MakeMS =
+ functor (X:TaggedType) ->
+ struct
+  module T = OrderedHashed(X)
+
+  module M = Extmap.Make(X)
+
+  module S = MakeOfMap(M)
+ end
+
+module MakeTagged =
+ functor (X:Weakey) ->
+ struct
+  type t = X.t
+
+  (** val tag : X.t -> tag **)
+
+  let tag x =
+    tag_hash (X.tag x)
+
+  (** val equal : (t, t) coq_RelDecision **)
+
+  let equal =
+    X.equal
+ end
+
+module MakeMSWeak =
+ functor (X:Weakey) ->
+ struct
+  module Tg = MakeTagged(X)
+
+  module T = OrderedHashed(Tg)
+
+  module M = Extmap.Make(Tg)
+
+  module S = MakeOfMap(M)
+ end
 
 (* Set, Map, Hashtbl on ints and strings *)
 
 module Int = struct
   type t = int
+  let tag (x: int) : BigInt.t = BigInt.of_int x
+  let eq = ((=) : int -> int -> bool)
   let compare (x : int) y = Stdlib.compare x y
   let equal (x : int) y = x = y
   let hash  (x : int) = BigInt.of_int x
-  let tag t = BigInt.of_int t
 end
 
 module Mint = Extmap.Make(Int)
 module Sint = Extset.MakeOfMap(Mint)
 module Hint = Exthtbl.Make(struct
   type t = Int.t
-  let compare = Int.compare
-  let equal = Int.equal
+  let compare = Stdlib.compare
+  let equal = Int.eq
   let hash x = x
 end)
 
 module Str = struct
   type t = string
-  (*JOSH TODO bad could overwrite*)
+  (*TODO bad could overwrite*)
   let tag (s: string) : BigInt.t = (BigInt.of_int (Hashtbl.hash s))
-  let equal s1 s2 = String.equal s1 s2
+  let equal (s1 : string) (s2: string) : bool = s1 = s2
 end
 
 module Mstr = Extmap.Make(Str)
@@ -46,8 +105,9 @@ end)
 
 module Float = struct
   type t = float
-  (* JOSH TODO Same with hash*)
+  (*Same with hash*)
   let tag (x: float) : BigInt.t = BigInt.of_int (Exthtbl.hash x)
+  let eq (f1: float) (f2: float) : bool = Float.equal f1 f2
   let compare (x : float) y = Stdlib.compare x y
   let equal (x : float) y = x = y
   let hash  (x : float) = Exthtbl.hash x
@@ -58,13 +118,12 @@ module Sfloat = Extset.MakeOfMap(Mfloat)
 module Hfloat = Exthtbl.Make(Float)
 
 
-(* Set, Map, Hashtbl on structures with a unique tag *)
-
+(*TODO: Coq extraction does not extract module types?*)
 module type TaggedType =
 sig
   type t
   val tag : t -> BigInt.t
-  val equal : t -> t -> bool
+  val equal : t -> t -> bool (*JOSH: added*)
 end
 
 module type OrderedHashedType =
@@ -73,14 +132,6 @@ sig
   val hash : t -> BigInt.t
   val equal : t -> t -> bool
   val compare : t -> t -> int
-end
-
-module OrderedHashed (X : TaggedType) =
-struct
-  type t = X.t
-  let hash = X.tag
-  let equal ts1 ts2 = X.tag ts1 == X.tag ts2
-  let compare ts1 ts2 = BigInt.compare (X.tag ts1) (X.tag ts2)
 end
 
 module TaggedList (X: TaggedType) =
@@ -109,6 +160,7 @@ let equal = X.equal
 let compare = X.compare
 end
 
+
 module MakeMSH (X : TaggedType) =
 struct
   module T = OrderedHashed(X)
@@ -118,12 +170,12 @@ struct
   module H = Exthtbl.Make(O)
 end
 
-module MakeTagged (X : Weakhtbl.Weakey) =
+(*module MakeTagged (X : Weakhtbl.Weakey) =
 struct
   type t = X.t
   let tag t = Weakhtbl.tag_hash (X.tag t)
-  let equal = X.equal
-end
+  let eq x1 x2 = X.eq x1 x2
+end*)
 
 module MakeMSHW (X : Weakhtbl.Weakey) =
 struct

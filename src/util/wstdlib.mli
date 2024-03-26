@@ -29,7 +29,7 @@ module type TaggedType =
 sig
   type t
   val tag : t -> BigInt.t
-  val equal : t -> t -> bool
+  val equal : t -> t -> bool (*JOSH ADDED*)
 end
 
 module type OrderedHashedType =
@@ -48,6 +48,18 @@ module TaggedList (X: TaggedType) :
 
 module OrderedHashedList (X : TaggedType) :
   OrderedHashedType with type t = X.t list
+
+module MakeMS (X : TaggedType) :
+sig
+  module M : Extmap.S with type key = X.t
+  module S : Extset.S with module M = M
+end
+
+module MakeMSWeak (X : Weakhtbl.Weakey) :
+sig
+  module M : Extmap.S with type key = X.t
+  module S : Extset.S with module M = M
+end
 
 module MakeMSH (X : TaggedType) :
 sig
