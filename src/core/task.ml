@@ -93,9 +93,9 @@ module Hstask = Hashcons.Make (struct
   let equal t1 t2 = td_equal t1.task_decl t2.task_decl &&
                   task_equal t1.task_prev t2.task_prev
 
-  let hash t = BigInt.hash (Hashcons.combine_big (td_hash t.task_decl) (task_hash t.task_prev))
+  let hash t =  (Hashcons.combine_big (td_hash t.task_decl) (task_hash t.task_prev))
 
-  let tag i task = { task with task_tag = Weakhtbl.create_int_tag i }
+  let tag i task = { task with task_tag = Weakhtbl.create_tag i }
 end)
 
 let mk_task decl prev known clone meta = Some (Hstask.hashcons {

@@ -31,8 +31,8 @@ module Mattr = Attr.M
 module Hsattr = Hashcons.Make (struct
   type t = attribute
   let equal a1 a2 = a1.attr_string = a2.attr_string
-  let hash a = Hashtbl.hash a.attr_string
-  let tag n a = { a with attr_tag = BigInt.of_int n }
+  let hash a = BigInt.of_int (Hashtbl.hash a.attr_string)
+  let tag n a = { a with attr_tag = n }
 end)
 
 let create_attribute s = Hsattr.hashcons {

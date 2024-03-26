@@ -1,74 +1,59 @@
-(********************************************************************)
-(*                                                                  *)
-(*  The Why3 Verification Platform   /   The Why3 Development Team  *)
-(*  Copyright 2010-2023 --  Inria - CNRS - Paris-Saclay University  *)
-(*                                                                  *)
-(*  This software is distributed under the terms of the GNU Lesser  *)
-(*  General Public License version 2.1, with the special exception  *)
-(*  on linking described in file LICENSE.                           *)
-(*                                                                  *)
-(********************************************************************)
-
-(** Hash tables for hash consing
-
-    Hash consing tables are using weak pointers, so that values that are no
-    more referenced from anywhere else can be erased by the GC.
-
-    Look in src/core/term.ml for usage examples. *)
-
-(** Values to be hash-consed must implement signature [HashedType] below.
-    Type [t] is the type of values to be hash-consed.
-    The user must provide an equality and a hash function over type [t],
-    as well as a function [tag] to build a new value of type [t] from
-    an old one and a unique integer tag. *)
+open CoqHashtbl
+open List0
+open StateMonad
 
 module type HashedType =
-  sig
-    type t
-    val equal : t -> t -> bool
-    val hash : t -> int
-    val tag : int -> t -> t
-  end
+ sig
+  type t
+
+  val equal : t -> t -> bool
+
+  val hash : t -> BigInt.t
+
+  val tag : BigInt.t -> t -> t
+ end
 
 module type S =
-  sig
-    type t
+ sig
+  type t
 
-    val hashcons : t -> t
-      (** [hashcons n] hash-cons value [n] i.e. returns any existing
-          value in the table equal to [n], if any; otherwise, creates
-          a new value with function [tag], stores it in the table and
-          returns it. *)
+  val hashcons : t -> (t, t) hashcons_st
 
-    val unique : t -> t
-      (** [unique n] registers the new value [n] without hash-consing.
-          This should be used in case where the value is guaranteed to
-          be unique, i.e. not equal to any other value, old or future.
-          Unique values are not visited by [iter]. *)
+  val unique : t -> (t, t) hashcons_st
 
-    val iter : (t -> unit) -> unit
-      (** [iter f] iterates [f] over all elements of the table. *)
+  val iter : (t -> unit) -> (t, unit) hashcons_st
 
-    val stats : unit -> int * int * int * int * int * int
-      (** Return statistics on the table.  The numbers are, in order:
-          table length, number of entries, sum of bucket lengths,
-          smallest bucket length, median bucket length, biggest
-          bucket length. *)
-  end
+  val stats :
+    unit -> (t, ((((Int.t * Int.t) * Int.t) * Int.t) * Int.t) * Int.t)
+    hashcons_st
+ end
 
-module Make(H : HashedType) : (S with type t = H.t)
+module Make :
+ functor (H:HashedType) ->
+ sig
+  type t = H.t
 
+  val hash_st : H.t hashcons_unit
 
-(* helpers *)
+  val unique : t -> (H.t, t) hashcons_st
 
-val combine : int -> int -> int
-val combine2 : int -> int -> int -> int
-val combine3 : int -> int -> int -> int -> int
-val combine_list : ('a -> int) -> int -> 'a list -> int
-val combine_option : ('a -> int) -> 'a option -> int
-val combine_pair : ('a -> int) -> ('b -> int) -> 'a * 'b -> int
+  val hashcons : t -> (H.t, t) hashcons_st
+
+  val iter : (t -> unit) -> (H.t, unit) hashcons_st
+
+  val stats :
+    unit -> (H.t, ((((Int.t * Int.t) * Int.t) * Int.t) * Int.t) * Int.t)
+    hashcons_st
+ end
+
+val combine : Int.t -> Int.t -> Int.t
+
+val combine_list : ('a1 -> Int.t) -> Int.t -> 'a1 list -> Int.t
 
 val combine_big : BigInt.t -> BigInt.t -> BigInt.t
+
 val combine2_big : BigInt.t -> BigInt.t -> BigInt.t -> BigInt.t
-val combine_big_list : ('a -> BigInt.t) -> BigInt.t -> 'a list -> BigInt.t
-val combine_big_option : ('a -> BigInt.t) -> 'a option -> BigInt.t
+
+val combine_big_list : ('a1 -> BigInt.t) -> BigInt.t -> 'a1 list -> BigInt.t
+
+val combine_big_option : ('a1 -> BigInt.t) -> 'a1 option -> BigInt.t

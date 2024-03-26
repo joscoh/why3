@@ -382,7 +382,7 @@ module Hsdecl = Hashcons.Make (struct
   let hs_kind = function
     | Plemma -> BigInt.of_int 11 | Paxiom -> BigInt.of_int 13 | Pgoal -> BigInt.of_int 17
 
-  let hash d = BigInt.hash (match d.d_node with
+  let hash d =  (match d.d_node with
     | Dtype  s -> ts_hash s
     | Ddata  l -> Hashcons.combine_big_list hs_td (BigInt.of_int 3) l
     | Dparam s -> ls_hash s
@@ -390,7 +390,7 @@ module Hsdecl = Hashcons.Make (struct
     | Dind (_,l) -> Hashcons.combine_big_list hs_ind (BigInt.of_int 7) l
     | Dprop (k,pr,f) -> Hashcons.combine_big (hs_kind k) (hs_prop (pr,f)))
 
-  let tag n d = { d with d_tag = Weakhtbl.create_int_tag n }
+  let tag n d = { d with d_tag = Weakhtbl.create_tag n }
 
 end)
 

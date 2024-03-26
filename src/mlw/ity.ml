@@ -139,12 +139,12 @@ module Hsity = Hashcons.Make (struct
         List.for_all2 ity_equal r1 r2
     | _ -> false
 
-  let hash ity = match ity.ity_node with
+  let hash ity = BigInt.of_int (match ity.ity_node with
     | Ityvar v -> BigInt.to_int (tv_hash v) (*JOSH*)
     | Ityreg r -> reg_hash r
     | Ityapp (s,tl,rl) ->
         Hashcons.combine_list ity_hash
-          (Hashcons.combine_list ity_hash (its_hash s) tl) rl
+          (Hashcons.combine_list ity_hash (its_hash s) tl) rl) (*TODO JOSH*)
 
   let pure ity = match ity.ity_node with
     | Ityvar _ -> true
@@ -155,7 +155,7 @@ module Hsity = Hashcons.Make (struct
 
   let tag n ity = { ity with
     ity_pure = pure ity;
-    ity_tag = Weakhtbl.create_int_tag n } (*JOSH*)
+    ity_tag = Weakhtbl.create_tag n } (*JOSH*)
 end)
 
 let mk_ity node = {

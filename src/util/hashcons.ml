@@ -1,68 +1,113 @@
-(********************************************************************)
-(*                                                                  *)
-(*  The Why3 Verification Platform   /   The Why3 Development Team  *)
-(*  Copyright 2010-2023 --  Inria - CNRS - Paris-Saclay University  *)
-(*                                                                  *)
-(*  This software is distributed under the terms of the GNU Lesser  *)
-(*  General Public License version 2.1, with the special exception  *)
-(*  on linking described in file LICENSE.                           *)
-(*                                                                  *)
-(********************************************************************)
-
-(*s Hash tables for hash-consing. (Some code is borrowed from the ocaml
-    standard library, which is copyright 1996 INRIA.) *)
+open CoqHashtbl
+open List0
+open StateMonad
 
 module type HashedType =
-  sig
-    type t
-    val equal : t -> t -> bool
-    val hash : t -> int
-    val tag : int -> t -> t
-  end
+ sig
+  type t
+
+  val equal : t -> t -> bool
+
+  val hash : t -> BigInt.t
+
+  val tag : BigInt.t -> t -> t
+ end
 
 module type S =
-  sig
-    type t
-    val hashcons : t -> t
-    val unique : t -> t
-    val iter : (t -> unit) -> unit
-    val stats : unit -> int * int * int * int * int * int
-  end
+ sig
+  type t
 
-module Make(H : HashedType) : (S with type t = H.t) =
-struct
+  val hashcons : t -> (t, t) hashcons_st
+
+  val unique : t -> (t, t) hashcons_st
+
+  val iter : (t -> unit) -> (t, unit) hashcons_st
+
+  val stats :
+    unit -> (t, ((((Int.t * Int.t) * Int.t) * Int.t) * Int.t) * Int.t)
+    hashcons_st
+ end
+
+module Make =
+ functor (H:HashedType) ->
+ struct
   type t = H.t
 
-  module WH = Weak.Make (H)
+  (** val hash_st : H.t hashcons_unit **)
 
-  let next_tag = ref 0
+  let hash_st =
+    ref (BigInt.one, CoqHashtbl.create_hashset)
 
-  let htable = WH.create 5003
-
-  let hashcons d =
-    let d = H.tag !next_tag d in
-    let o = WH.merge htable d in
-    if o == d then incr next_tag;
-    o
+  (** val unique : t -> (H.t, t) hashcons_st **)
 
   let unique d =
-    let d = H.tag !next_tag d in
-    incr next_tag;
-    d
+    (@@) (fun i ->
+      let d0 = H.tag i d in
+      (@@) (fun _ ->  d0)
+        (let old = !hash_st in
+    hash_st := (BigInt.succ (fst old), (snd old))))
+      (fst !hash_st)
 
-  let iter f = WH.iter f htable
+  (** val hashcons : t -> (H.t, t) hashcons_st **)
 
-  let stats () = WH.stats htable
-end
+  let hashcons d =
+    (@@) (fun o ->
+      match o with
+      | Some k ->  k
+      | None ->
+        (@@) (fun i ->
+          let d1 = H.tag i d in
+          (@@) (fun _ ->
+            (@@) (fun _ ->  d1)
+              (let old = !hash_st in
+    hash_st := (BigInt.succ (fst old), (snd old))))
+            ((fun _ k -> let old = !hash_st in
+              hash_st := (fst old, CoqHashtbl.add_hashset H.hash (snd old) k))
+              H.hash d1)) (fst !hash_st))
+      ((fun _ _ k -> CoqHashtbl.find_opt_hashset H.hash H.equal (snd !hash_st) k)
+        H.hash H.equal d)
 
-let combine acc n = acc * 65599 + n
-let combine2 acc n1 n2 = combine (combine acc n1) n2
-let combine3 acc n1 n2 n3 = combine (combine2 acc n1 n2) n3
-let combine_list f acc l = List.fold_left (fun acc x -> combine acc (f x)) acc l
-let combine_option h = function None -> -1 | Some s -> h s
-let combine_pair h1 h2 (a1,a2) = combine (h1 a1) (h2 a2)
+  (** val iter : (t -> unit) -> (H.t, unit) hashcons_st **)
 
-let combine_big acc n = BigInt.add (BigInt.mul_int 65599 acc) n
-let combine2_big acc n1 n2 = combine_big (combine_big acc n1) n2
-let combine_big_list f acc l = List.fold_left (fun acc x -> combine_big acc (f x)) acc l
-let combine_big_option h = function None -> BigInt.of_int (-1) | Some s -> h s
+  let iter f =
+    (@@) (fun h ->  (iter_hashset_unsafe f h)) (snd !hash_st)
+
+  (** val stats :
+      unit -> (H.t, ((((Int.t * Int.t) * Int.t) * Int.t) * Int.t) * Int.t)
+      hashcons_st **)
+
+  let stats _ =
+     (((((Int.zero, Int.zero), Int.zero), Int.zero), Int.zero), Int.zero)
+ end
+
+(** val combine : Int.t -> Int.t -> Int.t **)
+
+let combine acc n =
+  Int.add (Int.mul acc 65599) n
+
+(** val combine_list : ('a1 -> Int.t) -> Int.t -> 'a1 list -> Int.t **)
+
+let combine_list f acc l =
+  fold_left (fun acc0 x -> combine acc0 (f x)) l acc
+
+(** val combine_big : BigInt.t -> BigInt.t -> BigInt.t **)
+
+let combine_big acc n =
+  BigInt.add (BigInt.mul_int 65599 acc) n
+
+(** val combine2_big : BigInt.t -> BigInt.t -> BigInt.t -> BigInt.t **)
+
+let combine2_big acc n1 n2 =
+  combine_big (combine_big acc n1) n2
+
+(** val combine_big_list :
+    ('a1 -> BigInt.t) -> BigInt.t -> 'a1 list -> BigInt.t **)
+
+let combine_big_list f acc l =
+  fold_left (fun acc0 x -> combine_big acc0 (f x)) l acc
+
+(** val combine_big_option : ('a1 -> BigInt.t) -> 'a1 option -> BigInt.t **)
+
+let combine_big_option h = function
+| Some s -> h s
+| None -> (BigInt.of_int (-1))
