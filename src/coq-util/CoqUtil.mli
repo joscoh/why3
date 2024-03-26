@@ -1,4 +1,17 @@
+open BinNums
+open Byte
 open Datatypes
+open List0
+
+val bits_to_pos : bool list -> positive
+
+val bittup_to_bits :
+  (bool * (bool * (bool * (bool * (bool * (bool * (bool * bool))))))) -> bool
+  list
+
+val byte_to_bits : char -> bool list
+
+val str_to_pos : string -> positive
 
 val list_eqb : ('a1 -> 'a1 -> bool) -> 'a1 list -> 'a1 list -> bool
 

@@ -1,3 +1,10 @@
+open Datatypes
+
+(** val concat : 'a1 list list -> 'a1 list **)
+
+let rec concat = function
+| [] -> []
+| x :: l0 -> app x (concat l0)
 
 (** val map : ('a1 -> 'a2) -> 'a1 list -> 'a2 list **)
 

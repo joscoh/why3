@@ -1,3 +1,71 @@
+(*JOSH temp*)
+open Ident
+open CoqUtil
+open Wstdlib
+
+type tvsymbol = { tv_name : ident }
+
+(** val tv_name : tvsymbol -> ident **)
+
+let tv_name t0 =
+  t0.tv_name
+
+(** val tvsymbol_eqb : tvsymbol -> tvsymbol -> bool **)
+
+let tvsymbol_eqb t1 t2 =
+  id_equal t1.tv_name t2.tv_name
+
+(** val tvsymbol_eq : (tvsymbol, tvsymbol) coq_RelDecision **)
+
+let tvsymbol_eq =
+  dec_from_eqb tvsymbol_eqb
+
+module TvarTagged =
+ struct
+  type t = tvsymbol
+
+  (** val tag : tvsymbol -> tag **)
+
+  let tag tv =
+    tv.tv_name.id_tag
+
+  (** val equal : (tvsymbol, tvsymbol) coq_RelDecision **)
+
+  let equal =
+    tvsymbol_eq
+ end
+
+module Tvar = MakeMSWeak(TvarTagged)
+
+module Stv = Tvar.S
+
+module Mtv = Tvar.M
+
+(** val tv_equal : tvsymbol -> tvsymbol -> bool **)
+
+let tv_equal =
+  tvsymbol_eqb
+
+(** val tv_hash : tvsymbol -> BigInt.t **)
+
+let tv_hash tv =
+  id_hash tv.tv_name
+
+(** val tv_compare : tvsymbol -> tvsymbol -> Int.t **)
+
+let tv_compare tv1 tv2 =
+  id_compare tv1.tv_name tv2.tv_name
+
+(** val create_tvsymbol : preid -> tvsymbol ctr **)
+
+let create_tvsymbol n =
+  (@@) (fun i ->  { tv_name = i }) (id_register n)
+
+(** val tv_of_string : string -> tvsymbol ctr **)
+
+let tv_of_string s =
+  create_tvsymbol (id_fresh1 s)
+
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -9,30 +77,32 @@
 (*                                                                  *)
 (********************************************************************)
 
-open Wstdlib
+(* open Wstdlib
 open Ident
 
 (** Types *)
 
 type tvsymbol = {
   tv_name : ident;
-}
+} *)
 
-module Tvar = MakeMSHW (struct
+module Tvar2 = MakeMSHW (struct
   type t = tvsymbol
   let tag tv = tv.tv_name.id_tag
   let equal = (==) (*JOSH TODO equal*)
 end)
 
-module Stv = Tvar.S
-module Mtv = Tvar.M
-module Htv = Tvar.H
+(* module Stv = Tvar.S
+module Mtv = Tvar.M *)
+module Htv = Tvar2.H
 
-let tv_equal : tvsymbol -> tvsymbol -> bool = (==)
+(* let tv_equal : tvsymbol -> tvsymbol -> bool = (==)
 let tv_hash tv = id_hash tv.tv_name
 let tv_compare tv1 tv2 = id_compare tv1.tv_name tv2.tv_name
 
-let create_tvsymbol n = { tv_name = id_register n }
+let create_tvsymbol n = { tv_name = id_register n } *)
+
+
 
 let tv_of_string =
   let hs = Hstr.create 17 in fun s ->

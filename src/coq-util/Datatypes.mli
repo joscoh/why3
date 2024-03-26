@@ -7,6 +7,8 @@ type nat =
 
 val option_map : ('a1 -> 'a2) -> 'a1 option -> 'a2 option
 
+val app : 'a1 list -> 'a1 list -> 'a1 list
+
 type comparison =
 | Eq
 | Lt
