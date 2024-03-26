@@ -263,13 +263,13 @@ module Hstdecl = Hashcons.Make (struct
         (Mls.fold hs_cl_ls sm.sm_ls
           (Mpr.fold hs_cl_pr sm.sm_pr h)))
 
-  let hash td = BigInt.hash (match td.td_node with
+  let hash td =  (match td.td_node with
     | Decl d -> d_hash d 
     | Use th -> id_hash th.th_name 
     | Clone (th,sm) -> hs_smap sm  (id_hash th.th_name)
     | Meta (t,al) -> Hashcons.combine_big_list hs_ta (BigInt.of_int (Hashtbl.hash t)) al) 
 
-  let tag n td = { td with td_tag = BigInt.of_int n }
+  let tag n td = { td with td_tag = n }
 
 end)
 

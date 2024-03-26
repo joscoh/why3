@@ -43,11 +43,11 @@ module Hsdecl = Hashcons.Make (struct
         k1 = k2 && pr_equal pr1 pr2 && t_equal_strict f1 f2
     | _,_ -> d_equal d1 d2
 
-  let hash d = match d.d_node with
+  let hash d = BigInt.of_int (match d.d_node with
     | Dprop (k,pr,f) -> Hashcons.combine (Hashcons.combine
         (Hashtbl.hash pr.pr_name.id_string) (BigInt.hash (t_hash_strict f))) (*JOSH TODO*)
         (match k with Plemma -> 11 | Paxiom -> 13 | Pgoal -> 17)
-    | _ -> BigInt.to_int (d_hash d) (*JOSH - big_int*)
+    | _ -> BigInt.to_int (d_hash d) (*JOSH - big_int*)) (*TODO JOSH*)
 
   let tag _ d = d
 end)
