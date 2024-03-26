@@ -1,3 +1,19 @@
+(*A horrible hack for the moment until I set up a better action/bash script*)
+open Mysexplib.Std [@@warning "-33"]
+open Lexing
+type position = { pos_file_tag : Int.t; pos_start : Int.t; pos_end : Int.t }
+
+(** val position_eqb : position -> position -> bool **)
+
+let position_eqb p1 p2 =
+  (&&)
+    ((&&) (Int.equal p1.pos_file_tag p2.pos_file_tag)
+      (Int.equal p1.pos_start p2.pos_start)) (Int.equal p1.pos_end p2.pos_end)
+
+(** val equal : position -> position -> bool **)
+
+let equal =
+  position_eqb
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -8,10 +24,6 @@
 (*  on linking described in file LICENSE.                           *)
 (*                                                                  *)
 (********************************************************************)
-
-
-open Mysexplib.Std [@@warning "-33"]
-open Lexing
 
 let current_offset = ref 0
 let reloc p = { p with pos_cnum = p.pos_cnum + !current_offset }
@@ -64,13 +76,6 @@ module FileTags = struct
 
 end
 
-
-type position = {
-    pos_file_tag : int;
-    pos_start : int (* compressed line/col *);
-    pos_end : int (* compressed line/col *);
-  }
-
 let bits_col =
   if Sys.word_size = 32 then 12 else
   if Sys.word_size = 64 then 16 else
@@ -109,7 +114,6 @@ let join p1 p2 =
     pos_end = max p1.pos_end p2.pos_end }
 
 let compare = Stdlib.compare
-let equal = Stdlib.(=)
 let hash = Hashtbl.hash
 
 let pp_position_tail fmt bl bc el ec =

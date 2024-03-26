@@ -6,7 +6,7 @@ module MakeCtr :
 
   val create : BigInt.t -> unit ctr
 
-  val incr : unit ctr
+  val incr : unit -> unit ctr
 
-  val get : BigInt.t ctr
+  val get : unit -> BigInt.t ctr
  end

@@ -1,33 +1,296 @@
-(********************************************************************)
-(*                                                                  *)
-(*  The Why3 Verification Platform   /   The Why3 Development Team  *)
-(*  Copyright 2010-2023 --  Inria - CNRS - Paris-Saclay University  *)
-(*                                                                  *)
-(*  This software is distributed under the terms of the GNU Lesser  *)
-(*  General Public License version 2.1, with the special exception  *)
-(*  on linking described in file LICENSE.                           *)
-(*                                                                  *)
-(********************************************************************)
-
-open Mysexplib.Std [@@warning "-33"]
+open BinNums
+open CoqUtil
+open Weakhtbl
 open Wstdlib
+open Ctr
+open ErrorMonad
+open Loc
+open Specif
+open StateMonad
+open Base
+open Pmap
+open Zmap
 
-(** Attributes *)
+type attribute = { attr_string : string; attr_tag : BigInt.t }
 
-type attribute = {
-  attr_string : string;
-  attr_tag    : BigInt.t;
-}
+(** val attr_string : attribute -> string **)
 
-module Attr = MakeMSH (struct
+let attr_string a =
+  a.attr_string
+
+(** val attr_tag : attribute -> BigInt.t **)
+
+let attr_tag a =
+  a.attr_tag
+
+(** val attr_eqb : attribute -> attribute -> bool **)
+
+let attr_eqb a1 a2 =
+  (&&) ((=) a1.attr_string a2.attr_string) (BigInt.eq a1.attr_tag a2.attr_tag)
+
+(** val attr_eq : (attribute, attribute) coq_RelDecision **)
+
+let attr_eq =
+  dec_from_eqb attr_eqb
+
+module AttrTag =
+ struct
   type t = attribute
-  let tag a = a.attr_tag
-  let equal = (==) (*JOSH TODO equal*)
-end)
+
+  (** val tag : attribute -> BigInt.t **)
+
+  let tag x =
+    x.attr_tag
+
+  (** val equal : (attribute, attribute) coq_RelDecision **)
+
+  let equal =
+    attr_eq
+ end
+
+module Attr = MakeMS(AttrTag)
 
 module Sattr = Attr.S
+
 module Mattr = Attr.M
 
+(** val attr_equal : attribute -> attribute -> bool **)
+
+let attr_equal =
+  attr_eqb
+
+(** val attr_hash : attribute -> BigInt.t **)
+
+let attr_hash a =
+  a.attr_tag
+
+(** val attr_compare : attribute -> attribute -> Int.t **)
+
+let attr_compare a1 a2 =
+  BigInt.compare a1.attr_tag a2.attr_tag
+
+type notation =
+| SNword of string
+| SNinfix of string
+| SNtight of string
+| SNprefix of string
+| SNget of string
+| SNset of string
+| SNupdate of string
+| SNcut of string
+| SNlcut of string
+| SNrcut of string
+
+(** val op_infix : string -> string **)
+
+let op_infix s =
+  (^) "infix " s
+
+(** val op_prefix : string -> string **)
+
+let op_prefix s =
+  (^) "prefix " s
+
+(** val op_get : string -> string **)
+
+let op_get s =
+  (^) "mixfix []" s
+
+(** val op_set : string -> string **)
+
+let op_set s =
+  (^) "mixfix []<-" s
+
+(** val op_update : string -> string **)
+
+let op_update s =
+  (^) "mixfix [<-]" s
+
+(** val op_cut : string -> string **)
+
+let op_cut s =
+  (^) "mixfix [..]" s
+
+(** val op_lcut : string -> string **)
+
+let op_lcut s =
+  (^) "mixfix [.._]" s
+
+(** val op_rcut : string -> string **)
+
+let op_rcut s =
+  (^) "mixfix [_..]" s
+
+(** val op_equ : string **)
+
+let op_equ =
+  op_infix "="
+
+(** val op_neq : string **)
+
+let op_neq =
+  op_infix "<>"
+
+(** val op_tight : string -> string **)
+
+let op_tight =
+  op_prefix
+
+type ident = { id_string : string; id_attrs : Sattr.t;
+               id_loc : position option; id_tag : tag }
+
+(** val id_string : ident -> string **)
+
+let id_string i =
+  i.id_string
+
+(** val id_attrs : ident -> Sattr.t **)
+
+let id_attrs i =
+  i.id_attrs
+
+(** val id_loc : ident -> position option **)
+
+let id_loc i =
+  i.id_loc
+
+(** val id_tag : ident -> tag **)
+
+let id_tag i =
+  i.id_tag
+
+(** val ident_eqb : ident -> ident -> bool **)
+
+let ident_eqb i1 i2 =
+  (&&)
+    ((&&)
+      ((&&) ((=) i1.id_string i2.id_string)
+        (Sattr.equal i1.id_attrs i2.id_attrs))
+      (option_eqb equal i1.id_loc i2.id_loc)) (tag_equal i1.id_tag i2.id_tag)
+
+(** val ident_eq : (ident, ident) coq_RelDecision **)
+
+let ident_eq =
+  dec_from_eqb ident_eqb
+
+module IdentTag =
+ struct
+  type t = ident
+
+  (** val tag : ident -> tag **)
+
+  let tag x =
+    x.id_tag
+
+  (** val equal : (ident, ident) coq_RelDecision **)
+
+  let equal =
+    ident_eq
+ end
+
+module Id = MakeMSWeak(IdentTag)
+
+module Sid = Id.S
+
+module Mid = Id.M
+
+type preid = { pre_name : string; pre_attrs : Sattr.t;
+               pre_loc : position option }
+
+(** val pre_name : preid -> string **)
+
+let pre_name p =
+  p.pre_name
+
+(** val pre_attrs : preid -> Sattr.t **)
+
+let pre_attrs p =
+  p.pre_attrs
+
+(** val pre_loc : preid -> position option **)
+
+let pre_loc p =
+  p.pre_loc
+
+(** val id_equal : ident -> ident -> bool **)
+
+let id_equal =
+  ident_eqb
+
+(** val id_hash : ident -> BigInt.t **)
+
+let id_hash i =
+  tag_hash i.id_tag
+
+(** val id_compare : ident -> ident -> Int.t **)
+
+let id_compare id1 id2 =
+  BigInt.compare (id_hash id1) (id_hash id2)
+
+module IdCtr = MakeCtr
+
+(** val id_ctr : unit ctr **)
+
+let id_ctr =
+  IdCtr.create (BigInt.of_int 8)
+
+(** val id_register : preid -> ident ctr **)
+
+let id_register p =
+  (@@) (fun _ ->
+    (@@) (fun i ->
+       { id_string = p.pre_name; id_attrs = p.pre_attrs; id_loc = p.pre_loc;
+        id_tag = (create_tag i) }) (IdCtr.get ())) (IdCtr.incr ())
+
+(** val id_builtin : string -> BigInt.t -> ident **)
+
+let id_builtin name tag0 =
+  { id_string = name; id_attrs = Sattr.empty; id_loc = None; id_tag = tag0 }
+
+(** val id_int : ident **)
+
+let id_int =
+  id_builtin "int" (create_tag BigInt.one)
+
+(** val id_real : ident **)
+
+let id_real =
+  id_builtin "real" (create_tag (BigInt.of_int 2))
+
+(** val id_bool : ident **)
+
+let id_bool =
+  id_builtin "bool" (create_tag (BigInt.of_int 3))
+
+(** val id_str : ident **)
+
+let id_str =
+  id_builtin "string" (create_tag (BigInt.of_int 4))
+
+(** val id_a : ident **)
+
+let id_a =
+  id_builtin "a" (create_tag (BigInt.of_int 5))
+
+(** val id_b : ident **)
+
+let id_b =
+  id_builtin "b" (create_tag (BigInt.of_int 6))
+
+(** val id_fun : ident **)
+
+let id_fun =
+  id_builtin (op_infix "->") (create_tag (BigInt.of_int 7))
+
+(** val create_ident : string -> Sattr.t -> position option -> preid **)
+
+let create_ident name attrs loc =
+  { pre_name = name; pre_attrs = attrs; pre_loc = loc }
+
+(** val id_fresh1 : string -> preid **)
+
+let id_fresh1 s =
+  create_ident s Sattr.empty None
 module Hsattr = Hashcons.Make (struct
   type t = attribute
   let equal a1 a2 = a1.attr_string = a2.attr_string
@@ -45,9 +308,9 @@ let list_attributes () =
   Hsattr.iter (fun a -> acc := a.attr_string :: !acc);
   !acc
 
-let attr_equal : attribute -> attribute -> bool = (==)
-let attr_hash a = a.attr_tag
-let attr_compare a1 a2 = BigInt.compare a1.attr_tag a2.attr_tag
+module Id2 = MakeMSHW(IdentTag)
+module Hid = Id2.H
+module Wid = Id2.W
 
 let sexp_of_attribute (a:attribute) =
   Mysexplib.sexp_of_string a.attr_string
@@ -56,35 +319,6 @@ let sexp_of_attribute (a:attribute) =
 let attribute_of_sexp (s : Mysexplib.sexp) =
   create_attribute (Mysexplib.string_of_sexp s)
 [@@warning "-32"]
-
-(** Naming convention *)
-
-type notation =
-  | SNword   of string  (* plus *)
-  | SNinfix  of string  (* + *)
-  | SNtight  of string  (* ! *)
-  | SNprefix of string  (* -_ *)
-  | SNget    of string  (* [] *)
-  | SNset    of string  (* []<- *)
-  | SNupdate of string  (* [<-] *)
-  | SNcut    of string  (* [..] *)
-  | SNlcut   of string  (* [.._] *)
-  | SNrcut   of string  (* [_..] *)
-
-(* current encoding *)
-
-let op_infix  s = "infix " ^ s
-let op_prefix s = "prefix " ^ s
-let op_get    s = "mixfix []" ^ s
-let op_set    s = "mixfix []<-" ^ s
-let op_update s = "mixfix [<-]" ^ s
-let op_cut    s = "mixfix [..]" ^ s
-let op_lcut   s = "mixfix [.._]" ^ s
-let op_rcut   s = "mixfix [_..]" ^ s
-
-let op_equ   = op_infix "="
-let op_neq   = op_infix "<>"
-let op_tight = op_prefix
 
 let print_sn fmt w =
   let lspace p = if p.[0] = '*' then " " else "" in
@@ -101,6 +335,7 @@ let print_sn fmt w =
   | SNrcut   p -> Format.fprintf fmt "([_..]%s)" p
   | SNword   p -> Format.pp_print_string fmt p
 
+
 (* The function below recognizes the following strings as notations:
       "infix " (opchar+ [']* as p) (['_] [^'_] .* as q)
       "prefix " (opchar+ [']* as p) (['_] [^'_] .* as q)
@@ -109,7 +344,7 @@ let print_sn fmt w =
    the closing square bracket, or a mixfix that does not use brackets.
    Be careful when working with this code, it may eat your brain. *)
 
-let sn_decode s =
+  let sn_decode s =
   let len = String.length s in
   if len <= 6 then SNword s else
   if s.[5] <> ' ' && s.[6] <> ' ' then SNword s else
@@ -152,56 +387,9 @@ let sn_decode s =
 
 let print_decoded fmt s = print_sn fmt (sn_decode s)
 
-(** Identifiers *)
-
-type ident = {
-  id_string : string;               (* non-unique name *)
-  id_attrs  : Sattr.t;              (* identifier attributes *)
-  id_loc    : Loc.position option;  (* optional location *)
-  id_tag    : Weakhtbl.tag;         (* unique magical tag *)
-  }
-
-module Id = MakeMSHW (struct
-  type t = ident
-  let tag id = id.id_tag
-  let equal = (==) (*JOSH TODO equal*)
-end)
-
-module Sid = Id.S
-module Mid = Id.M
-module Hid = Id.H
-module Wid = Id.W
-
-type preid = {
-  pre_name  : string;
-  pre_attrs : Sattr.t;
-  pre_loc   : Loc.position option;
-}
-
-let id_equal : ident -> ident -> bool = (==)
-let id_hash id = Weakhtbl.tag_hash id.id_tag
-let id_compare id1 id2 = BigInt.compare (id_hash id1) (id_hash id2)
-
-(* constructors *)
-
-let big_incr =
-  fun r -> r := BigInt.succ !r
-
-let id_register = let r = ref BigInt.zero in fun id -> {
-  id_string = id.pre_name;
-  id_attrs  = id.pre_attrs;
-  id_loc    = id.pre_loc;
-  id_tag    = (big_incr r; Weakhtbl.create_tag !r);
-}
-
-let create_ident name attrs loc = {
-  pre_name  = name;
-  pre_attrs = attrs;
-  pre_loc   = loc;
-}
-
 let id_fresh ?(attrs = Sattr.empty) ?loc nm =
   create_ident nm attrs loc
+
 
 let id_user ?(attrs = Sattr.empty) nm loc =
   create_ident nm attrs (Some loc)
