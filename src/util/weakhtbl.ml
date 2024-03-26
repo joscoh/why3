@@ -1,3 +1,35 @@
+open Base
+
+type tag = BigInt.t
+
+(** val dummy_tag : tag **)
+
+let dummy_tag =
+  (BigInt.of_int (-1))
+
+(** val tag_equal : tag -> tag -> bool **)
+
+let tag_equal =
+  BigInt.eq
+
+(** val tag_hash : tag -> tag **)
+
+let tag_hash k =
+  k
+
+(** val create_tag : BigInt.t -> tag **)
+
+let create_tag x =
+  x
+
+module type Weakey =
+ sig
+  type t
+
+  val tag : t -> tag
+
+  val equal : (t, t) coq_RelDecision
+ end
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -48,24 +80,16 @@ module type S = sig
 
 end
 
-type tag = BigInt.t
-
 let create_int_tag : int -> tag = BigInt.of_int
-
-let create_tag tag = tag
-
-let dummy_tag = BigInt.of_int (-1)
 
 let tag_equal : tag -> tag -> bool = BigInt.eq
 
-let tag_hash k = assert (k != dummy_tag); k
 
-module type Weakey =
+(*module type Weakey =
 sig
   type t
   val tag : t -> tag
-  val equal : t -> t -> bool (*JOSH ADDED equal*)
-end
+end*)
 
 module Make (S : Weakey) : S with type key = S.t = struct
 

@@ -1,4 +1,40 @@
+open BinNums
+open Byte
 open Datatypes
+open List0
+
+(** val bits_to_pos : bool list -> positive **)
+
+let rec bits_to_pos = function
+| [] -> Coq_xH
+| b :: tl -> if b then Coq_xI (bits_to_pos tl) else Coq_xO (bits_to_pos tl)
+
+(** val bittup_to_bits :
+    (bool * (bool * (bool * (bool * (bool * (bool * (bool * bool))))))) ->
+    bool list **)
+
+let bittup_to_bits = function
+| (b1, p) ->
+  let (b2, p0) = p in
+  let (b3, p1) = p0 in
+  let (b4, p2) = p1 in
+  let (b5, p3) = p2 in
+  let (b6, p4) = p3 in
+  let (b7, b8) = p4 in
+  b1 :: (b2 :: (b3 :: (b4 :: (b5 :: (b6 :: (b7 :: (b8 :: [])))))))
+
+(** val byte_to_bits : char -> bool list **)
+
+let byte_to_bits b =
+  bittup_to_bits (to_bits b)
+
+(** val str_to_pos : string -> positive **)
+
+let str_to_pos s =
+  bits_to_pos
+    (concat
+      (map byte_to_bits
+        ((fun s -> List.init (String.length s) (fun i -> s.[i])) s)))
 
 (** val list_eqb : ('a1 -> 'a1 -> bool) -> 'a1 list -> 'a1 list -> bool **)
 

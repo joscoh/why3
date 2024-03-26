@@ -90,7 +90,7 @@ end)
 module Str = struct
   type t = string
   (*TODO bad could overwrite*)
-  let tag (s: string) : BigInt.t = (BigInt.of_int (Hashtbl.hash s))
+  let tag (s: string) : BigInt.t = BigInt.of_int (Hashtbl.hash s) (*(ZCompat.of_Z_big (Zpos (CoqUtil.str_to_pos s)))*)
   let equal (s1 : string) (s2: string) : bool = s1 = s2
 end
 
