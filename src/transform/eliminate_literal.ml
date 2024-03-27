@@ -133,8 +133,8 @@ let elim le_int le_real neg_real type_kept kn range_metas float_metas d
       | Float fp -> fp
       | _ -> assert false
     in
-    let eb = BigInt.of_int fp.Number.fp_exponent_digits in
-    let sb = BigInt.of_int fp.Number.fp_significand_digits in
+    let eb = fp.Number.fp_exponent_digits in (*JOSH rempove of_int*)
+    let sb = fp.Number.fp_significand_digits in
     (* declare abstract type [t] *)
     let ty_decl = create_ty_decl ts in
     (* declare projection to_real *)

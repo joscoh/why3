@@ -1,3 +1,44 @@
+
+type int_range = { ir_lower : BigInt.t; ir_upper : BigInt.t }
+
+(** val ir_lower : int_range -> BigInt.t **)
+
+let ir_lower i =
+  i.ir_lower
+
+(** val ir_upper : int_range -> BigInt.t **)
+
+let ir_upper i =
+  i.ir_upper
+
+(** val int_range_eqb : int_range -> int_range -> bool **)
+
+let int_range_eqb i1 i2 =
+  (&&) (BigInt.eq i1.ir_lower i2.ir_lower) (BigInt.eq i1.ir_upper i2.ir_upper)
+
+(** val create_range : BigInt.t -> BigInt.t -> int_range **)
+
+let create_range lo hi =
+  { ir_lower = lo; ir_upper = hi }
+
+type float_format = { fp_exponent_digits : BigInt.t;
+                      fp_significand_digits : BigInt.t }
+
+(** val fp_exponent_digits : float_format -> BigInt.t **)
+
+let fp_exponent_digits f =
+  f.fp_exponent_digits
+
+(** val fp_significand_digits : float_format -> BigInt.t **)
+
+let fp_significand_digits f =
+  f.fp_significand_digits
+
+(** val float_format_eqb : float_format -> float_format -> bool **)
+
+let float_format_eqb i1 i2 =
+  (&&) (BigInt.eq i1.fp_exponent_digits i2.fp_exponent_digits)
+    (BigInt.eq i1.fp_significand_digits i2.fp_significand_digits)
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -373,7 +414,7 @@ let print_hex_real support fmt k ({ rv_sig = i; rv_pow2 = p2; rv_pow5 = p5 } as 
   check_support support.hex_real_support do_it default
     (fun () -> print_dec_real support fmt (BigInt.min p2 p5) r)
 
-let print_real_constant support fmt
+let print_real_constant support fmt 
       { rl_kind = k; rl_real = { rv_pow2 = p2; rv_pow5 = p5 } as r } =
   match k with
   | RLitDec e -> print_dec_real support fmt (BigInt.of_int e) r
@@ -400,17 +441,6 @@ let print_real_constant support fmt r =
 
 (** Range checks *)
 
-type int_range = {
-  ir_lower : BigInt.t;
-  ir_upper : BigInt.t;
-}
-[@@deriving sexp]
-
-let create_range lo hi =
-  { ir_lower = lo;
-    ir_upper = hi;
-}
-
 exception OutOfRange of int_constant
 
 let check_range c {ir_lower = lo; ir_upper = hi} =
@@ -421,12 +451,6 @@ let int_range_equal ir1 ir2 =
   BigInt.eq ir1.ir_lower ir2.ir_lower && BigInt.eq ir1.ir_upper ir2.ir_upper
 
 (** Float checks *)
-
-type float_format = {
-  fp_exponent_digits    : int;
-  fp_significand_digits : int; (* counting the hidden bit *)
-}
-[@@deriving sexp]
 
 exception NonRepresentableFloat of real_constant
 
@@ -441,8 +465,8 @@ let float_parser c =
     i, p2
 
 let compute_float c fp =
-  let eb = BigInt.of_int fp.fp_exponent_digits in
-  let sb = BigInt.of_int fp.fp_significand_digits in
+  let eb = (*BigInt.of_int*) fp.fp_exponent_digits in
+  let sb = (*BigInt.of_int*) fp.fp_significand_digits in
   (* 2 ^ (sb - 1)    min representable normalized significand*)
   let smin = pow_int_pos_bigint 2 (sub sb one) in
   (* (2 ^ sb) - 1    max representable normalized significand*)

@@ -1416,8 +1416,8 @@ let add_types muc tdl =
         Hstr.add hts x itd.itd_its; Hstr.add htd x itd
     | TDfloat (eb,sb) ->
         check_public ~loc d "Floating-point";
-        let fp = { Number.fp_exponent_digits = eb;
-                   Number.fp_significand_digits = sb } in
+        let fp = { Number.fp_exponent_digits = BigInt.of_int eb;(*JOSH*)
+                   Number.fp_significand_digits = BigInt.of_int sb } in
         let itd = create_float_decl id fp in
         Hstr.add hts x itd.itd_its; Hstr.add htd x itd
 

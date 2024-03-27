@@ -515,8 +515,8 @@ let print_ty_decl fmt ts =
           (BigInt.to_string ir.Number.ir_upper)
     | Float irf ->
         fprintf fmt " =@ <float %d %d>"
-          irf.Number.fp_exponent_digits
-          irf.Number.fp_significand_digits
+          (BigInt.to_int (irf.Number.fp_exponent_digits)) (*JOSH to_int*)
+          (BigInt.to_int (irf.Number.fp_significand_digits))
   in
   fprintf fmt "@[<hov 2>type %a%a%a%a@]"
     print_ts ts print_id_attrs ts.ts_name

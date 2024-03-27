@@ -2,6 +2,10 @@
 open Ident
 open CoqUtil
 open Wstdlib
+open Number
+open Weakhtbl
+open IntFuncs
+open List0
 
 type tvsymbol = { tv_name : ident }
 
@@ -85,6 +89,140 @@ let create_tvsymbol n =
        (@@) (fun i -> (@@) (fun _ ->  i) ( (Hstr_tv.add s i))) ( tv))
      ( (Hstr_tv.find_opt s))
 
+
+  type 'a type_def =
+  | NoDef
+  | Alias of 'a
+  | Range of int_range
+  | Float of float_format
+  
+  type 'a ty_o = { ty_node : 'a; ty_tag : tag }
+  
+  (** val ty_node : 'a1 ty_o -> 'a1 **)
+  
+  let ty_node t0 =
+    t0.ty_node
+  
+  (** val ty_tag : 'a1 ty_o -> tag **)
+  
+  let ty_tag t0 =
+    t0.ty_tag
+  
+  type 'a tysymbol_o = { ts_name : ident; ts_args : tvsymbol list;
+                        ts_def : 'a type_def }
+  
+  (** val ts_name : 'a1 tysymbol_o -> ident **)
+  
+  let ts_name t0 =
+    t0.ts_name
+  
+  (** val ts_args : 'a1 tysymbol_o -> tvsymbol list **)
+  
+  let ts_args t0 =
+    t0.ts_args
+  
+  (** val ts_def : 'a1 tysymbol_o -> 'a1 type_def **)
+  
+  let ts_def t0 =
+    t0.ts_def
+  
+  type ty_node_c =
+  | Tyvar of tvsymbol
+  | Tyapp of (ty_node_c ty_o) tysymbol_o * ty_node_c ty_o list
+  
+  type ty = ty_node_c ty_o
+  
+  type tysymbol = ty tysymbol_o
+
+
+(** val build_tysym_o :
+    ident -> tvsymbol list -> ty_node_c ty_o type_def -> ty_node_c ty_o
+    tysymbol_o **)
+
+let build_tysym_o i l t0 =
+  { ts_name = i; ts_args = l; ts_def = t0 }
+
+(** val build_ty_o : ty_node_c -> tag -> ty_node_c ty_o **)
+
+let build_ty_o n i =
+  { ty_node = n; ty_tag = i }
+
+(** val ty_eqb : ty_node_c ty_o -> ty_node_c ty_o -> bool **)
+
+let rec ty_eqb t1 t2 =
+  (&&) (tag_equal (ty_tag t1) (ty_tag t2))
+    (ty_node_eqb (ty_node t1) (ty_node t2))
+
+(** val ty_node_eqb : ty_node_c -> ty_node_c -> bool **)
+
+and ty_node_eqb t1 t2 =
+  match t1 with
+  | Tyvar v1 ->
+    (match t2 with
+     | Tyvar v2 -> tvsymbol_eqb v1 v2
+     | Tyapp (_, _) -> false)
+  | Tyapp (ts1, tys1) ->
+    (match t2 with
+     | Tyvar _ -> false
+     | Tyapp (ts2, tys2) ->
+       (&&)
+         ((&&) (tysymbol_eqb ts1 ts2)
+           (BigInt.eq (int_length tys1) (int_length tys2)))
+         (forallb (fun x -> x) (map2 ty_eqb tys1 tys2)))
+
+(** val tysymbol_eqb :
+    (ty_node_c ty_o) tysymbol_o -> (ty_node_c ty_o) tysymbol_o -> bool **)
+
+and tysymbol_eqb t1 t2 =
+  (&&)
+    ((&&) (id_equal (ts_name t1) (ts_name t2))
+      (list_eqb tvsymbol_eqb (ts_args t1) (ts_args t2)))
+    (match ts_def t1 with
+     | NoDef -> (match ts_def t2 with
+                 | NoDef -> true
+                 | _ -> false)
+     | Alias a1 ->
+       (match ts_def t2 with
+        | Alias a2 -> ty_eqb a1 a2
+        | _ -> false)
+     | Range n1 ->
+       (match ts_def t2 with
+        | Range n2 -> int_range_eqb n1 n2
+        | _ -> false)
+     | Float f1 ->
+       (match ts_def t2 with
+        | Float f2 -> float_format_eqb f1 f2
+        | _ -> false))
+
+(** val tysymbol_eq :
+    ((ty_node_c ty_o) tysymbol_o, (ty_node_c ty_o) tysymbol_o) coq_RelDecision **)
+
+let tysymbol_eq =
+  dec_from_eqb tysymbol_eqb
+
+module TsymTagged =
+ struct
+  type t = (ty_node_c ty_o) tysymbol_o
+
+  (** val tag : (ty_node_c ty_o) tysymbol_o -> tag **)
+
+  let tag ts =
+    (ts_name ts).id_tag
+
+  (** val equal :
+      ((ty_node_c ty_o) tysymbol_o, (ty_node_c ty_o) tysymbol_o)
+      coq_RelDecision **)
+
+  let equal =
+    tysymbol_eq
+ end
+
+module Tsym = MakeMSWeak(TsymTagged)
+
+module Sts = Tsym.S
+
+module Mts = Tsym.M
+
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -123,7 +261,7 @@ let create_tvsymbol n = { tv_name = id_register n } *)
 
 
 
-let tv_of_string =
+(* let tv_of_string =
   let hs = Hstr.create 17 in fun s ->
   try Hstr.find hs s with Not_found ->
   let tv = create_tvsymbol (id_fresh s) in
@@ -151,18 +289,18 @@ and ty = {
 
 and ty_node =
   | Tyvar of tvsymbol
-  | Tyapp of tysymbol * ty list
+  | Tyapp of tysymbol * ty list *)
 
-module Tsym = MakeMSHW (struct
+module Tsym2 = MakeMSHW (struct
   type t = tysymbol
   let tag ts = ts.ts_name.id_tag
   let equal = (==) (*JOSH TODO equal*)
 end)
 
-module Sts = Tsym.S
-module Mts = Tsym.M
-module Hts = Tsym.H
-module Wts = Tsym.W
+(* module Sts = Tsym.S
+module Mts = Tsym.M *)
+module Hts = Tsym2.H
+module Wts = Tsym2.W
 
 let ts_equal : tysymbol -> tysymbol -> bool = (==)
 let ty_equal : ty       -> ty       -> bool = (==)
@@ -286,8 +424,8 @@ let create_tysymbol name args def =
         then raise EmptyRange
     | Float fp ->
         if args <> [] then raise IllegalTypeParameters;
-        if fp.Number.fp_exponent_digits < 1 ||
-           fp.Number.fp_significand_digits < 1
+        if BigInt.lt (fp.Number.fp_exponent_digits) BigInt.one ||
+           BigInt.lt (fp.Number.fp_significand_digits) BigInt.one
         then raise BadFloatSpec
   end;
   mk_ts name args def
