@@ -77,3 +77,4 @@ sig
 end
 
 module Int : OrderedHashedType with type t = int
+module Str2 : TaggedType with type t = string

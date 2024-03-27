@@ -4,6 +4,10 @@ type __ = Obj.t
 
 type 'ty ctr = 'ty
 
+type ('ty, 'ty2, 'ty3) hash_st = 'ty3
+
+type ('k, 'v) hash_unit = (('k, 'v) CoqHashtbl.hashtbl) ref
+
 type ('ty, 'ty2) hashcons_st = 'ty2
 
 (** val hashcons_list :
@@ -23,3 +27,7 @@ type ('ty, 'ty2) errorHashconsT = 'ty2
 let errorHashcons_list l =
   fold_right (fun x acc -> (@@) (fun h -> (@@) (fun t ->  (h :: t)) acc) x)
     ( []) l
+
+type ('ty, 'ty2, 'ty3) hash_ctr = 'ty3
+
+

@@ -1,4 +1,5 @@
 open BinNums
+open CoqUtil
 open Weakhtbl
 open ErrorMonad
 open Specif
@@ -7,6 +8,21 @@ open Extmap
 open Extset
 open Pmap
 open Zmap
+
+module Str2 =
+ struct
+  type t = string
+
+  (** val tag : string -> BigInt.t **)
+
+  let tag s =
+    ZCompat.of_Z_big (Zpos (str_to_pos s))
+
+  (** val equal : (string, string) coq_RelDecision **)
+
+  let equal =
+    dec_from_eqb (=)
+ end
 
 module OrderedHashed =
  functor (X:TaggedType) ->
@@ -23,7 +39,7 @@ module OrderedHashed =
   let equal ts1 ts2 =
     BigInt.eq (X.tag ts1) (X.tag ts2)
 
-  (** val compare : X.t -> X.t -> Int.t **)
+  (** val compare : X.t -> X.t -> Stdlib.Int.t **)
 
   let compare ts1 ts2 =
     BigInt.compare (X.tag ts1) (X.tag ts2)
@@ -90,7 +106,7 @@ end)
 module Str = struct
   type t = string
   (*TODO bad could overwrite*)
-  let tag (s: string) : BigInt.t = BigInt.of_int (Hashtbl.hash s) (*(ZCompat.of_Z_big (Zpos (CoqUtil.str_to_pos s)))*)
+  let tag (s: string) : BigInt.t = (BigInt.of_int (Hashtbl.hash s))
   let equal (s1 : string) (s2: string) : bool = s1 = s2
 end
 
