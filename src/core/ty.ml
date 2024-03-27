@@ -6,6 +6,7 @@ open Number
 open Weakhtbl
 open IntFuncs
 open List0
+open Hashcons
 
 type tvsymbol = { tv_name : ident }
 
@@ -223,6 +224,107 @@ module Sts = Tsym.S
 
 module Mts = Tsym.M
 
+
+(** val ts_equal :
+    (ty_node_c ty_o) tysymbol_o -> (ty_node_c ty_o) tysymbol_o -> bool **)
+
+let ts_equal =
+  tysymbol_eqb
+
+(** val ty_equal : ty_node_c ty_o -> ty_node_c ty_o -> bool **)
+
+let ty_equal =
+  ty_eqb
+
+(** val ts_hash : (ty_node_c ty_o) tysymbol_o -> BigInt.t **)
+
+let ts_hash ts =
+  id_hash (ts_name ts)
+
+(** val ty_hash : ty_node_c ty_o -> tag **)
+
+let ty_hash t0 =
+  tag_hash (ty_tag t0)
+
+(** val ts_compare :
+    (ty_node_c ty_o) tysymbol_o -> (ty_node_c ty_o) tysymbol_o -> Stdlib.Int.t **)
+
+let ts_compare ts1 ts2 =
+  id_compare (ts_name ts1) (ts_name ts2)
+
+(** val ty_compare : ty_node_c ty_o -> ty_node_c ty_o -> Stdlib.Int.t **)
+
+let ty_compare ty1 ty2 =
+  BigInt.compare (ty_hash ty1) (ty_hash ty2)
+
+module TyHash =
+  struct
+  type t = ty_node_c ty_o
+
+  (** val equal : ty_node_c ty_o -> ty_node_c ty_o -> bool **)
+
+  let equal ty1 ty2 =
+    match ty_node ty1 with
+    | Tyvar n1 ->
+      (match ty_node ty2 with
+        | Tyvar n2 -> tv_equal n1 n2
+        | Tyapp (_, _) -> false)
+    | Tyapp (s1, l1) ->
+      (match ty_node ty2 with
+        | Tyvar _ -> false
+        | Tyapp (s2, l2) ->
+          (&&) (ts_equal s1 s2) (forallb (fun x -> x) (map2 ty_equal l1 l2)))
+
+  (** val hash : ty_node_c ty_o -> BigInt.t **)
+
+  let hash t0 =
+    match ty_node t0 with
+    | Tyvar v -> tv_hash v
+    | Tyapp (s, tl) -> combine_big_list ty_hash (ts_hash s) tl
+
+  (** val tag : BigInt.t -> ty_node_c ty_o -> ty_node_c ty_o **)
+
+  let tag n ty0 =
+    (fun (a, b) -> build_ty_o a b) ((ty_node ty0), (create_tag n))
+  end
+
+module Hsty = Make(TyHash)
+
+
+(** val mk_ts :
+preid -> tvsymbol list -> ty_node_c ty_o type_def ->
+(ty_node_c ty_o) tysymbol_o ctr **)
+
+let mk_ts name args d =
+  (@@) (fun i ->  ((fun (a,b,c) -> build_tysym_o a b c) (i, args, d)))
+    (id_register name)
+
+(** val ty_eq : (ty_node_c ty_o, ty_node_c ty_o) coq_RelDecision **)
+
+let ty_eq =
+  dec_from_eqb ty_eqb
+
+module TyTagged =
+  struct
+  type t = ty_node_c ty_o
+
+  (** val tag : ty_node_c ty_o -> tag **)
+
+  let tag =
+    ty_tag
+
+  (** val equal : (ty_node_c ty_o, ty_node_c ty_o) coq_RelDecision **)
+
+  let equal =
+    ty_eq
+  end
+
+module TyM = MakeMSWeak(TyTagged)
+
+module Sty = TyM.S
+
+module Mty = TyM.M
+
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -302,7 +404,7 @@ module Mts = Tsym.M *)
 module Hts = Tsym2.H
 module Wts = Tsym2.W
 
-let ts_equal : tysymbol -> tysymbol -> bool = (==)
+(* let ts_equal : tysymbol -> tysymbol -> bool = (==)
 let ty_equal : ty       -> ty       -> bool = (==)
 
 let ts_hash ts = id_hash ts.ts_name
@@ -330,18 +432,18 @@ module Hsty = Hashcons.Make (struct
     | Tyvar v -> tv_hash v
     | Tyapp (s,tl) -> Hashcons.combine_big_list ty_hash (ts_hash s) tl)
   let tag n ty = { ty with ty_tag = (Weakhtbl.create_tag n) }
-end)
+end) *)
 
-module Ty = MakeMSHW (struct
+module Ty2 = MakeMSHW (struct
   type t = ty
   let tag ty = ty.ty_tag
   let equal = (==) (*JOSH TODO equal*)
 end)
 
-module Sty = Ty.S
-module Mty = Ty.M
-module Hty = Ty.H
-module Wty = Ty.W
+(* module Sty = Ty.S
+module Mty = Ty.M *)
+module Hty = Ty2.H
+module Wty = Ty2.W
 
 let mk_ty n = {
   ty_node = n;
