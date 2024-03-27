@@ -61,10 +61,29 @@ let tv_compare tv1 tv2 =
 let create_tvsymbol n =
   (@@) (fun i ->  { tv_name = i }) (id_register n)
 
-(** val tv_of_string : string -> tvsymbol ctr **)
 
-let tv_of_string s =
-  create_tvsymbol (id_fresh1 s)
+  module Tvsym_t =
+  struct
+   type t = tvsymbol
+  end
+ 
+ module Hstr_tv = Exthtbl2.Make(Str2)(Tvsym_t)
+ 
+ (** val tv_hashtbl : (string, tvsymbol, unit) hash_st **)
+ 
+ let tv_hashtbl =
+   Hstr_tv.create Stdlib.Int.one
+ 
+ (** val tv_of_string : string -> (string, tvsymbol, tvsymbol) hash_ctr **)
+ 
+ let tv_of_string s =
+   (@@) (fun o ->
+     match o with
+     | Some v ->  v
+     | None ->
+       let tv = create_tvsymbol (id_fresh1 s) in
+       (@@) (fun i -> (@@) (fun _ ->  i) ( (Hstr_tv.add s i))) ( tv))
+     ( (Hstr_tv.find_opt s))
 
 (********************************************************************)
 (*                                                                  *)
