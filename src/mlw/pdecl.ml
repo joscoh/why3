@@ -435,14 +435,14 @@ let create_type_decl dl =
           let attrs = suffix_attr_name ~attrs:id.id_attrs "'eb" in
           id_fresh ~attrs ?loc:id.id_loc (nm ^ "'eb") in
         let eb_ls = create_fsymbol eb_id [] ty_int in
-        let eb_defn = t_nat_const ff.Number.fp_exponent_digits in
+        let eb_defn = t_nat_const (BigInt.to_int ff.Number.fp_exponent_digits) in (*JOSH to_int*)
         let eb_decl = create_logic_decl [make_ls_defn eb_ls [] eb_defn] in
         (* create significand digits attribute *)
         let sb_id =
           let attrs = suffix_attr_name ~attrs:id.id_attrs "'sb" in
           id_fresh ~attrs ?loc:id.id_loc (nm ^ "'sb") in
         let sb_ls = create_fsymbol sb_id [] ty_int  in
-        let sb_defn = t_nat_const ff.Number.fp_significand_digits in
+        let sb_defn = t_nat_const (BigInt.to_int ff.Number.fp_significand_digits) in (*JOSH to_int*)
         let sb_decl = create_logic_decl [make_ls_defn sb_ls [] sb_defn] in
         (* build *)
         let pure = [create_ty_decl ts;pj_decl;iF_decl;eb_decl;sb_decl] in

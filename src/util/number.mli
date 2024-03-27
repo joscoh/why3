@@ -127,7 +127,8 @@ type int_range = {
   ir_lower : BigInt.t;
   ir_upper : BigInt.t;
 }
-[@@deriving sexp]
+(*[@@deriving sexp]*)
+val int_range_eqb : int_range -> int_range -> bool
 
 val create_range : BigInt.t -> BigInt.t -> int_range
 
@@ -142,10 +143,12 @@ val int_range_equal : int_range -> int_range -> bool
 (** {2 Float checking} *)
 
 type float_format = {
-  fp_exponent_digits    : int;
-  fp_significand_digits : int; (* counting the hidden bit *)
+  fp_exponent_digits    : BigInt.t;
+  fp_significand_digits : BigInt.t; (* counting the hidden bit *)
 }
-[@@deriving sexp]
+(*[@@deriving sexp]*)
+
+val float_format_eqb : float_format -> float_format -> bool
 
 exception NonRepresentableFloat of real_constant
 

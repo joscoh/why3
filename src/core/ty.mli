@@ -39,24 +39,36 @@ type 'a type_def =
   | Range of Number.int_range
   | Float of Number.float_format
 
-type tysymbol = private {
+(*Our types are different:*)
+
+(*type tysymbol = private {
   ts_name      : ident;
   ts_args      : tvsymbol list;
   ts_def       : ty type_def;
 }
 
 and ty = private {
-  ty_node : ty_node;
+  ty_node : ty_node_c;
   ty_tag  : Weakhtbl.tag;
 }
 
-and ty_node = private
+and ty_node_c = private
   | Tyvar of tvsymbol
-  | Tyapp of tysymbol * ty list
+  | Tyapp of tysymbol * ty list*)
+
+type 'a ty_o = private { ty_node : 'a; ty_tag : Weakhtbl.tag }
+type 'a tysymbol_o = private { ts_name : ident; ts_args : tvsymbol list;
+                       ts_def : 'a type_def }
+type ty_node_c =
+| Tyvar of tvsymbol
+| Tyapp of (ty_node_c ty_o) tysymbol_o * ty_node_c ty_o list
+
+type ty = ty_node_c ty_o
+type tysymbol = ty tysymbol_o
 
 module Mts : Extmap.S with type key = tysymbol
 module Sts : Extset.S with module M = Mts
-module Hts : Exthtbl.S with type key = tysymbol
+(*module Hts : Exthtbl.S with type key = tysymbol*)
 module Wts : Weakhtbl.S with type key = tysymbol
 
 module Mty : Extmap.S with type key = ty
@@ -73,6 +85,7 @@ val ty_equal : ty -> ty -> bool
 val ts_hash : tysymbol -> BigInt.t
 val ty_hash : ty -> BigInt.t
 
+(*JOSH TODO*)
 exception BadTypeArity of tysymbol * int
 exception DuplicateTypeVar of tvsymbol
 exception UnboundTypeVar of tvsymbol
