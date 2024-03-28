@@ -38,14 +38,14 @@ let rec dty_app ts dtl =
   with Exit -> match ts.ts_def with
     | Alias ty ->
         let sbs = try List.fold_right2 Mtv.add ts.ts_args dtl Mtv.empty with
-          | Invalid_argument _ -> raise (BadTypeArity (ts, List.length dtl)) in
+          | Invalid_argument _ -> raise (BadTypeArity (ts, BigInt.of_int (List.length dtl))) in
         let rec inst ty = match ty.ty_node with
           | Tyapp (ts,tl) -> dty_app ts (List.map inst tl)
           | Tyvar v -> Mtv.find v sbs in
         inst ty
     | NoDef | Range _ | Float _ ->
         if List.length ts.ts_args <> List.length dtl then
-          raise (BadTypeArity (ts, List.length dtl));
+          raise (BadTypeArity (ts, BigInt.of_int (List.length dtl)));
         Dapp (ts, dtl)
 
 let dty_fold fnS fnV fnI dty =
