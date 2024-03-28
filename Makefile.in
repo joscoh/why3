@@ -251,9 +251,9 @@ endif
 #awful hack
 LIB_BIGINT = bigInt
 
-LIB_COQUTIL = Datatypes base fin_maps option0 numbers BinNums ErrorMonad \
+LIB_COQUTIL = ZCompat Datatypes base fin_maps option0 numbers BinNums ErrorMonad \
 		Specif pmap Basics zmap BinPos BinInt List0 decidable Byte \
-		CoqUtil StateMonad path ssrbool ZCompat Ctr CoqHashtbl IntFuncs \
+		CoqUtil CoqHashtbl StateMonad StateMonad0 path ssrbool Ctr IntFuncs \
 		Exthtbl2
 
 LIB_CORE = \
