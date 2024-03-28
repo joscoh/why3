@@ -6,7 +6,7 @@ open Ctr
 open ErrorMonad
 open Loc
 open Specif
-open StateMonad
+open StateMonad0
 open Base
 open Pmap
 open Zmap
@@ -64,7 +64,7 @@ let attr_equal =
 let attr_hash a =
   a.attr_tag
 
-(** val attr_compare : attribute -> attribute -> Int.t **)
+(** val attr_compare : attribute -> attribute -> Stdlib.Int.t **)
 
 let attr_compare a1 a2 =
   BigInt.compare a1.attr_tag a2.attr_tag
@@ -222,19 +222,19 @@ let id_equal =
 let id_hash i =
   tag_hash i.id_tag
 
-(** val id_compare : ident -> ident -> Int.t **)
+(** val id_compare : ident -> ident -> Stdlib.Int.t **)
 
 let id_compare id1 id2 =
   BigInt.compare (id_hash id1) (id_hash id2)
 
 module IdCtr = MakeCtr
 
-(** val id_ctr : unit ctr **)
+(** val id_ctr : (BigInt.t, unit) st **)
 
 let id_ctr =
   IdCtr.create (BigInt.of_int 8)
 
-(** val id_register : preid -> ident ctr **)
+(** val id_register : preid -> (BigInt.t, ident) st **)
 
 let id_register p =
   (@@) (fun _ ->

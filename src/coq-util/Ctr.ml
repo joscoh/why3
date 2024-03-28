@@ -1,4 +1,4 @@
-open StateMonad
+open StateMonad0
 
 module MakeCtr =
  struct
@@ -7,17 +7,17 @@ module MakeCtr =
   let ctr_ref =
     ref BigInt.zero
 
-  (** val create : BigInt.t -> unit ctr **)
+  (** val create : BigInt.t -> (BigInt.t, unit) st **)
 
   let create =
     fun x -> ctr_ref := x
 
-  (** val incr : unit -> unit ctr **)
+  (** val incr : unit -> (BigInt.t, unit) st **)
 
   let incr _ =
     (ctr_ref := BigInt.succ !ctr_ref)
 
-  (** val get : unit -> BigInt.t ctr **)
+  (** val get : unit -> (BigInt.t, BigInt.t) st **)
 
   let get _ =
     !ctr_ref
