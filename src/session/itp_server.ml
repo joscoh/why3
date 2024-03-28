@@ -165,7 +165,7 @@ let bypass_pretty s id =
   | Ty.BadTypeArity (ts, app_arg) ->
       let i = List.length ts.Ty.ts_args in
       fprintf fmt "Type symbol %a expects %i argument%s but is applied to %i"
-        P.print_ts ts i (if i = 1 then "" else "s") app_arg
+        P.print_ts ts i (if i = 1 then "" else "s") (BigInt.to_int app_arg) (*JOSH: to_int*)
   | Ty.DuplicateTypeVar tv ->
       fprintf fmt "Type variable %a is used twice" P.print_tv tv
   | Ty.UnboundTypeVar tv ->

@@ -814,7 +814,7 @@ let () = Exn_printer.register
   | Ty.BadTypeArity (ts, app_arg) ->
       let i = List.length ts.ts_args in
       fprintf fmt "Type symbol %a expects %i argument%s but is applied to %i"
-        print_ts ts i (if i = 1 then "" else "s") app_arg
+        print_ts ts i (if i = 1 then "" else "s") (BigInt.to_int app_arg) (*JOSH: to_int*)
   | Ty.DuplicateTypeVar tv ->
       fprintf fmt "Type variable %a is used twice" print_tv tv
   | Ty.UnboundTypeVar tv ->
