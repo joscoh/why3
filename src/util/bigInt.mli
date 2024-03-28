@@ -96,5 +96,8 @@ val hash : t -> int
 (* 3. Convenience*)
 val is_zero : t -> bool
 val pos : t -> bool
-val to_Z : t -> Z.t
+
+(*4. Added (requires Zarith)*)
+
 val of_Z : Z.t -> t
+val to_Z : t -> Z.t
