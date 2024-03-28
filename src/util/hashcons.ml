@@ -1,6 +1,6 @@
 open CoqHashtbl
 open List0
-open StateMonad
+open StateMonad0
 
 module type HashedType =
  sig
@@ -17,15 +17,16 @@ module type S =
  sig
   type t
 
-  val hashcons : t -> (t, t) hashcons_st
+  val hashcons : t -> (BigInt.t * t hashset, t) st
 
-  val unique : t -> (t, t) hashcons_st
+  val unique : t -> (BigInt.t * t hashset, t) st
 
-  val iter : (t -> unit) -> (t, unit) hashcons_st
+  val iter : (t -> unit) -> (BigInt.t * t hashset, unit) st
 
   val stats :
-    unit -> (t, ((((Int.t * Int.t) * Int.t) * Int.t) * Int.t) * Int.t)
-    hashcons_st
+    unit -> (BigInt.t * t hashset,
+    ((((Stdlib.Int.t * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t)
+    st
  end
 
 module Make =
@@ -38,7 +39,7 @@ module Make =
   let hash_st =
     ref (BigInt.one, CoqHashtbl.create_hashset)
 
-  (** val unique : t -> (H.t, t) hashcons_st **)
+  (** val unique : t -> (BigInt.t * H.t hashset, t) st **)
 
   let unique d =
     (@@) (fun i ->
@@ -48,7 +49,7 @@ module Make =
     hash_st := (BigInt.succ (fst old), (snd old))))
       (fst !hash_st)
 
-  (** val hashcons : t -> (H.t, t) hashcons_st **)
+  (** val hashcons : t -> (BigInt.t * H.t hashset, t) st **)
 
   let hashcons d =
     (@@) (fun o ->
@@ -67,25 +68,28 @@ module Make =
       ((fun _ _ k -> CoqHashtbl.find_opt_hashset H.hash H.equal (snd !hash_st) k)
         H.hash H.equal d)
 
-  (** val iter : (t -> unit) -> (H.t, unit) hashcons_st **)
+  (** val iter : (t -> unit) -> (BigInt.t * H.t hashset, unit) st **)
 
   let iter f =
     (@@) (fun h ->  (iter_hashset_unsafe f h)) (snd !hash_st)
 
   (** val stats :
-      unit -> (H.t, ((((Int.t * Int.t) * Int.t) * Int.t) * Int.t) * Int.t)
-      hashcons_st **)
+      unit -> (BigInt.t * H.t hashset,
+      ((((Stdlib.Int.t * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t)
+      st **)
 
   let stats _ =
-     (((((Int.zero, Int.zero), Int.zero), Int.zero), Int.zero), Int.zero)
+     (((((Stdlib.Int.zero, Stdlib.Int.zero), Stdlib.Int.zero),
+      Stdlib.Int.zero), Stdlib.Int.zero), Stdlib.Int.zero)
  end
 
-(** val combine : Int.t -> Int.t -> Int.t **)
+(** val combine : Stdlib.Int.t -> Stdlib.Int.t -> Stdlib.Int.t **)
 
 let combine acc n =
-  Int.add (Int.mul acc 65599) n
+  Stdlib.Int.add (Stdlib.Int.mul acc 65599) n
 
-(** val combine_list : ('a1 -> Int.t) -> Int.t -> 'a1 list -> Int.t **)
+(** val combine_list :
+    ('a1 -> Stdlib.Int.t) -> Stdlib.Int.t -> 'a1 list -> Stdlib.Int.t **)
 
 let combine_list f acc l =
   fold_left (fun acc0 x -> combine acc0 (f x)) l acc

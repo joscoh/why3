@@ -1,6 +1,6 @@
 open CoqHashtbl
 open List0
-open StateMonad
+open StateMonad0
 
 module type HashedType =
  sig
@@ -17,15 +17,16 @@ module type S =
  sig
   type t
 
-  val hashcons : t -> (t, t) hashcons_st
+  val hashcons : t -> (BigInt.t * t hashset, t) st
 
-  val unique : t -> (t, t) hashcons_st
+  val unique : t -> (BigInt.t * t hashset, t) st
 
-  val iter : (t -> unit) -> (t, unit) hashcons_st
+  val iter : (t -> unit) -> (BigInt.t * t hashset, unit) st
 
   val stats :
-    unit -> (t, ((((Int.t * Int.t) * Int.t) * Int.t) * Int.t) * Int.t)
-    hashcons_st
+    unit -> (BigInt.t * t hashset,
+    ((((Stdlib.Int.t * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t)
+    st
  end
 
 module Make :
@@ -35,20 +36,22 @@ module Make :
 
   val hash_st : H.t hashcons_unit
 
-  val unique : t -> (H.t, t) hashcons_st
+  val unique : t -> (BigInt.t * H.t hashset, t) st
 
-  val hashcons : t -> (H.t, t) hashcons_st
+  val hashcons : t -> (BigInt.t * H.t hashset, t) st
 
-  val iter : (t -> unit) -> (H.t, unit) hashcons_st
+  val iter : (t -> unit) -> (BigInt.t * H.t hashset, unit) st
 
   val stats :
-    unit -> (H.t, ((((Int.t * Int.t) * Int.t) * Int.t) * Int.t) * Int.t)
-    hashcons_st
+    unit -> (BigInt.t * H.t hashset,
+    ((((Stdlib.Int.t * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t)
+    st
  end
 
-val combine : Int.t -> Int.t -> Int.t
+val combine : Stdlib.Int.t -> Stdlib.Int.t -> Stdlib.Int.t
 
-val combine_list : ('a1 -> Int.t) -> Int.t -> 'a1 list -> Int.t
+val combine_list :
+  ('a1 -> Stdlib.Int.t) -> Stdlib.Int.t -> 'a1 list -> Stdlib.Int.t
 
 val combine_big : BigInt.t -> BigInt.t -> BigInt.t
 

@@ -1,6 +1,6 @@
 open CoqHashtbl
 open Datatypes
-open StateMonad
+open StateMonad0
 open Extmap
 
 module type S =
@@ -11,11 +11,11 @@ module type S =
 
   type t
 
-  val create : Stdlib.Int.t -> (key, value, unit) hash_st
+  val create : Stdlib.Int.t -> ((key, value) hashtbl, unit) st
 
-  val add : key -> value -> (key, value, unit) hash_st
+  val add : key -> value -> ((key, value) hashtbl, unit) st
 
-  val find_opt : key -> (key, value, value option) hash_st
+  val find_opt : key -> ((key, value) hashtbl, value option) st
  end
 
 module type TyMod =
@@ -38,18 +38,18 @@ module Make =
   let hash_ref : t ref =
     ref CoqHashtbl.create_hashtbl
 
-  (** val create : Stdlib.Int.t -> (key, value, unit) hash_st **)
+  (** val create : Stdlib.Int.t -> ((key, value) hashtbl, unit) st **)
 
   let create _ =
     (fun x -> hash_ref := x) create_hashtbl
 
-  (** val add : key -> value -> (key, value, unit) hash_st **)
+  (** val add : key -> value -> ((key, value) hashtbl, unit) st **)
 
   let add k v =
     (@@) (fun h -> (fun x -> hash_ref := x) (add_hashtbl X.tag h k v))
       !hash_ref
 
-  (** val find_opt : key -> (key, value, value option) hash_st **)
+  (** val find_opt : key -> ((key, value) hashtbl, value option) st **)
 
   let find_opt k =
     (@@) (fun h ->
