@@ -73,14 +73,14 @@ let tv_compare tv1 tv2 =
 (** val create_tvsymbol : preid -> (BigInt.t, tvsymbol) st **)
 
 let create_tvsymbol n =
-  (@@) (fun i ->  { tv_name = i }) (id_register n)
+  (@@) (fun i -> (fun x -> x) { tv_name = i }) (id_register n)
 
 module Tvsym_t =
  struct
   type t = tvsymbol
  end
 
-module Hstr_tv = Exthtbl2.Make(Str2)(Tvsym_t)
+module Hstr_tv = MakeExthtbl(Str2)(Tvsym_t)
 
 (** val tv_hashtbl : ((string, tvsymbol) hashtbl, unit) st **)
 
@@ -93,11 +93,11 @@ let tv_hashtbl =
 let tv_of_string s =
   (@@) (fun o ->
     match o with
-    | Some v ->  v
+    | Some v -> (fun x -> x) v
     | None ->
       let tv = create_tvsymbol (id_fresh1 s) in
-      (@@) (fun i -> (@@) (fun _ ->  i) ( (Hstr_tv.add s i))) ( tv))
-    ( (Hstr_tv.find_opt s))
+      (@@) (fun i -> (@@) (fun _ -> (fun x -> x) i) ( (Hstr_tv.add s i)))
+        ( tv)) ( (Hstr_tv.find_opt s))
 
 type 'a type_def =
 | NoDef
@@ -301,7 +301,8 @@ module Hsty = Make(TyHash)
     (ty_node_c ty_o) tysymbol_o) st **)
 
 let mk_ts name args d =
-  (@@) (fun i ->  ((fun (a,b,c) -> build_tysym_o a b c) (i, args, d)))
+  (@@) (fun i ->
+    (fun x -> x) ((fun (a,b,c) -> build_tysym_o a b c) (i, args, d)))
     (id_register name)
 
 (** val ty_eq : (ty_node_c ty_o, ty_node_c ty_o) coq_RelDecision **)
@@ -339,10 +340,12 @@ exception BadFloatSpec
 exception EmptyRange
 exception UnexpectedProp
 exception TypeMismatch of ty * ty
+open Exthtbl2
 open CoqHashtbl
 open Number
 open CoqUtil
 open Weakhtbl
+open Wstdlib
 open Datatypes
 open ErrorMonad
 open Ident
@@ -350,6 +353,7 @@ open IntFuncs
 open List0
 open StateMonad0
 
+open Base
 
 (** val mk_ty : ty_node_c -> ty_node_c ty_o **)
 
@@ -375,7 +379,7 @@ let ty_app1 s tl =
 
 let ty_map fn t0 =
   match ty_node t0 with
-  | Tyvar _ ->  t0
+  | Tyvar _ -> (fun x -> x) t0
   | Tyapp (f, tl) -> ty_app1 f (map fn tl)
 
 (** val ty_fold :
@@ -432,7 +436,7 @@ let is_float_type_def = function
 
 let rec ty_v_map fn t0 =
   match ty_node t0 with
-  | Tyvar v ->  (fn v)
+  | Tyvar v -> (fun x -> x) (fn v)
   | Tyapp (f, tl) ->
     (@@) (fun l -> ty_app1 f l) (st_list (map (ty_v_map fn) tl))
 
@@ -601,7 +605,7 @@ let ty_s_any pr t0 =
 
 let ty_mapM fn t0 =
   match ty_node t0 with
-  | Tyvar _ ->  t0
+  | Tyvar _ -> (fun x -> x) t0
   | Tyapp (f, tl) -> (@@) (fun l -> ty_app1 f l) (st_list (map fn tl))
 
 (** val ty_inst :
@@ -610,7 +614,7 @@ let ty_mapM fn t0 =
 
 let rec ty_inst s t0 =
   match ty_node t0 with
-  | Tyvar n ->  (Mtv.find_def t0 n s)
+  | Tyvar n -> (fun x -> x) (Mtv.find_def t0 n s)
   | Tyapp (_, _) -> ty_mapM (ty_inst s) t0
 
 (** val fold_right2_error :
@@ -726,6 +730,94 @@ let ty_func ty_a ty_b =
 let ty_pred ty_a =
   (@@) (fun t0 -> ty_app1 ts_func (ty_a :: (t0 :: []))) ty_bool
 
+module TysymbolT =
+ struct
+  type t = (ty_node_c ty_o) tysymbol_o
+ end
+
+module BigIntT =
+ struct
+  type t = BigInt.t
+ end
+
+module IdentTag2 = MakeTagged(IdentTag)
+
+module TupIds = MakeExthtbl(BigIntTag)(TysymbolT)
+
+module TupNames = MakeExthtbl(IdentTag2)(BigIntT)
+
+(** val ts_tuple_ids : ((TupNames.key, TupNames.value) hashtbl, unit) st **)
+
+let ts_tuple_ids =
+  TupNames.create Stdlib.Int.one
+
+(** val tuple_memo : ((TupIds.key, TupIds.value) hashtbl, unit) st **)
+
+let tuple_memo =
+  TupIds.create Stdlib.Int.one
+
+(** val fold_left_st :
+    ('a2 -> 'a3 -> ('a1, 'a2) st) -> 'a3 list -> 'a2 -> ('a1, 'a2) st **)
+
+let rec fold_left_st f l x =
+  match l with
+  | [] -> (fun x -> x) x
+  | h :: t0 -> (@@) (fun j -> fold_left_st f t0 j) (f x h)
+
+(** val ts_tuple :
+    BigInt.t -> (BigInt.t * ((TupNames.key, TupNames.value)
+    hashtbl * (TupIds.key, TupIds.value) hashtbl),
+    (ty_node_c ty_o) tysymbol_o) st **)
+
+let ts_tuple n =
+  (@@) (fun o ->
+    match o with
+    | Some v -> (fun x -> x) v
+    | None ->
+      let vl =
+        fold_left_st (fun l _ ->
+          (@@) (fun h -> (fun x -> x) (h :: l))
+            (create_tvsymbol (id_fresh1 "a"))) (iota n) []
+      in
+      (@@) (fun l ->
+        (@@) (fun i ->
+          let ts = mk_ts_builtin i l NoDef in
+          (@@) (fun _ ->
+            (@@) (fun _ -> (fun x -> x) ts) ( ( (TupIds.add n ts))))
+            ( ( (TupNames.add (ts_name ts) n))))
+          ( (id_register (id_fresh1 ((^) "tuple" (BigInt.to_string n))))))
+        ( vl)) ( ( (TupIds.find_opt n)))
+
+(** val ty_tuple :
+    ty_node_c ty_o list -> ((BigInt.t * ((TupNames.key, TupNames.value)
+    hashtbl * (TupIds.key, TupIds.value) hashtbl)) * (BigInt.t * TyHash.t
+    hashset), ty_node_c ty_o) st **)
+
+let ty_tuple l =
+  (@@) (fun s ->  (ty_app1 s l)) ( (ts_tuple (int_length l)))
+
+(** val is_ts_tuple :
+    (ty_node_c ty_o) tysymbol_o -> ((BigInt.t, (ty_node_c ty_o) tysymbol_o)
+    hashtbl, bool) st **)
+
+let is_ts_tuple ts =
+  (@@) (fun o ->
+    match o with
+    | Some t0 -> (fun x -> x) (tysymbol_eqb t0 ts)
+    | None -> (fun x -> x) false) (TupIds.find_opt (int_length (ts_args ts)))
+
+(** val is_ts_tuple_id :
+    ident -> ((ident, BigInt.t) hashtbl, BigInt.t option) st **)
+
+let is_ts_tuple_id i =
+  (@@) (fun x -> x) (TupNames.find_opt i)
+
+(** val oty_type : ty_node_c ty_o option -> ty_node_c ty_o errorM **)
+
+let oty_type = function
+| Some t0 ->  t0
+| None -> raise UnexpectedProp
+
 (** val oty_equal : ty_node_c ty_o option -> ty_node_c ty_o option -> bool **)
 
 let oty_equal o1 o2 =
@@ -784,7 +876,7 @@ let oty_cons l o =
 
 let ty_equal_check ty1 ty2 =
   if negb (ty_equal ty1 ty2) then raise (TypeMismatch (ty1, ty2)) else  ()
-let oty_type = function Some ty -> ty | None -> raise UnexpectedProp
+(* let oty_type = function Some ty -> ty | None -> raise UnexpectedProp
 let ts_tuple_ids = Hid.create 17
 
 (*JOSH: remove memoization*)
@@ -800,7 +892,7 @@ let ty_tuple tyl = ty_app (ts_tuple (List.length tyl)) tyl
 let is_ts_tuple ts = ts_equal ts (ts_tuple (List.length ts.ts_args))
 
 let is_ts_tuple_id id =
-  try Some (Hid.find ts_tuple_ids id) with Not_found -> None
+  try Some (Hid.find ts_tuple_ids id) with Not_found -> None *)
 
 module Ty2 = MakeMSHW(TyTagged)
 module Hty = Ty2.H

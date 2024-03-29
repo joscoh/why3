@@ -535,7 +535,7 @@ let add_use uc syms = Sid.fold (fun id uc ->
   else if id_equal id ts_ref.ts_name then
     use_export uc ref_module
   else match is_ts_tuple_id id with
-  | Some n -> use_export uc (tuple_module n)
+  | Some n -> use_export uc (tuple_module (BigInt.to_int n)) (*JOSH to_int*)
   | None -> uc) (Mid.set_diff syms uc.muc_known) uc
 
 let mk_vc uc d = Vc.vc uc.muc_env uc.muc_known uc.muc_theory d

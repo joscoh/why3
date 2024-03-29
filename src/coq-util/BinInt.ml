@@ -66,6 +66,11 @@ module Z =
   let succ x =
     add x (Zpos Coq_xH)
 
+  (** val pred : coq_Z -> coq_Z **)
+
+  let pred x =
+    add x (Zneg Coq_xH)
+
   (** val mul : coq_Z -> coq_Z -> coq_Z **)
 
   let mul x y =

@@ -1042,7 +1042,7 @@ let to_prop t =
 let fs_tuple_ids = Hid.create 17
 
 let fs_tuple = Hint.memo 17 (fun n ->
-  let ts = ts_tuple n in
+  let ts = ts_tuple (BigInt.of_int n) in (*JOSH of_int*)
   let tl = List.map ty_var ts.ts_args in
   let ty = ty_app ts tl in
   let attrs = Sattr.singleton builtin_attr in

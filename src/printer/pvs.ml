@@ -249,7 +249,7 @@ let print_vsty_nopar info fmt v =
   fprintf fmt "%a:%a" print_vs v (print_ty info) v.vs_ty
 
 let is_tuple0_ty = function
-  | Some { ty_node = Tyapp (ts, _) } -> ts_equal ts (ts_tuple 0)
+  | Some { ty_node = Tyapp (ts, _) } -> ts_equal ts (ts_tuple BigInt.zero)
   | Some _ | None -> false
 
 let is_tuple_ty = function

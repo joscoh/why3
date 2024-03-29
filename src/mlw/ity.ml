@@ -792,11 +792,11 @@ let ity_str  = ity_app its_str  [] []
 let ity_func a b = ity_app its_func [a;b] []
 let ity_pred a   = ity_app its_func [a;ity_bool] []
 
-let its_tuple = Hint.memo 17 (fun n -> its_of_ts (ts_tuple n))
+let its_tuple = Hint.memo 17 (fun n -> its_of_ts (ts_tuple (BigInt.of_int n))) (*JOSH: of_int*)
 
 let ity_tuple tl = ity_app (its_tuple (List.length tl)) tl []
 
-let ts_unit  = ts_tuple  0
+let ts_unit  = ts_tuple  BigInt.zero
 let its_unit = its_tuple 0
 
 let ty_unit  = ty_tuple  []

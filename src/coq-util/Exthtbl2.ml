@@ -16,6 +16,8 @@ module type S =
   val add : key -> value -> ((key, value) hashtbl, unit) st
 
   val find_opt : key -> ((key, value) hashtbl, value option) st
+
+  val memo : (key -> value) -> key -> ((key, value) hashtbl, value) st
  end
 
 module type TyMod =
@@ -23,7 +25,7 @@ module type TyMod =
   type t
  end
 
-module Make =
+module MakeExthtbl =
  functor (X:TaggedType) ->
  functor (Y:TyMod) ->
  struct
@@ -53,7 +55,18 @@ module Make =
 
   let find_opt k =
     (@@) (fun h ->
-      
+      (fun x -> x)
         (option_map snd
           (find_opt_hashtbl X.tag (fun x y ->  (X.equal x y)) h k))) !hash_ref
+
+  (** val memo : (key -> value) -> key -> ((key, value) hashtbl, value) st **)
+
+  let memo f k =
+    (@@) (fun h ->
+      match find_opt_hashtbl X.tag (fun x y ->  (X.equal x y)) h k with
+      | Some v -> (fun x -> x) (snd v)
+      | None ->
+        let y = f k in
+        (@@) (fun _ -> (fun x -> x) y)
+          ((fun x -> hash_ref := x) (add_hashtbl X.tag h k y))) !hash_ref
  end

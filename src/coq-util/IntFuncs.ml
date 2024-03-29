@@ -17,3 +17,15 @@ let option_compare cmp o1 o2 =
     (match o2 with
      | Some _ -> Stdlib.Int.minus_one
      | None -> Stdlib.Int.zero)
+
+(** val iota_aux : BigInt.t -> BigInt.t list **)
+
+let rec iota_aux z =
+  if BigInt.lt z BigInt.zero
+  then []
+  else if BigInt.eq z BigInt.zero then [] else z :: (iota_aux (BigInt.pred z))
+
+(** val iota : BigInt.t -> BigInt.t list **)
+
+let iota =
+  iota_aux

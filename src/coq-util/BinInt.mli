@@ -16,6 +16,8 @@ module Z :
 
   val succ : coq_Z -> coq_Z
 
+  val pred : coq_Z -> coq_Z
+
   val mul : coq_Z -> coq_Z -> coq_Z
 
   val pow_pos : coq_Z -> positive -> coq_Z
