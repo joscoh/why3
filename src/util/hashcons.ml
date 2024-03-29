@@ -44,7 +44,7 @@ module Make =
   let unique d =
     (@@) (fun i ->
       let d0 = H.tag i d in
-      (@@) (fun _ ->  d0)
+      (@@) (fun _ -> (fun x -> x) d0)
         (let old = !hash_st in
     hash_st := (BigInt.succ (fst old), (snd old))))
       (fst !hash_st)
@@ -54,12 +54,12 @@ module Make =
   let hashcons d =
     (@@) (fun o ->
       match o with
-      | Some k ->  k
+      | Some k -> (fun x -> x) k
       | None ->
         (@@) (fun i ->
           let d1 = H.tag i d in
           (@@) (fun _ ->
-            (@@) (fun _ ->  d1)
+            (@@) (fun _ -> (fun x -> x) d1)
               (let old = !hash_st in
     hash_st := (BigInt.succ (fst old), (snd old))))
             ((fun _ k -> let old = !hash_st in
@@ -71,7 +71,7 @@ module Make =
   (** val iter : (t -> unit) -> (BigInt.t * H.t hashset, unit) st **)
 
   let iter f =
-    (@@) (fun h ->  (iter_hashset_unsafe f h)) (snd !hash_st)
+    (@@) (fun h -> (fun x -> x) (iter_hashset_unsafe f h)) (snd !hash_st)
 
   (** val stats :
       unit -> (BigInt.t * H.t hashset,
@@ -79,7 +79,7 @@ module Make =
       st **)
 
   let stats _ =
-     (((((Stdlib.Int.zero, Stdlib.Int.zero), Stdlib.Int.zero),
+    (fun x -> x) (((((Stdlib.Int.zero, Stdlib.Int.zero), Stdlib.Int.zero),
       Stdlib.Int.zero), Stdlib.Int.zero), Stdlib.Int.zero)
  end
 

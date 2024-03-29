@@ -1035,7 +1035,7 @@ let highord_theory =
   close_theory uc
 
 let tuple_theory = Hint.memo 17 (fun n ->
-  let ts = ts_tuple n and fs = fs_tuple n in
+  let ts = ts_tuple (BigInt.of_int n) and fs = fs_tuple n in (*Josh of_int*)
   let pl = List.map (fun _ -> None) ts.ts_args in
   let nm = "Tuple" ^ string_of_int n in
   let attrs = Sattr.singleton builtin_attr in
@@ -1057,7 +1057,7 @@ let tuple_theory_name s =
 let add_decl_with_tuples uc d =
   let ids = Mid.set_diff (get_used_syms_decl d) uc.uc_known in
   let add id s = match is_ts_tuple_id id with
-    | Some n -> Sint.add n s
+    | Some n -> Sint.add (BigInt.to_int n) s (*JOSH to_int*)
     | None -> s in
   let ixs = Sid.fold add ids Sint.empty in
   let add n uc = use_export uc (tuple_theory n) in

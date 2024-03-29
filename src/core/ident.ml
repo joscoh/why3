@@ -239,8 +239,8 @@ let id_ctr =
 let id_register p =
   (@@) (fun _ ->
     (@@) (fun i ->
-       { id_string = p.pre_name; id_attrs = p.pre_attrs; id_loc = p.pre_loc;
-        id_tag = (create_tag i) }) (IdCtr.get ())) (IdCtr.incr ())
+      (fun x -> x) { id_string = p.pre_name; id_attrs = p.pre_attrs; id_loc =
+        p.pre_loc; id_tag = (create_tag i) }) (IdCtr.get ())) (IdCtr.incr ())
 
 (** val id_builtin : string -> BigInt.t -> ident **)
 

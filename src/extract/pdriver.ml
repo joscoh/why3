@@ -165,7 +165,7 @@ let load_driver whyconf_main env file extra_files =
               let tyl = List.map ty_of_pty tyl in
               Loc.try2 ~loc Ty.ty_app ts tyl
           | PTuple tyl ->
-              let ts = Ty.ts_tuple (List.length tyl) in
+              let ts = Ty.ts_tuple (BigInt.of_int (List.length tyl)) in (*JOSH of_int*)
               Ty.ty_app ts (List.map ty_of_pty tyl)
         in
         let convert = function

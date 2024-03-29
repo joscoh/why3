@@ -1,14 +1,16 @@
 (*A horrible hack for the moment until I set up a better action/bash script*)
 open Mysexplib.Std [@@warning "-33"]
 open Lexing
-type position = { pos_file_tag : Int.t; pos_start : Int.t; pos_end : Int.t }
+type position = { pos_file_tag : Stdlib.Int.t; pos_start : Stdlib.Int.t;
+                  pos_end : Stdlib.Int.t }
 
 (** val position_eqb : position -> position -> bool **)
 
 let position_eqb p1 p2 =
   (&&)
-    ((&&) (Int.equal p1.pos_file_tag p2.pos_file_tag)
-      (Int.equal p1.pos_start p2.pos_start)) (Int.equal p1.pos_end p2.pos_end)
+    ((&&) (Stdlib.Int.equal p1.pos_file_tag p2.pos_file_tag)
+      (Stdlib.Int.equal p1.pos_start p2.pos_start))
+    (Stdlib.Int.equal p1.pos_end p2.pos_end)
 
 (** val equal : position -> position -> bool **)
 

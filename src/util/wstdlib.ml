@@ -9,6 +9,21 @@ open Extset
 open Pmap
 open Zmap
 
+module BigIntTag =
+ struct
+  type t = BigInt.t
+
+  (** val tag : t -> t **)
+
+  let tag x =
+    x
+
+  (** val equal : (t, t) coq_RelDecision **)
+
+  let equal =
+    dec_from_eqb BigInt.eq
+ end
+
 module Str2 =
  struct
   type t = string

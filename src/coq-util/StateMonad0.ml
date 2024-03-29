@@ -7,8 +7,9 @@ type ('a, 'b) st = 'b
 (** val st_list : ('a1, 'a2) st list -> ('a1, 'a2 list) st **)
 
 let st_list l =
-  fold_right (fun x acc -> (@@) (fun h -> (@@) (fun t ->  (h :: t)) acc) x)
-    ( []) l
+  fold_right (fun x acc ->
+    (@@) (fun h -> (@@) (fun t -> (fun x -> x) (h :: t)) acc) x)
+    ((fun x -> x) []) l
 
 type ('a, 'b) errState = 'b
 
