@@ -1,4 +1,3 @@
-open Base
 
 type tag = BigInt.t
 
@@ -28,7 +27,7 @@ module type Weakey =
 
   val tag : t -> tag
 
-  val equal : (t, t) coq_RelDecision
+  val equal : t -> t -> bool
  end
 (********************************************************************)
 (*                                                                  *)

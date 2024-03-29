@@ -1,4 +1,4 @@
-open StateMonad0
+open Monads
 
 module MakeCtr :
  sig

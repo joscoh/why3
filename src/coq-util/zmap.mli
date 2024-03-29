@@ -10,9 +10,6 @@ type __ = Obj.t
 type 'a coq_Zmap = { coq_Zmap_0 : 'a option; coq_Zmap_pos : 'a coq_Pmap;
                      coq_Zmap_neg : 'a coq_Pmap }
 
-val coq_Zmap_eq_dec :
-  ('a1, 'a1) coq_RelDecision -> ('a1 coq_Zmap, 'a1 coq_Zmap) coq_RelDecision
-
 val coq_Zmap_empty : 'a1 coq_Zmap coq_Empty
 
 val coq_Zmap_lookup : (coq_Z, 'a1, 'a1 coq_Zmap) coq_Lookup
