@@ -1,6 +1,6 @@
 open CoqHashtbl
 open Datatypes
-open StateMonad0
+open Monads
 open Extmap
 
 module type S =
@@ -55,15 +55,14 @@ module MakeExthtbl =
 
   let find_opt k =
     (@@) (fun h ->
-      (fun x -> x)
-        (option_map snd
-          (find_opt_hashtbl X.tag (fun x y ->  (X.equal x y)) h k))) !hash_ref
+      (fun x -> x) (option_map snd (find_opt_hashtbl X.tag X.equal h k)))
+      !hash_ref
 
   (** val memo : (key -> value) -> key -> ((key, value) hashtbl, value) st **)
 
   let memo f k =
     (@@) (fun h ->
-      match find_opt_hashtbl X.tag (fun x y ->  (X.equal x y)) h k with
+      match find_opt_hashtbl X.tag X.equal h k with
       | Some v -> (fun x -> x) (snd v)
       | None ->
         let y = f k in

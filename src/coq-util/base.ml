@@ -3,21 +3,6 @@ open Datatypes
 type __ = Obj.t
 let __ = let rec f _ = Obj.repr f in Obj.repr f
 
-type coq_Decision = bool
-
-(** val decide : coq_Decision -> bool **)
-
-let decide decision =
-  decision
-
-type ('a, 'b) coq_RelDecision = 'a -> 'b -> coq_Decision
-
-(** val decide_rel :
-    ('a1, 'a2) coq_RelDecision -> 'a1 -> 'a2 -> coq_Decision **)
-
-let decide_rel relDecision =
-  relDecision
-
 type 'a coq_Empty = 'a
 
 (** val empty : 'a1 coq_Empty -> 'a1 **)

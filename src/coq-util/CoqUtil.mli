@@ -27,5 +27,3 @@ val fold_right2 :
 val null : 'a1 list -> bool
 
 val option_fold : 'a1 -> ('a2 -> 'a1) -> 'a2 option -> 'a1
-
-val dec_from_eqb : ('a1 -> 'a1 -> bool) -> 'a1 -> 'a1 -> bool

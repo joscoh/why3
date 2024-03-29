@@ -19,13 +19,6 @@ type 'a coq_Pmap =
 | PEmpty
 | PNodes of 'a coq_Pmap_ne
 
-val coq_Pmap_ne_eq_dec :
-  ('a1, 'a1) coq_RelDecision -> ('a1 coq_Pmap_ne, 'a1 coq_Pmap_ne)
-  coq_RelDecision
-
-val coq_Pmap_eq_dec :
-  ('a1, 'a1) coq_RelDecision -> ('a1 coq_Pmap, 'a1 coq_Pmap) coq_RelDecision
-
 val coq_PNode : 'a1 coq_Pmap -> 'a1 option -> 'a1 coq_Pmap -> 'a1 coq_Pmap
 
 val coq_Pmap_ne_case :

@@ -3,11 +3,9 @@ open CoqUtil
 open Weakhtbl
 open Wstdlib
 open Ctr
-open ErrorMonad
 open Loc
+open Monads
 open Specif
-open StateMonad0
-open Base
 open Pmap
 open Zmap
 
@@ -28,11 +26,6 @@ let attr_tag a =
 let attr_eqb a1 a2 =
   (&&) ((=) a1.attr_string a2.attr_string) (BigInt.eq a1.attr_tag a2.attr_tag)
 
-(** val attr_eq : (attribute, attribute) coq_RelDecision **)
-
-let attr_eq =
-  dec_from_eqb attr_eqb
-
 module AttrTag =
  struct
   type t = attribute
@@ -42,10 +35,10 @@ module AttrTag =
   let tag x =
     x.attr_tag
 
-  (** val equal : (attribute, attribute) coq_RelDecision **)
+  (** val equal : attribute -> attribute -> bool **)
 
   let equal =
-    attr_eq
+    attr_eqb
  end
 
 module Attr = MakeMS(AttrTag)
@@ -168,11 +161,6 @@ let ident_eqb i1 i2 =
         (Sattr.equal i1.id_attrs i2.id_attrs))
       (option_eqb equal i1.id_loc i2.id_loc)) (tag_equal i1.id_tag i2.id_tag)
 
-(** val ident_eq : (ident, ident) coq_RelDecision **)
-
-let ident_eq =
-  dec_from_eqb ident_eqb
-
 module IdentTag =
  struct
   type t = ident
@@ -182,10 +170,10 @@ module IdentTag =
   let tag x =
     x.id_tag
 
-  (** val equal : (ident, ident) coq_RelDecision **)
+  (** val equal : ident -> ident -> bool **)
 
   let equal =
-    ident_eq
+    ident_eqb
  end
 
 module Id = MakeMSWeak(IdentTag)

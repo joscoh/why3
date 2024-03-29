@@ -1,6 +1,6 @@
 open CoqHashtbl
 open List0
-open StateMonad0
+open Monads
 
 module type HashedType =
  sig

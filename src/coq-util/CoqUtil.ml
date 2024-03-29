@@ -100,8 +100,3 @@ let null = function
 let option_fold none some = function
 | Some x -> some x
 | None -> none
-
-(** val dec_from_eqb : ('a1 -> 'a1 -> bool) -> 'a1 -> 'a1 -> bool **)
-
-let dec_from_eqb f x y =
-  let b = f x y in if b then true else false

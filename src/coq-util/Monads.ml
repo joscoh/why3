@@ -2,6 +2,13 @@ open List0
 
 type __ = Obj.t
 
+type 'a errorM = 'a
+
+(** val ignore : 'a1 errorM -> unit errorM **)
+
+let ignore x =
+  (@@) (fun _ ->  ()) x
+
 type ('a, 'b) st = 'b
 
 (** val st_list : ('a1, 'a2) st list -> ('a1, 'a2 list) st **)

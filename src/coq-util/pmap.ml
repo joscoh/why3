@@ -19,68 +19,6 @@ type 'a coq_Pmap =
 | PEmpty
 | PNodes of 'a coq_Pmap_ne
 
-(** val coq_Pmap_ne_eq_dec :
-    ('a1, 'a1) coq_RelDecision -> ('a1 coq_Pmap_ne, 'a1 coq_Pmap_ne)
-    coq_RelDecision **)
-
-let rec coq_Pmap_ne_eq_dec eqDecision0 x y =
-  match x with
-  | PNode001 p ->
-    (match y with
-     | PNode001 p0 -> coq_Pmap_ne_eq_dec eqDecision0 p p0
-     | _ -> false)
-  | PNode010 y0 ->
-    (match y with
-     | PNode010 a -> decide_rel eqDecision0 y0 a
-     | _ -> false)
-  | PNode011 (y0, p) ->
-    (match y with
-     | PNode011 (a, p0) ->
-       if decide_rel eqDecision0 y0 a
-       then coq_Pmap_ne_eq_dec eqDecision0 p p0
-       else false
-     | _ -> false)
-  | PNode100 p ->
-    (match y with
-     | PNode100 p0 -> coq_Pmap_ne_eq_dec eqDecision0 p p0
-     | _ -> false)
-  | PNode101 (p, p0) ->
-    (match y with
-     | PNode101 (p1, p2) ->
-       if coq_Pmap_ne_eq_dec eqDecision0 p p1
-       then coq_Pmap_ne_eq_dec eqDecision0 p0 p2
-       else false
-     | _ -> false)
-  | PNode110 (p, y0) ->
-    (match y with
-     | PNode110 (p0, a) ->
-       if coq_Pmap_ne_eq_dec eqDecision0 p p0
-       then decide_rel eqDecision0 y0 a
-       else false
-     | _ -> false)
-  | PNode111 (p, y0, p0) ->
-    (match y with
-     | PNode111 (p1, a, p2) ->
-       if coq_Pmap_ne_eq_dec eqDecision0 p p1
-       then if decide_rel eqDecision0 y0 a
-            then coq_Pmap_ne_eq_dec eqDecision0 p0 p2
-            else false
-       else false
-     | _ -> false)
-
-(** val coq_Pmap_eq_dec :
-    ('a1, 'a1) coq_RelDecision -> ('a1 coq_Pmap, 'a1 coq_Pmap) coq_RelDecision **)
-
-let coq_Pmap_eq_dec eqDecision0 x y =
-  match x with
-  | PEmpty -> (match y with
-               | PEmpty -> true
-               | PNodes _ -> false)
-  | PNodes p ->
-    (match y with
-     | PEmpty -> false
-     | PNodes p0 -> decide_rel (coq_Pmap_ne_eq_dec eqDecision0) p p0)
-
 (** val coq_PNode :
     'a1 coq_Pmap -> 'a1 option -> 'a1 coq_Pmap -> 'a1 coq_Pmap **)
 

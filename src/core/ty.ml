@@ -5,14 +5,12 @@ open Number
 open CoqUtil
 open Weakhtbl
 open Wstdlib
-open ErrorMonad
 open Ident
 open IntFuncs
 open List0
+open Monads
 open Specif
 open StateMonad
-open StateMonad0
-open Base
 open Hashcons
 open Pmap
 open Zmap
@@ -29,11 +27,6 @@ let tv_name t0 =
 let tvsymbol_eqb t1 t2 =
   id_equal t1.tv_name t2.tv_name
 
-(** val tvsymbol_eq : (tvsymbol, tvsymbol) coq_RelDecision **)
-
-let tvsymbol_eq =
-  dec_from_eqb tvsymbol_eqb
-
 module TvarTagged =
  struct
   type t = tvsymbol
@@ -43,10 +36,10 @@ module TvarTagged =
   let tag tv =
     tv.tv_name.id_tag
 
-  (** val equal : (tvsymbol, tvsymbol) coq_RelDecision **)
+  (** val equal : tvsymbol -> tvsymbol -> bool **)
 
   let equal =
-    tvsymbol_eq
+    tvsymbol_eqb
  end
 
 module Tvar = MakeMSWeak(TvarTagged)
@@ -202,12 +195,6 @@ and tysymbol_eqb t1 t2 =
         | Float f2 -> float_format_eqb f1 f2
         | _ -> false))
 
-(** val tysymbol_eq :
-    ((ty_node_c ty_o) tysymbol_o, (ty_node_c ty_o) tysymbol_o) coq_RelDecision **)
-
-let tysymbol_eq =
-  dec_from_eqb tysymbol_eqb
-
 module TsymTagged =
  struct
   type t = (ty_node_c ty_o) tysymbol_o
@@ -218,11 +205,10 @@ module TsymTagged =
     (ts_name ts).id_tag
 
   (** val equal :
-      ((ty_node_c ty_o) tysymbol_o, (ty_node_c ty_o) tysymbol_o)
-      coq_RelDecision **)
+      (ty_node_c ty_o) tysymbol_o -> (ty_node_c ty_o) tysymbol_o -> bool **)
 
   let equal =
-    tysymbol_eq
+    tysymbol_eqb
  end
 
 module Tsym = MakeMSWeak(TsymTagged)
@@ -305,11 +291,6 @@ let mk_ts name args d =
     (fun x -> x) ((fun (a,b,c) -> build_tysym_o a b c) (i, args, d)))
     (id_register name)
 
-(** val ty_eq : (ty_node_c ty_o, ty_node_c ty_o) coq_RelDecision **)
-
-let ty_eq =
-  dec_from_eqb ty_eqb
-
 module TyTagged =
  struct
   type t = ty_node_c ty_o
@@ -319,10 +300,10 @@ module TyTagged =
   let tag =
     ty_tag
 
-  (** val equal : (ty_node_c ty_o, ty_node_c ty_o) coq_RelDecision **)
+  (** val equal : ty_node_c ty_o -> ty_node_c ty_o -> bool **)
 
   let equal =
-    ty_eq
+    ty_eqb
  end
 
 module TyM = MakeMSWeak(TyTagged)
@@ -347,13 +328,11 @@ open CoqUtil
 open Weakhtbl
 open Wstdlib
 open Datatypes
-open ErrorMonad
 open Ident
 open IntFuncs
 open List0
-open StateMonad0
+open Monads
 
-open Base
 
 (** val mk_ty : ty_node_c -> ty_node_c ty_o **)
 

@@ -1,9 +1,8 @@
 open BinNums
 open CoqUtil
 open Weakhtbl
-open ErrorMonad
+open Monads
 open Specif
-open Base
 open Extmap
 open Extset
 open Pmap
@@ -18,10 +17,10 @@ module BigIntTag =
   let tag x =
     x
 
-  (** val equal : (t, t) coq_RelDecision **)
+  (** val equal : BigInt.t -> BigInt.t -> bool **)
 
   let equal =
-    dec_from_eqb BigInt.eq
+    BigInt.eq
  end
 
 module Str2 =
@@ -33,10 +32,10 @@ module Str2 =
   let tag s =
     ZCompat.of_Z_big (Zpos (str_to_pos s))
 
-  (** val equal : (string, string) coq_RelDecision **)
+  (** val equal : string -> string -> bool **)
 
   let equal =
-    dec_from_eqb (=)
+    (=)
  end
 
 module OrderedHashed =
@@ -80,7 +79,7 @@ module MakeTagged =
   let tag x =
     tag_hash (X.tag x)
 
-  (** val equal : (t, t) coq_RelDecision **)
+  (** val equal : X.t -> X.t -> bool **)
 
   let equal =
     X.equal

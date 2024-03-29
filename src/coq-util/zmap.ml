@@ -10,18 +10,6 @@ type __ = Obj.t
 type 'a coq_Zmap = { coq_Zmap_0 : 'a option; coq_Zmap_pos : 'a coq_Pmap;
                      coq_Zmap_neg : 'a coq_Pmap }
 
-(** val coq_Zmap_eq_dec :
-    ('a1, 'a1) coq_RelDecision -> ('a1 coq_Zmap, 'a1 coq_Zmap) coq_RelDecision **)
-
-let coq_Zmap_eq_dec eqDecision0 t1 t2 =
-  let { coq_Zmap_0 = x; coq_Zmap_pos = t3; coq_Zmap_neg = t1' } = t1 in
-  let { coq_Zmap_0 = y; coq_Zmap_pos = t4; coq_Zmap_neg = t2' } = t2 in
-  if decide (decide_rel (option_eq_dec eqDecision0) x y)
-  then if decide (decide_rel (coq_Pmap_eq_dec eqDecision0) t3 t4)
-       then decide (decide_rel (coq_Pmap_eq_dec eqDecision0) t1' t2')
-       else false
-  else false
-
 (** val coq_Zmap_empty : 'a1 coq_Zmap coq_Empty **)
 
 let coq_Zmap_empty =
