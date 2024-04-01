@@ -5,6 +5,7 @@ open Number
 open CoqUtil
 open Weakhtbl
 open Wstdlib
+open Datatypes
 open Ident
 open IntFuncs
 open List0
