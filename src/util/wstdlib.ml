@@ -1,6 +1,7 @@
 open BinNums
 open CoqUtil
 open Weakhtbl
+open Datatypes
 open Monads
 open Specif
 open Extmap

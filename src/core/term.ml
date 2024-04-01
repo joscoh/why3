@@ -193,6 +193,73 @@ let create_psymbol nm al =
 let ls_ty_freevars ls =
   let acc = oty_freevars Stv.empty ls.ls_value in
   fold_left ty_freevars ls.ls_args acc
+
+type 'a pattern_o = { pat_node : 'a; pat_vars : Svs.t; pat_ty : ty_node_c ty_o }
+
+(** val pat_node : 'a1 pattern_o -> 'a1 **)
+
+let pat_node p =
+  p.pat_node
+
+(** val pat_vars : 'a1 pattern_o -> Svs.t **)
+
+let pat_vars p =
+  p.pat_vars
+
+(** val pat_ty : 'a1 pattern_o -> ty_node_c ty_o **)
+
+let pat_ty p =
+  p.pat_ty
+
+type pattern_node =
+| Pwild
+| Pvar of vsymbol
+| Papp of lsymbol * (pattern_node pattern_o) list
+| Por of (pattern_node pattern_o) * (pattern_node pattern_o)
+| Pas of (pattern_node pattern_o) * vsymbol
+
+type pattern = pattern_node pattern_o
+
+(** val build_pattern_o :
+    pattern_node -> Svs.t -> ty_node_c ty_o -> pattern_node pattern_o **)
+
+let build_pattern_o p s t0 =
+  { pat_node = p; pat_vars = s; pat_ty = t0 }
+
+(** val pattern_eqb :
+    (pattern_node pattern_o) -> (pattern_node pattern_o) -> bool **)
+
+let rec pattern_eqb p1 p2 =
+  (&&)
+    ((&&) (pattern_node_eqb (pat_node p1) (pat_node p2))
+      (Svs.equal (pat_vars p1) (pat_vars p2)))
+    (ty_equal (pat_ty p1) (pat_ty p2))
+
+(** val pattern_node_eqb : pattern_node -> pattern_node -> bool **)
+
+and pattern_node_eqb p1 p2 =
+  match p1 with
+  | Pwild -> (match p2 with
+              | Pwild -> true
+              | _ -> false)
+  | Pvar v1 -> (match p2 with
+                | Pvar v2 -> vs_equal v1 v2
+                | _ -> false)
+  | Papp (l1, ps1) ->
+    (match p2 with
+     | Papp (l2, ps2) ->
+       (&&)
+         ((&&) (ls_equal l1 l2) (BigInt.eq (int_length ps1) (int_length ps2)))
+         (forallb (fun x -> x) (map2 pattern_eqb ps1 ps2))
+     | _ -> false)
+  | Por (p3, p4) ->
+    (match p2 with
+     | Por (p5, p6) -> (&&) (pattern_eqb p3 p5) (pattern_eqb p4 p6)
+     | _ -> false)
+  | Pas (p3, v1) ->
+    (match p2 with
+     | Pas (p4, v2) -> (&&) (pattern_eqb p3 p4) (vs_equal v1 v2)
+     | _ -> false)
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -290,7 +357,7 @@ let create_fsymbol ?constr ?proj nm al vl =
 
 (** Patterns *)
 
-type pattern = {
+(* type pattern = {
   pat_node : pattern_node;
   pat_vars : Svs.t;
   pat_ty   : ty;
@@ -303,7 +370,7 @@ and pattern_node =
   | Por  of pattern * pattern (* | *)
   | Pas  of pattern * vsymbol
   (* naming a term recognized by pattern as a variable *)
-
+ *)
 (* h-consing constructors for patterns *)
 
 let mk_pattern n vs ty = {

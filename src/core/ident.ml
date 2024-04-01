@@ -3,6 +3,7 @@ open CoqUtil
 open Weakhtbl
 open Wstdlib
 open Ctr
+open Datatypes
 open Loc
 open Monads
 open Specif
