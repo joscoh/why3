@@ -1,3 +1,198 @@
+open BinNums
+open Bool0
+open CoqUtil
+open Weakhtbl
+open Wstdlib
+open Datatypes
+open Ident
+open IntFuncs
+open List0
+open Monads
+open Specif
+open Ty
+
+open Pmap
+open Zmap
+
+type vsymbol = { vs_name : ident; vs_ty : ty_node_c ty_o }
+
+(** val vs_name : vsymbol -> ident **)
+
+let vs_name v =
+  v.vs_name
+
+(** val vs_ty : vsymbol -> ty_node_c ty_o **)
+
+let vs_ty v =
+  v.vs_ty
+
+(** val vsymbol_eqb : vsymbol -> vsymbol -> bool **)
+
+let vsymbol_eqb v1 v2 =
+  (&&) (id_equal v1.vs_name v2.vs_name) (ty_equal v1.vs_ty v2.vs_ty)
+
+module VsymTag =
+ struct
+  type t = vsymbol
+
+  (** val tag : vsymbol -> tag **)
+
+  let tag vs =
+    vs.vs_name.id_tag
+
+  (** val equal : vsymbol -> vsymbol -> bool **)
+
+  let equal =
+    vsymbol_eqb
+ end
+
+module Vsym = MakeMSWeak(VsymTag)
+
+module Svs = Vsym.S
+
+module Mvs = Vsym.M
+
+(** val vs_equal : vsymbol -> vsymbol -> bool **)
+
+let vs_equal =
+  vsymbol_eqb
+
+(** val vs_hash : vsymbol -> BigInt.t **)
+
+let vs_hash vs =
+  id_hash vs.vs_name
+
+(** val vs_compare : vsymbol -> vsymbol -> Stdlib.Int.t **)
+
+let vs_compare vs1 vs2 =
+  id_compare vs1.vs_name vs2.vs_name
+
+(** val create_vsymbol : preid -> ty_node_c ty_o -> (BigInt.t, vsymbol) st **)
+
+let create_vsymbol name t0 =
+  (@@) (fun i -> (fun x -> x) { vs_name = i; vs_ty = t0 }) (id_register name)
+
+type lsymbol = { ls_name : ident; ls_args : ty_node_c ty_o list;
+                 ls_value : ty_node_c ty_o option; ls_constr : BigInt.t;
+                 ls_proj : bool }
+
+(** val ls_name : lsymbol -> ident **)
+
+let ls_name l =
+  l.ls_name
+
+(** val ls_args : lsymbol -> ty_node_c ty_o list **)
+
+let ls_args l =
+  l.ls_args
+
+(** val ls_value : lsymbol -> ty_node_c ty_o option **)
+
+let ls_value l =
+  l.ls_value
+
+(** val ls_constr : lsymbol -> BigInt.t **)
+
+let ls_constr l =
+  l.ls_constr
+
+(** val ls_proj : lsymbol -> bool **)
+
+let ls_proj l =
+  l.ls_proj
+
+(** val lsymbol_eqb : lsymbol -> lsymbol -> bool **)
+
+let lsymbol_eqb l1 l2 =
+  (&&)
+    ((&&)
+      ((&&)
+        ((&&) (id_equal l1.ls_name l2.ls_name)
+          (list_eqb ty_equal l1.ls_args l2.ls_args))
+        (option_eqb ty_equal l1.ls_value l2.ls_value))
+      (BigInt.eq l1.ls_constr l2.ls_constr)) (eqb l1.ls_proj l2.ls_proj)
+
+module LsymTag =
+ struct
+  type t = lsymbol
+
+  (** val tag : lsymbol -> tag **)
+
+  let tag ls =
+    ls.ls_name.id_tag
+
+  (** val equal : lsymbol -> lsymbol -> bool **)
+
+  let equal =
+    lsymbol_eqb
+ end
+
+module Lsym = MakeMSWeak(LsymTag)
+
+module Sls = Lsym.S
+
+module Mls = Lsym.M
+
+(** val ls_equal : lsymbol -> lsymbol -> bool **)
+
+let ls_equal =
+  lsymbol_eqb
+
+(** val ls_hash : lsymbol -> BigInt.t **)
+
+let ls_hash ls =
+  id_hash ls.ls_name
+
+(** val ls_compare : lsymbol -> lsymbol -> Stdlib.Int.t **)
+
+let ls_compare ls1 ls2 =
+  id_compare ls1.ls_name ls2.ls_name
+
+(** val check_constr :
+    BigInt.t -> ty_node_c ty_o option -> BigInt.t errorM **)
+
+let check_constr constr value =
+  if (||) (BigInt.is_zero constr) ((&&) (BigInt.pos constr) (isSome value))
+  then  constr
+  else raise (Invalid_argument "Term.create_lsymbol")
+
+(** val check_proj :
+    bool -> BigInt.t -> ty_node_c ty_o list -> ty_node_c ty_o option -> bool
+    errorM **)
+
+let check_proj proj constr args value =
+  if (||) (negb proj)
+       ((&&) ((&&) (BigInt.is_zero constr) (isSome value))
+         (BigInt.eq (int_length args) BigInt.one))
+  then  proj
+  else raise (Invalid_argument "Term.create_lsymbol")
+
+(** val create_lsymbol1 :
+    preid -> ty_node_c ty_o list -> ty_node_c ty_o option -> (BigInt.t,
+    lsymbol) st **)
+
+let create_lsymbol1 name args value =
+  (@@) (fun i ->
+    (fun x -> x) { ls_name = i; ls_args = args; ls_value = value; ls_constr =
+      BigInt.zero; ls_proj = false }) (id_register name)
+
+(** val create_fsymbol1 :
+    preid -> ty_node_c ty_o list -> ty_node_c ty_o -> (BigInt.t, lsymbol) st **)
+
+let create_fsymbol1 nm al vl =
+  create_lsymbol1 nm al (Some vl)
+
+(** val create_psymbol :
+    preid -> ty_node_c ty_o list -> (BigInt.t, lsymbol) st **)
+
+let create_psymbol nm al =
+  create_lsymbol1 nm al None
+
+(** val ls_ty_freevars : lsymbol -> Stv.t **)
+
+let ls_ty_freevars ls =
+  let acc = oty_freevars Stv.empty ls.ls_value in
+  fold_left ty_freevars ls.ls_args acc
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -15,81 +210,83 @@ open Ty
 
 (** Variable symbols *)
 
-type vsymbol = {
+(* type vsymbol = {
   vs_name : ident;
   vs_ty   : ty;
-}
+} *)
 
-module Vsym = MakeMSHW (struct
+module Vsym2 = MakeMSHW(VsymTag) 
+(* (struct
   type t = vsymbol
   let tag vs = vs.vs_name.id_tag
   let equal = (==) (*JOSH TODO equal*)
-end)
+end) *)
 
-module Svs = Vsym.S
-module Mvs = Vsym.M
-module Hvs = Vsym.H
-module Wvs = Vsym.W
+(* module Svs = Vsym.S
+module Mvs = Vsym.M *)
+module Hvs = Vsym2.H
+module Wvs = Vsym2.W
 
-let vs_equal : vsymbol -> vsymbol -> bool = (==)
+(* let vs_equal : vsymbol -> vsymbol -> bool = (==)
 let vs_hash vs = id_hash vs.vs_name
-let vs_compare vs1 vs2 = id_compare vs1.vs_name vs2.vs_name
+let vs_compare vs1 vs2 = id_compare vs1.vs_name vs2.vs_name *)
 
-let create_vsymbol name ty = {
+(* let create_vsymbol name ty = {
   vs_name = id_register name;
   vs_ty   = ty;
-}
+} *)
 
 (** Function and predicate symbols *)
 
-type lsymbol = {
+(* type lsymbol = {
   ls_name   : ident;
   ls_args   : ty list;
   ls_value  : ty option;
   ls_constr : BigInt.t;
   ls_proj   : bool;
-}
+} *)
 
-module Lsym = MakeMSHW (struct
+module Lsym2 = MakeMSHW (LsymTag) 
+(* (struct
   type t = lsymbol
   let tag ls = ls.ls_name.id_tag
-  let equal = (==) (*JOSH TODO equal*)
-end)
+  let equal = (==) JOSH TODO equal
+end) *)
 
-module Sls = Lsym.S
-module Mls = Lsym.M
-module Hls = Lsym.H
-module Wls = Lsym.W
+(* module Sls = Lsym.S
+module Mls = Lsym.M *)
+module Hls = Lsym2.H
+module Wls = Lsym2.W
 
-let ls_equal : lsymbol -> lsymbol -> bool = (==)
+(* let ls_equal : lsymbol -> lsymbol -> bool = (==)
 let ls_hash ls = id_hash ls.ls_name
-let ls_compare ls1 ls2 = id_compare ls1.ls_name ls2.ls_name
+let ls_compare ls1 ls2 = id_compare ls1.ls_name ls2.ls_name *)
 
-let check_constr constr _args value =
+(* let check_constr constr _args value =
   if BigInt.is_zero constr || (BigInt.pos constr && value <> None)
   then constr else invalid_arg "Term.create_lsymbol"
 
 let check_proj proj constr args value =
   if not proj || (BigInt.is_zero constr  && value <> None && List.length args = 1)
-  then proj else invalid_arg "Term.create_lsymbol"
+  then proj else invalid_arg "Term.create_lsymbol" *)
 
 let create_lsymbol ?(constr=BigInt.zero) ?(proj=false) name args value = {
   ls_name   = id_register name;
   ls_args   = args;
   ls_value  = value;
-  ls_constr = check_constr constr args value;
+  ls_constr = check_constr constr value;
   ls_proj   = check_proj proj constr args value;
 }
 
 let create_fsymbol ?constr ?proj nm al vl =
   create_lsymbol ?constr ?proj nm al (Some vl)
 
-let create_psymbol nm al =
-  create_lsymbol nm al None
+(* let create_psymbol nm al =
+  create_lsymbol nm al None *)
 
-let ls_ty_freevars ls =
+(* let ls_ty_freevars ls =
   let acc = oty_freevars Stv.empty ls.ls_value in
-  List.fold_left ty_freevars acc ls.ls_args
+  List.fold_left ty_freevars acc ls.ls_args *)
 
 (** Patterns *)
 
