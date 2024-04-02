@@ -269,7 +269,7 @@ let create_prog_pattern pp ity mask =
               List.length ls.ls_args = List.length ml -> ml
           | MaskTuple _ -> invalid_arg "Expr.create_prog_pattern" in
         (try List.iter2 (scan gp) ml pl with Invalid_argument _ ->
-          raise (Term.BadArity (ls, List.length pl)))
+          raise (Term.BadArity (ls, BigInt.of_int (List.length pl)))) (*JOSH of_int*)
     | PPapp (rs,_) -> raise (ConstructorExpected rs)
     | PPvar (id,gh) -> mark id gh mask
     | PPas (pp,id,gh) -> mark id gh mask; scan gp mask pp

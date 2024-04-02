@@ -265,9 +265,18 @@ and pattern_node_eqb p1 p2 =
 exception UncoveredVar of vsymbol
 exception DuplicateVar of vsymbol
 
+exception BadArity of lsymbol * BigInt.t
+exception FunctionSymbolExpected of lsymbol
+exception PredicateSymbolExpected of lsymbol
+exception ConstructorExpected of lsymbol
+
+open CoqHashtbl
 open Datatypes
+open IntFuncs
 open List0
 open Monads
+
+open Ty
 
 
 (** val mk_pattern :
@@ -318,6 +327,99 @@ let pat_app_aux f pl t0 =
       ( Svs.empty)
   in
   (@@) (fun s ->  (mk_pattern (Papp (f, pl)) s t0)) dups
+
+(** val pat_map_aux :
+    ((pattern_node pattern_o) -> (pattern_node pattern_o) errorM) ->
+    (pattern_node pattern_o) -> (pattern_node pattern_o) errorM **)
+
+let pat_map_aux fn p =
+  match pat_node p with
+  | Papp (s, pl) ->
+    (@@) (fun l -> pat_app_aux s l (pat_ty p)) (errorM_list (map fn pl))
+  | Por (p0, q) ->
+    (@@) (fun p1 -> (@@) (fun q1 -> pat_or_aux p1 q1) (fn q)) (fn p0)
+  | Pas (p0, v) -> (@@) (fun p1 -> pat_as_aux p1 v) (fn p0)
+  | _ ->  p
+
+(** val pat_map :
+    ((pattern_node pattern_o) -> (pattern_node pattern_o)) ->
+    (pattern_node pattern_o) -> (pattern_node pattern_o) errorM **)
+
+let pat_map fn =
+  pat_map_aux (fun p ->
+    let res = fn p in
+    (@@) (fun _ ->  res) (ty_equal_check (pat_ty p) (pat_ty res)))
+
+(** val pat_fold :
+    ('a1 -> (pattern_node pattern_o) -> 'a1) -> 'a1 ->
+    (pattern_node pattern_o) -> 'a1 **)
+
+let pat_fold fn acc pat =
+  match pat_node pat with
+  | Papp (_, pl) -> fold_left fn pl acc
+  | Por (p, q) -> fn (fn acc p) q
+  | Pas (p, _) -> fn acc p
+  | _ -> acc
+
+(** val pat_all :
+    ((pattern_node pattern_o) -> bool) -> (pattern_node pattern_o) -> bool **)
+
+let pat_all pr pat =
+  pat_fold (fun x y -> (&&) x (pr y)) true pat
+
+(** val pat_any :
+    ((pattern_node pattern_o) -> bool) -> (pattern_node pattern_o) -> bool **)
+
+let pat_any pr pat =
+  pat_fold (fun x y -> (||) x (pr y)) false pat
+
+(** val fold_left2_errorHashcons :
+    ('a3 -> 'a1 -> 'a2 -> (BigInt.t * 'a4 hashset, 'a3) errState) -> 'a3 ->
+    'a1 list -> 'a2 list -> (BigInt.t * 'a4 hashset, 'a3 option) errState **)
+
+let rec fold_left2_errorHashcons f accu l1 l2 =
+  match l1 with
+  | [] -> (match l2 with
+           | [] ->  ( (Some accu))
+           | _ :: _ ->  ( None))
+  | a1 :: l3 ->
+    (match l2 with
+     | [] ->  ( None)
+     | a2 :: l4 ->
+       (@@) (fun x -> fold_left2_errorHashcons f x l3 l4) (f accu a1 a2))
+
+(** val pat_app :
+    lsymbol -> (pattern_node pattern_o) list -> ty_node_c ty_o ->
+    (BigInt.t * TyHash.t hashset, (pattern_node pattern_o)) errState **)
+
+let pat_app fs pl t0 =
+  (@@) (fun s ->
+    let mtch = fun s0 ty p -> ty_match s0 ty (pat_ty p) in
+    (@@) (fun o ->
+      
+        (match o with
+         | Some _ ->
+           if BigInt.is_zero fs.ls_constr
+           then raise (ConstructorExpected fs)
+           else pat_app_aux fs pl t0
+         | None -> raise (BadArity (fs, (int_length pl)))))
+      (fold_left2_errorHashcons mtch s fs.ls_args pl))
+    (match fs.ls_value with
+     | Some vty -> ty_match Mtv.empty vty t0
+     | None ->  (raise (FunctionSymbolExpected fs)))
+
+(** val pat_as :
+    (pattern_node pattern_o) -> vsymbol -> (pattern_node pattern_o) errorM **)
+
+let pat_as p v =
+  (@@) (fun _ -> pat_as_aux p v) (ty_equal_check (pat_ty p) v.vs_ty)
+
+(** val pat_or :
+    (pattern_node pattern_o) -> (pattern_node pattern_o) ->
+    (pattern_node pattern_o) errorM **)
+
+let pat_or p q =
+  (@@) (fun _ -> pat_or_aux p q) (ty_equal_check (pat_ty p) (pat_ty q))
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -461,7 +563,7 @@ let pat_app f pl ty =
 
 (* generic traversal functions *)
 
-let pat_map fn pat = match pat.pat_node with
+(* let pat_map fn pat = match pat.pat_node with
   | Pwild | Pvar _ -> pat
   | Papp (s, pl) -> pat_app_aux s (List.map fn pl) pat.pat_ty
   | Pas (p, v) -> pat_as_aux (fn p) v
@@ -484,9 +586,9 @@ let pat_any pr pat = Util.any pat_fold pr pat
 exception BadArity of lsymbol * int
 exception FunctionSymbolExpected of lsymbol
 exception PredicateSymbolExpected of lsymbol
-exception ConstructorExpected of lsymbol
+exception ConstructorExpected of lsymbol *)
 
-let pat_app fs pl ty =
+(* let pat_app fs pl ty =
   let s = match fs.ls_value with
     | Some vty -> ty_match Mtv.empty vty ty
     | None -> raise (FunctionSymbolExpected fs)
@@ -503,7 +605,7 @@ let pat_as p v =
 
 let pat_or p q =
   ty_equal_check p.pat_ty q.pat_ty;
-  pat_or_aux p q
+  pat_or_aux p q *)
 
 (* rename all variables in a pattern *)
 
@@ -1201,7 +1303,7 @@ let t_peek_quant (vl,_,_,_) =
 let ls_arg_inst ls tl =
   let mtch s ty t = ty_match s ty (t_type t) in
   try List.fold_left2 mtch Mtv.empty ls.ls_args tl with
-    | Invalid_argument _ -> raise (BadArity (ls, List.length tl))
+    | Invalid_argument _ -> raise (BadArity (ls, (BigInt.of_int (List.length tl)))) (*JOSH of_int*)
 
 let ls_app_inst ls tl ty =
   let s = ls_arg_inst ls tl in
