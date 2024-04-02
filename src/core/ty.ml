@@ -465,11 +465,6 @@ let ty_freevars s t0 =
 let ty_closed t0 =
   ty_v_all (fun _ -> false) t0
 
-(** val mk_errtype : 'a1 -> exn **)
-
-let mk_errtype x =
-  (Obj.magic x)
-
 (** val fold_errorM' :
     ('a1 -> 'a2 -> 'a1 errorM) -> 'a2 list -> 'a1 -> 'a1 errorM **)
 
@@ -613,30 +608,35 @@ let rec fold_right2_error f l1 l2 accu =
      | a2 :: l4 -> (@@) (fun x -> f x a1 a2) (fold_right2_error f l3 l4 accu))
 
 (** val ty_match_aux :
-    ty_node_c ty_o -> ty_node_c ty_o -> ty_node_c ty_o Mtv.t ->
-    ty_node_c ty_o -> ty_node_c ty_o -> ty_node_c ty_o Mtv.t errorM **)
+    ty_node_c ty_o Mtv.t -> ty_node_c ty_o -> ty_node_c ty_o ->
+    ty_node_c ty_o Mtv.t errorM **)
 
-let rec ty_match_aux err1 err2 s ty1 ty2 =
+let rec ty_match_aux s ty1 ty2 =
   match ty_node ty1 with
   | Tyvar n1 ->
     (match Mtv.find_opt n1 s with
-     | Some ty3 ->
-       if ty_equal ty3 ty2 then  s else raise (TypeMismatch (err1, err2))
+     | Some ty3 -> if ty_equal ty3 ty2 then  s else raise Exit
      | None ->  (Mtv.add n1 ty2 s))
   | Tyapp (f1, l1) ->
     (match ty_node ty2 with
-     | Tyvar _ -> raise (TypeMismatch (err1, err2))
+     | Tyvar _ -> raise Exit
      | Tyapp (f2, l2) ->
        if ts_equal f1 f2
-       then fold_right2_error (ty_match_aux err1 err2) l1 l2 s
-       else raise (TypeMismatch (err1, err2)))
+       then fold_right2_error ty_match_aux l1 l2 s
+       else raise Exit)
 
 (** val ty_match :
     ty_node_c ty_o Mtv.t -> ty_node_c ty_o -> ty_node_c ty_o ->
     (BigInt.t * TyHash.t hashset, ty_node_c ty_o Mtv.t) errState **)
 
 let ty_match s ty1 ty2 =
-  (@@) (fun t1 ->  (ty_match_aux t1 ty2 s ty1 ty2)) ( (ty_inst s ty1))
+  (@@) (fun t1 ->
+    
+      ((fun x e ret ->
+  try x ()
+  with | e1 -> if e = e1 then ret () else raise e1)
+        (fun _ -> ty_match_aux s ty1 ty2) Exit (fun _ ->
+        raise (TypeMismatch (t1, ty2))))) ( (ty_inst s ty1))
 
 (** val mk_ts_builtin :
     ident -> tvsymbol list -> ty_node_c ty_o type_def ->

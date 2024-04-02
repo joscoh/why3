@@ -260,6 +260,64 @@ and pattern_node_eqb p1 p2 =
     (match p2 with
      | Pas (p4, v2) -> (&&) (pattern_eqb p3 p4) (vs_equal v1 v2)
      | _ -> false)
+
+
+exception UncoveredVar of vsymbol
+exception DuplicateVar of vsymbol
+
+open Datatypes
+open List0
+open Monads
+
+
+(** val mk_pattern :
+    pattern_node -> Svs.t -> ty_node_c ty_o -> (pattern_node pattern_o) **)
+
+let mk_pattern n vs t0 =
+  (fun (a, b, c) -> build_pattern_o a b c) (n, vs, t0)
+
+(** val pat_wild : ty_node_c ty_o -> (pattern_node pattern_o) **)
+
+let pat_wild t0 =
+  mk_pattern Pwild Svs.empty t0
+
+(** val pat_var : vsymbol -> (pattern_node pattern_o) **)
+
+let pat_var v =
+  mk_pattern (Pvar v) (Svs.singleton v) v.vs_ty
+
+(** val pat_as_aux :
+    (pattern_node pattern_o) -> vsymbol -> (pattern_node pattern_o) errorM **)
+
+let pat_as_aux p v =
+  (@@) (fun s ->  (mk_pattern (Pas (p, v)) s v.vs_ty))
+    (Svs.add_new (DuplicateVar v) v (pat_vars p))
+
+(** val pat_or_aux :
+    (pattern_node pattern_o) -> (pattern_node pattern_o) ->
+    (pattern_node pattern_o) errorM **)
+
+let pat_or_aux p q =
+  if Svs.equal (pat_vars p) (pat_vars q)
+  then  (mk_pattern (Por (p, q)) (pat_vars p) (pat_ty p))
+  else let s = Mvs.union (fun _ _ _ -> None) (pat_vars p) (pat_vars q) in
+       (@@) (fun x -> raise (UncoveredVar x)) (Svs.choose s)
+
+(** val pat_app_aux :
+    lsymbol -> (pattern_node pattern_o) list -> ty_node_c ty_o ->
+    (pattern_node pattern_o) errorM **)
+
+let pat_app_aux f pl t0 =
+  let dups =
+    fold_left (fun s p ->
+      (@@) (fun s1 ->
+        let dups = Mvs.inter (fun _ _ _ -> Some ()) s1 (pat_vars p) in
+        if negb (Mvs.is_empty dups)
+        then (@@) (fun x -> raise (DuplicateVar (fst x))) (Mvs.choose dups)
+        else  (Mvs.union (fun _ _ _ -> None) s1 (pat_vars p))) s) pl
+      ( Svs.empty)
+  in
+  (@@) (fun s ->  (mk_pattern (Papp (f, pl)) s t0)) dups
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -373,7 +431,7 @@ and pattern_node =
  *)
 (* h-consing constructors for patterns *)
 
-let mk_pattern n vs ty = {
+(* let mk_pattern n vs ty = {
   pat_node = n;
   pat_vars = vs;
   pat_ty   = ty;
@@ -399,15 +457,15 @@ let pat_or p q =
 let pat_app f pl ty =
   let dup v () () = raise (DuplicateVar v) in
   let merge s p = Mvs.union dup s p.pat_vars in
-  mk_pattern (Papp (f,pl)) (List.fold_left merge Svs.empty pl) ty
+  mk_pattern (Papp (f,pl)) (List.fold_left merge Svs.empty pl) ty *)
 
 (* generic traversal functions *)
 
 let pat_map fn pat = match pat.pat_node with
   | Pwild | Pvar _ -> pat
-  | Papp (s, pl) -> pat_app s (List.map fn pl) pat.pat_ty
-  | Pas (p, v) -> pat_as (fn p) v
-  | Por (p, q) -> pat_or (fn p) (fn q)
+  | Papp (s, pl) -> pat_app_aux s (List.map fn pl) pat.pat_ty
+  | Pas (p, v) -> pat_as_aux (fn p) v
+  | Por (p, q) -> pat_or_aux (fn p) (fn q)
 
 let pat_map fn = pat_map (fun p ->
   let res = fn p in ty_equal_check p.pat_ty res.pat_ty; res)
@@ -437,15 +495,15 @@ let pat_app fs pl ty =
   ignore (try List.fold_left2 mtch s fs.ls_args pl with
     | Invalid_argument _ -> raise (BadArity (fs, List.length pl)));
   if BigInt.is_zero fs.ls_constr then raise (ConstructorExpected fs);
-  pat_app fs pl ty
+  pat_app_aux fs pl ty
 
 let pat_as p v =
   ty_equal_check p.pat_ty v.vs_ty;
-  pat_as p v
+  pat_as_aux p v
 
 let pat_or p q =
   ty_equal_check p.pat_ty q.pat_ty;
-  pat_or p q
+  pat_or_aux p q
 
 (* rename all variables in a pattern *)
 
