@@ -232,12 +232,12 @@ exception FmlaExpected
 
 let dty_unify_app ls unify (l1: 'a list) (l2: dty list) =
   try List.iter2 unify l1 l2 with Invalid_argument _ ->
-    raise (BadArity (ls, List.length l1))
+    raise (BadArity (ls, (BigInt.of_int (List.length l1)))) (*JOSH of_int*)
 
 (* FIXME: can we convert every use of dty_unify_app to this one? *)
 let dty_unify_app_map ls unify (l1: 'a list) (l2: dty list) =
   try List.map2 unify l1 l2 with Invalid_argument _ ->
-    raise (BadArity (ls, List.length l1))
+    raise (BadArity (ls, BigInt.of_int (List.length l1))) (*JOSH of_int*)
 
 let dpat_expected_type dp dty =
   try dty_unify dp.dp_dty dty with Exit -> Loc.errorm ?loc:dp.dp_loc

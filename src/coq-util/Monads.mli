@@ -4,6 +4,8 @@ type __ = Obj.t
 
 type 'a errorM = 'a
 
+val errorM_list : 'a1 errorM list -> 'a1 list errorM
+
 val ignore : 'a1 errorM -> unit errorM
 
 type ('a, 'b) st = 'b

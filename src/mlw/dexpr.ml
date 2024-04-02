@@ -457,7 +457,7 @@ and dfun_defn = preid * ghost * rs_kind * dbinder list *
 
 let dity_unify_app ls fn (l1: 'a list) (l2: dity list) =
   try List.iter2 fn l1 l2 with Invalid_argument _ ->
-    raise (BadArity (ls, List.length l1))
+    raise (BadArity (ls, BigInt.of_int (List.length l1))) (*JOSH of_int*)
 
 let dvar_expected_type {pre_loc = loc} dv_dity dity =
   try dity_unify dv_dity dity with Exit -> Loc.errorm ?loc

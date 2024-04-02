@@ -4,6 +4,12 @@ type __ = Obj.t
 
 type 'a errorM = 'a
 
+(** val errorM_list : 'a1 errorM list -> 'a1 list errorM **)
+
+let errorM_list l =
+  fold_right (fun x acc -> (@@) (fun h -> (@@) (fun t ->  (h :: t)) acc) x)
+    ( []) l
+
 (** val ignore : 'a1 errorM -> unit errorM **)
 
 let ignore x =

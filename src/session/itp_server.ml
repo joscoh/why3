@@ -179,7 +179,7 @@ let bypass_pretty s id =
       let i = List.length ls.Term.ls_args in
       fprintf fmt "%s %a expects %i argument%s but is applied to %i"
         (if ls.Term.ls_value = None then "Predicate" else "Function")
-        P.print_ls ls i (if i = 1 then "" else "s") app_arg
+        P.print_ls ls i (if i = 1 then "" else "s") (BigInt.to_int app_arg) (*JOSH to_int*)
   | Term.EmptyCase ->
       pp_print_string fmt "Empty match expression"
   | Term.DuplicateVar vs ->
