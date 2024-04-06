@@ -1165,55 +1165,22 @@ let t_map_fold_unsafe fn acc t = match t.t_node with
 
 (* type-unsafe term substitution *)
 
-let rec t_subst_unsafe m t =
-  let t_subst t = t_subst_unsafe m t in
-  let b_subst (u,b,e as bv) =
-    if Mvs.set_disjoint m b.bv_vars then bv else
-    (u, bv_subst_unsafe m b, e) in
-  match t.t_node with
-  | Tvar u ->
-      t_attr_copy t (Mvs.find_def t u m)
-  | Tlet (e, bt) ->
-      let d = t_subst e in
-      t_attr_copy t (t_let d (b_subst bt) t.t_ty)
-  | Tcase (e, bl) ->
-      let d = t_subst e in
-      let bl = List.map b_subst bl in
-      t_attr_copy t (t_case d bl t.t_ty)
-  | Teps bf ->
-      t_attr_copy t (t_eps (b_subst bf) t.t_ty)
-  | Tquant (q, (vl,b,tl,f1 as bq)) ->
-      let bq =
-        if Mvs.set_disjoint m b.bv_vars then bq else
-        (vl,bv_subst_unsafe m b,tl,f1) in
-      t_attr_copy t (t_quant q bq)
-  | _ ->
-      t_map_unsafe t_subst t
+let fresh_vsymbol v =
+  create_vsymbol (id_clone v.vs_name) v.vs_ty
 
-and bv_subst_unsafe m b =
-  (* restrict m to the variables free in b *)
-  let m = Mvs.set_inter m b.bv_vars in
-  (* if m is empty, return early *)
-  if Mvs.is_empty m then b else
-  (* remove from b.bv_vars the variables replaced by m *)
-  let s = Mvs.set_diff b.bv_vars m in
-  (* add to b.bv_vars the free variables added by m *)
-  let s = Mvs.fold2_inter add_nt_vars b.bv_vars m s in
-  (* apply m to the terms in b.bv_subst *)
-  let h = Mvs.map (t_subst_unsafe m) b.bv_subst in
-  (* join m to b.bv_subst *)
-  let h = Mvs.set_union h m in
-  (* reconstruct b *)
-  { bv_vars = s ; bv_subst = h }
-
-let t_subst_unsafe m t =
-  if Mvs.is_empty m then t else t_subst_unsafe m t
-
-(* close bindings *)
+let vs_rename h v =
+  let u = fresh_vsymbol v in
+  Mvs.add v (t_var u) h, u
 
 let bnd_new s = { bv_vars = s ; bv_subst = Mvs.empty }
 
 let t_close_bound v t = (v, bnd_new (Mvs.remove v (t_vars t)), t)
+
+let pat_rename h p =
+  let add_vs v () = fresh_vsymbol v in
+  let m = Mvs.mapi add_vs p.pat_vars in
+  let p = pat_rename_all m p in
+  Mvs.union (fun _ _ t -> Some t) h (Mvs.map t_var m), p
 
 let t_close_branch p t = (p, bnd_new (Mvs.set_diff (t_vars t) p.pat_vars), t)
 
@@ -1223,41 +1190,115 @@ let t_close_quant vl tl f =
   let s = List.fold_left del_v s vl in
   (vl, bnd_new s, tl, t_prop f)
 
-(* open bindings *)
-
-let fresh_vsymbol v =
-  create_vsymbol (id_clone v.vs_name) v.vs_ty
-
-let vs_rename h v =
-  let u = fresh_vsymbol v in
-  Mvs.add v (t_var u) h, u
-
 let vl_rename h vl =
   Lists.map_fold_left vs_rename h vl
 
-let pat_rename h p =
-  let add_vs v () = fresh_vsymbol v in
-  let m = Mvs.mapi add_vs p.pat_vars in
-  let p = pat_rename_all m p in
-  Mvs.union (fun _ _ t -> Some t) h (Mvs.map t_var m), p
+let rec t_subst_unsafe m t =
+  let t_subst t = t_subst_unsafe m t in
+  let b_subst (u,b,e as bv) =
+    if Mvs.set_disjoint m b.bv_vars then bv else
+      let b1 = bv_subst_unsafe m b in
+      let v, t1 = t_open_bound (u, b1, e) in
+      let (_, b, _) as x = t_close_bound v t1 in
+      assert (Mvs.is_empty b.bv_subst);
+      x in
+  let b_subst1 (u,b,e as bv) =
+    if Mvs.set_disjoint m b.bv_vars then bv else
+      let b1 = bv_subst_unsafe m b in
+      let v, t1 = t_open_branch (u, b1, e) in
+      let (_, b, _) as x = t_close_branch v t1 in
+      assert (Mvs.is_empty b.bv_subst);
+      x in
+  let b_subst2 (vl,b,tl,f1 as bq) =
+    if Mvs.set_disjoint m b.bv_vars then bq else
+      let b1 = bv_subst_unsafe m b in
+      let vs, tr, t1 = t_open_quant (vl, b1, tl, f1) in
+      let (_, b, _, _) as x = t_close_quant vs tr t1 in
+      assert (Mvs.is_empty b.bv_subst);
+      x in
+  match t.t_node with
+  | Tvar u ->
+      t_attr_copy t (Mvs.find_def t u m)
+  | Tlet (e, bt) ->
+      let d = t_subst e in
+      t_attr_copy t (t_let d (b_subst bt) t.t_ty)
+  | Tcase (e, bl) ->
+      let d = t_subst e in
+      let bl = List.map b_subst1 bl in
+      t_attr_copy t (t_case d bl t.t_ty)
+  | Teps bf ->
+      t_attr_copy t (t_eps (b_subst bf) t.t_ty)
+  | Tquant (q, (vl,b,tl,f1 as bq)) ->
+      t_attr_copy t (t_quant q (b_subst2 bq))
+      (* let bq =
+        if Mvs.set_disjoint m b.bv_vars then bq else
+        (vl,bv_subst_unsafe m b,tl,f1) in
+      t_attr_copy t (t_quant q bq) *)
+  | _ ->
+      t_map_unsafe t_subst t
 
-let t_open_bound (v,b,t) =
+and bv_subst_unsafe m b =
+  assert (Mvs.is_empty b.bv_subst);
+  (* restrict m to the variables free in b *)
+  let m = Mvs.set_inter m b.bv_vars in
+  (* if m is empty, return early *)
+  if Mvs.is_empty m then b else
+  (* remove from b.bv_vars the variables replaced by m *)
+  let s = Mvs.set_diff b.bv_vars m in
+  (* add to b.bv_vars the free variables added by m *)
+  let s = Mvs.fold2_inter add_nt_vars b.bv_vars m s in
+  (* apply m to the terms in b.bv_subst *)
+  (* let h = Mvs.map (t_subst_unsafe m) b.bv_subst in *)
+  (* join m to b.bv_subst *)
+  (* let h = Mvs.set_union h m in *)
+  (* reconstruct b *)
+  { bv_vars = s ; bv_subst = m }
+and  t_open_bound (v,b,t) =
   let m,v = vs_rename b.bv_subst v in
   v, t_subst_unsafe m t
+and t_open_branch (p,b,t) =
+  let m,p = pat_rename b.bv_subst p in
+  p, t_subst_unsafe m t
+and t_open_quant (vl,b,tl,f) =
+  let m,vl = vl_rename b.bv_subst vl in
+  let tl = tr_map (t_subst_unsafe m) tl in
+  vl, tl, t_subst_unsafe m f
+
+let t_subst_unsafe m t =
+  if Mvs.is_empty m then t else t_subst_unsafe m t
+
+(* close bindings *)
+
+(* let t_open_bound (v,b,t) = v, t *)
+
+(* let t_open_branch (p, b, t) = p, t
+
+let t_open_quant (vl, b, tl, f) = vl, tl, f *)
+
+
+
+
+
+(* open bindings *)
+
+
+
+
+
+
+
+(* let t_open_bound (v,b,t) =
+  let m,v = vs_rename b.bv_subst v in
+  v, t_subst_unsafe m t *)
 
 let t_open_bound_with e (v,b,t) =
   vs_check v e;
   let m = Mvs.add v e b.bv_subst in
   t_subst_unsafe m t
 
-let t_open_branch (p,b,t) =
-  let m,p = pat_rename b.bv_subst p in
-  p, t_subst_unsafe m t
 
-let t_open_quant (vl,b,tl,f) =
-  let m,vl = vl_rename b.bv_subst vl in
-  let tl = tr_map (t_subst_unsafe m) tl in
-  vl, tl, t_subst_unsafe m f
+
+
 
 let t_clone_bound_id ?loc ?attrs (v,_,_) =
   id_clone ?loc ?attrs v.vs_name
