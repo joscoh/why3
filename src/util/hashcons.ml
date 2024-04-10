@@ -94,6 +94,33 @@ let combine acc n =
 let combine_list f acc l =
   fold_left (fun acc0 x -> combine acc0 (f x)) l acc
 
+(** val combine2 :
+    Stdlib.Int.t -> Stdlib.Int.t -> Stdlib.Int.t -> Stdlib.Int.t **)
+
+let combine2 acc n1 n2 =
+  combine (combine acc n1) n2
+
+(** val combine3 :
+    Stdlib.Int.t -> Stdlib.Int.t -> Stdlib.Int.t -> Stdlib.Int.t ->
+    Stdlib.Int.t **)
+
+let combine3 acc n1 n2 n3 =
+  combine (combine2 acc n1 n2) n3
+
+(** val combine_option :
+    ('a1 -> Stdlib.Int.t) -> 'a1 option -> Stdlib.Int.t **)
+
+let combine_option h = function
+| Some s -> h s
+| None -> Stdlib.Int.minus_one
+
+(** val combine_pair :
+    ('a1 -> Stdlib.Int.t) -> ('a2 -> Stdlib.Int.t) -> ('a1 * 'a2) ->
+    Stdlib.Int.t **)
+
+let combine_pair h1 h2 x =
+  combine (h1 (fst x)) (h2 (snd x))
+
 (** val combine_big : BigInt.t -> BigInt.t -> BigInt.t **)
 
 let combine_big acc n =
