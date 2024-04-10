@@ -49,6 +49,9 @@ module TaggedList (X: TaggedType) :
 module OrderedHashedList (X : TaggedType) :
   OrderedHashedType with type t = X.t list
 
+module OrderedIntHashed (X: OrderedHashedType) :
+  Hashtbl.HashedType with type t = X.t
+
 module MakeMS (X : TaggedType) :
 sig
   module M : Extmap.S with type key = X.t
