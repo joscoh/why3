@@ -681,14 +681,22 @@ and bind_info = {
 
 (* term equality modulo alpha-equivalence and location *)
 
-exception CompLT
-exception CompGT
+(* exception CompLT
+exception CompGT *)
 
-type frame = BigInt.t Mvs.t
+(* type frame = BigInt.t Mvs.t
 
 type term_or_bound =
   | Trm of term (* * frame list*)
-  | Bnd of BigInt.t
+  | Bnd of BigInt.t *)
+
+
+(*lexicographic comparison*)
+let lex_comp x1 x2 : int =
+  if x1 = 0 then x2 else x1
+
+let list_comp l : int =
+  List.fold_left lex_comp 0 l
 
 (*Compare variables v1 and v2.
   To be equal, they must either be mapped to each other in each map
@@ -702,120 +710,164 @@ let var_compare (m1: BigInt.t Mvs.t) (m2: BigInt.t Mvs.t) (v1: vsymbol) (v2: vsy
     | _, _ -> 1
     end
 
+let quant_compare (q1: quant) (q2: quant) : int =
+  match q1, q2 with
+  | Tforall, Texists -> -1
+  | Texists, Tforall -> 1
+  | _, _ -> 0
+
+let binop_compare (b1: binop) (b2: binop) : int =
+  match b1, b2 with
+  | Tand, Tand -> 0
+  | Tor, Tor -> 0
+  | Timplies, Timplies -> 0
+  | Tiff, Tiff -> 0
+  | Tand, _ -> -1
+  | _, Tand -> 1
+  | Tor, _ -> -1
+  | _, Tor -> 1
+  | Timplies, _ -> -1
+  | _, Timplies -> 1
+
 let t_compare ~trigger ~attr ~loc ~const t1 t2 =
-  let comp_raise c =
-    if c < 0 then raise CompLT else if c > 0 then raise CompGT in
-  let perv_compare h1 h2 = comp_raise (Stdlib.compare h1 h2) in
   let rec pat_compare (bnd,bv1,bv2 as state) p1 p2 =
     match p1.pat_node, p2.pat_node with
     | Pwild, Pwild ->
-        bnd, bv1, bv2
+        0, bnd, bv1, bv2
     | Pvar v1, Pvar v2 ->
-        BigInt.succ bnd, Mvs.add v1 bnd bv1, Mvs.add v2 bnd bv2
+        0, BigInt.succ bnd, Mvs.add v1 bnd bv1, Mvs.add v2 bnd bv2 (*equal by fiat*)
     | Papp (s1, l1), Papp (s2, l2) ->
-        comp_raise (ls_compare s1 s2);
-        List.fold_left2 pat_compare state l1 l2
+        let i1 = ls_compare s1 s2 in
+        let sbnd, sm1, sm2 = state in
+        let i2, bnd, bv1, bv2 = List.fold_left2 (fun acc p1 p2 ->
+            let i, bnd1, m1, m2 = acc in
+            let j, bnd2, m1', m2' = pat_compare (bnd1, m1, m2) p1 p2 in
+            lex_comp i j, bnd2, m1', m2') (0, sbnd, sm1, sm2) l1 l2 in 
+        lex_comp i1 i2, bnd, bv1, bv2
     | Por (p1, q1), Por (p2, q2) ->
-        let (_,bv1,bv2 as res) = pat_compare state p1 p2 in
+        let (i1,bnd1,bv1,bv2 as res) = pat_compare state p1 p2 in
+        if i1 <> 0 then res
+        else
         let rec or_cmp q1 q2 = match q1.pat_node, q2.pat_node with
-          | Pwild, Pwild -> ()
+          | Pwild, Pwild -> 0
           | Pvar v1, Pvar v2 ->
-              perv_compare (Mvs.find v1 bv1) (Mvs.find v2 bv2)
+              BigInt.compare (Mvs.find v1 bv1) (Mvs.find v2 bv2)
           | Papp (s1, l1), Papp (s2, l2) ->
-              comp_raise (ls_compare s1 s2);
-              List.iter2 or_cmp l1 l2
+              let i1 = ls_compare s1 s2 in
+              if i1 <> 0 then i1 else (*TODO: do this to avoid lex_comp evaluating ill typed I think? TODO do we need?*)
+                List.fold_left2 (fun i p1 p2 ->
+                  lex_comp i (or_cmp p1 p2)
+                  ) 0 l1 l2
           | Por (p1, q1), Por (p2, q2) ->
-              or_cmp p1 p2; or_cmp q1 q2
+              let i1 = or_cmp p1 p2 in
+              if i1 <> 0 then i1 else
+                or_cmp q1 q2 
           | Pas (p1, v1), Pas (p2, v2) ->
-              or_cmp p1 p2;
-              perv_compare (Mvs.find v1 bv1) (Mvs.find v2 bv2)
-          | Pwild,  _ -> raise CompLT | _, Pwild  -> raise CompGT
-          | Pvar _, _ -> raise CompLT | _, Pvar _ -> raise CompGT
-          | Papp _, _ -> raise CompLT | _, Papp _ -> raise CompGT
-          | Por _,  _ -> raise CompLT | _, Por _  -> raise CompGT
+              let i1 = or_cmp p1 p2 in
+              if i1 <> 0 then i1 else
+                BigInt.compare (Mvs.find v1 bv1) (Mvs.find v2 bv2)
+          | Pwild,  _ -> -1 | _, Pwild  -> 1
+          | Pvar _, _ -> -1 | _, Pvar _ -> 1
+          | Papp _, _ -> -1 | _, Papp _ -> 1
+          | Por _,  _ -> -1 | _, Por _  -> 1
         in
-        or_cmp q1 q2;
-        res
+        let i2 = or_cmp q1 q2 in
+        (i2, bnd1, bv1, bv2)
     | Pas (p1, v1), Pas (p2, v2) ->
-        let bnd, bv1, bv2 = pat_compare state p1 p2 in
-        BigInt.succ bnd, Mvs.add v1 bnd bv1, Mvs.add v2 bnd bv2
-    | Pwild, _  -> raise CompLT | _, Pwild  -> raise CompGT
-    | Pvar _, _ -> raise CompLT | _, Pvar _ -> raise CompGT
-    | Papp _, _ -> raise CompLT | _, Papp _ -> raise CompGT
-    | Por _, _  -> raise CompLT | _, Por _  -> raise CompGT
+        let i1, bnd, bv1, bv2 = pat_compare state p1 p2 in
+        i1, BigInt.succ bnd, Mvs.add v1 bnd bv1, Mvs.add v2 bnd bv2
+    | Pwild, _  -> -1, bnd, bv1, bv2 | _, Pwild  -> 1, bnd, bv1, bv2
+    | Pvar _, _ -> -1, bnd, bv1, bv2 | _, Pvar _ -> 1, bnd, bv1, bv2
+    | Papp _, _ -> -1, bnd, bv1, bv2 | _, Papp _ -> 1, bnd, bv1, bv2
+    | Por _, _  -> -1, bnd, bv1, bv2 | _, Por _  -> 1, bnd, bv1, bv2
   in
-  let rec t_compare bnd (vml1 : BigInt.t Mvs.t) (vml2 : BigInt.t Mvs.t) t1 t2 =
+  let rec t_compare bnd (vml1 : BigInt.t Mvs.t) (vml2 : BigInt.t Mvs.t) t1 t2 : int =
     if t1 != t2 || not (Mvs.is_empty vml1) || not (Mvs.is_empty vml2) then begin
-      comp_raise (oty_compare t1.t_ty t2.t_ty);
-      if attr then comp_raise (Sattr.compare t1.t_attrs t2.t_attrs);
-      if loc then comp_raise (Option.compare Loc.compare t1.t_loc t2.t_loc);
+      let i1 = oty_compare t1.t_ty t2.t_ty in (*TODO: really repetitive*)
+      if i1 <> 0 then i1 else
+      let i2 = if attr then (Sattr.compare t1.t_attrs t2.t_attrs) else 0 in
+      if i2 <> 0 then i2 else
+      let i3 = if loc then (Option.compare Loc.compare t1.t_loc t2.t_loc) else 0 in
+      if i3 <> 0 then i3 else
       match t1.t_node, t2.t_node with
       | Tvar v1, Tvar v2 ->
-        comp_raise (var_compare vml1 vml2 v1 v2)
+          var_compare vml1 vml2 v1 v2
         | Tconst c1, Tconst c2 ->
-            comp_raise (Constant.compare_const ~structural:const c1 c2)
+            Constant.compare_const ~structural:const c1 c2
         | Tapp (s1,l1), Tapp (s2,l2) ->
-            comp_raise (ls_compare s1 s2);
-            List.iter2 (t_compare bnd vml1 vml2) l1 l2
+          let i1 = ls_compare s1 s2 in
+          if i1 <> 0 then i1 else
+            (*TODO: might be bad if not equal because of elements but not sizes but checked by typing?*)
+            List.fold_left2 (fun acc t1 t2 ->
+              if acc <> 0 then acc else (t_compare bnd vml1 vml2) t1 t2) 0 l1 l2
         | Tif (f1,t1,e1), Tif (f2,t2,e2) ->
-            t_compare bnd vml1 vml2 f1 f2;
-            t_compare bnd vml1 vml2 t1 t2;
+            let i1 = t_compare bnd vml1 vml2 f1 f2 in
+            if i1 <> 0 then i1 else
+            let i2 = t_compare bnd vml1 vml2 t1 t2 in
+            if i2 <> 0 then i2 else
             t_compare bnd vml1 vml2 e1 e2
         | Tlet (t1,(v1,b1,e1)), Tlet (t2,(v2,b2,e2)) ->
-            t_compare bnd vml1 vml2 t1 t2;
+            let i1 = t_compare bnd vml1 vml2 t1 t2 in
+            if i1 <> 0 then i1 else
             let vml1 = Mvs.add v1 bnd vml1 in
             let vml2 = Mvs.add v2 bnd vml2 in
             t_compare (BigInt.succ bnd) vml1 vml2 e1 e2
         | Tcase (t1,bl1), Tcase (t2,bl2) ->
-            t_compare bnd vml1 vml2 t1 t2;
+            let i1 = t_compare bnd vml1 vml2 t1 t2 in
+            if i1 <> 0 then i1 else
             let b_compare (p1,b1,t1) (p2,b2,t2) =
-              let bnd,bv1,bv2 = pat_compare (bnd,Mvs.empty,Mvs.empty) p1 p2 in
+              let ip, bnd,bv1,bv2 = pat_compare (bnd,Mvs.empty,Mvs.empty) p1 p2 in
+              if ip <> 0 then ip else
               let vml1 = Mvs.union (fun x n1 n2 -> Some n1) bv1 vml1 in
               let vml2 = Mvs.union (fun x n1 n2 -> Some n1) bv2 vml2 in
-              t_compare bnd vml1 vml2 t1 t2; 0 in
-            comp_raise (Lists.compare b_compare bl1 bl2)
+              t_compare bnd vml1 vml2 t1 t2 in
+            Lists.compare b_compare bl1 bl2
         | Teps (v1,b1,e1), Teps (v2,b2,e2) ->
             let vml1 = Mvs.add v1 bnd vml1 in
             let vml2 = Mvs.add v2 bnd vml2 in
             t_compare (BigInt.succ bnd) vml1 vml2 e1 e2
         | Tquant (q1,(vl1,b1,tr1,f1)), Tquant (q2,(vl2,b2,tr2,f2)) ->
-            perv_compare q1 q2;
+            let i1 = quant_compare q1 q2 in
+            if i1 <> 0 then i1 else
             let rec add bnd bv1 bv2 vl1 vl2 = match vl1, vl2 with
               | (v1::vl1), (v2::vl2) ->
                   let bv1 = Mvs.add v1 bnd bv1 in
                   let bv2 = Mvs.add v2 bnd bv2 in
                   add (BigInt.succ bnd) bv1 bv2 vl1 vl2
-              | [], (_::_) -> raise CompLT
-              | (_::_), [] -> raise CompGT
-              | [], [] -> bnd, bv1, bv2 in
-            let bnd, bv1, bv2 = add bnd Mvs.empty Mvs.empty vl1 vl2 in
+              | [], (_::_) -> -1, bnd, bv1, bv2
+              | (_::_), [] -> 1, bnd, bv1, bv2 
+              | [], [] -> 0, bnd, bv1, bv2 in
+            let i1, bnd, bv1, bv2 = add bnd Mvs.empty Mvs.empty vl1 vl2 in
+            if i1 <> 0 then i1 else
             let vml1 = Mvs.union (fun x n1 n2 -> Some n1) bv1 vml1 in
             let vml2 = Mvs.union (fun x n1 n2 -> Some n1) bv2 vml2 in
-            let tr_cmp t1 t2 = t_compare bnd vml1 vml2 t1 t2; 0 in
-            if trigger then comp_raise (Lists.compare (Lists.compare tr_cmp) tr1 tr2) else ();
+            let tr_cmp t1 t2 = t_compare bnd vml1 vml2 t1 t2 in
+            let i2 = if trigger then (Lists.compare (Lists.compare tr_cmp) tr1 tr2) else 0 in
+            if i2 <> 0 then i2 else
             t_compare bnd vml1 vml2 f1 f2
         | Tbinop (op1,f1,g1), Tbinop (op2,f2,g2) ->
-            perv_compare op1 op2;
-            t_compare bnd vml1 vml2 g1 g2;
+            let i1 = binop_compare op1 op2 in
+            if i1 <> 0 then i1 else
+            let i2 = t_compare bnd vml1 vml2 g1 g2 in
+            if i2 <> 0 then i2 else
             t_compare bnd vml1 vml2 f1 f2
         | Tnot f1, Tnot f2 ->
             t_compare bnd vml1 vml2 f1 f2
-        | Ttrue, Ttrue -> ()
-        | Tfalse, Tfalse -> ()
-        | Tvar _, _   -> raise CompLT | _, Tvar _   -> raise CompGT
-        | Tconst _, _ -> raise CompLT | _, Tconst _ -> raise CompGT
-        | Tapp _, _   -> raise CompLT | _, Tapp _   -> raise CompGT
-        | Tif _, _    -> raise CompLT | _, Tif _    -> raise CompGT
-        | Tlet _, _   -> raise CompLT | _, Tlet _   -> raise CompGT
-        | Tcase _, _  -> raise CompLT | _, Tcase _  -> raise CompGT
-        | Teps _, _   -> raise CompLT | _, Teps _   -> raise CompGT
-        | Tquant _, _ -> raise CompLT | _, Tquant _ -> raise CompGT
-        | Tbinop _, _ -> raise CompLT | _, Tbinop _ -> raise CompGT
-        | Tnot _, _   -> raise CompLT | _, Tnot _   -> raise CompGT
-        | Ttrue, _    -> raise CompLT | _, Ttrue    -> raise CompGT
-        end in
-  try t_compare BigInt.zero Mvs.empty Mvs.empty t1 t2; 0
-  with CompLT -> -1 | CompGT -> 1
+        | Ttrue, Ttrue -> 0
+        | Tfalse, Tfalse -> 0
+        | Tvar _, _   -> -1 | _, Tvar _   -> 1
+        | Tconst _, _ -> -1 | _, Tconst _ -> 1
+        | Tapp _, _   -> -1 | _, Tapp _   -> 1
+        | Tif _, _    -> -1 | _, Tif _    -> 1
+        | Tlet _, _   -> -1 | _, Tlet _   -> 1
+        | Tcase _, _  -> -1 | _, Tcase _  -> 1
+        | Teps _, _   -> -1 | _, Teps _   -> 1
+        | Tquant _, _ -> -1 | _, Tquant _ -> 1
+        | Tbinop _, _ -> -1 | _, Tbinop _ -> 1
+        | Tnot _, _   -> -1 | _, Tnot _   -> 1
+        | Ttrue, _    -> -1 | _, Ttrue    -> 1
+        end else 0 in
+  t_compare BigInt.zero Mvs.empty Mvs.empty t1 t2
 
 let t_similar t1 t2 =
   oty_equal t1.t_ty t2.t_ty &&
