@@ -1195,26 +1195,36 @@ let vl_rename h vl =
 
 let rec t_subst_unsafe m t =
   let t_subst t = t_subst_unsafe m t in
+  let t_open_bound v m t (*(v,b,t)*) =
+    let m,v = vs_rename m v in
+    v, t_subst_unsafe m t in
+  let t_open_branch p m t (*(p,b,t)*) =
+    let m,p = pat_rename m p in
+    p, t_subst_unsafe m t in
+  let t_open_quant vl m tl f (*(vl,b,tl,f)*) =
+    let m,vl = vl_rename m vl in
+    let tl = tr_map (t_subst_unsafe m) tl in
+    vl, tl, t_subst_unsafe m f in
   let b_subst (u,b,e as bv) =
     if Mvs.set_disjoint m b.bv_vars then bv else
-      let b1 = bv_subst_unsafe m b in
-      let v, t1 = t_open_bound (u, b1, e) in
+      let m1 = Mvs.set_inter m b.bv_vars in
+      let v, t1 = t_open_bound u m1 e in
       let (_, b, _) as x = t_close_bound v t1 in
-      assert (Mvs.is_empty b.bv_subst);
+      (* assert (Mvs.is_empty b.bv_subst); *)
       x in
   let b_subst1 (u,b,e as bv) =
     if Mvs.set_disjoint m b.bv_vars then bv else
-      let b1 = bv_subst_unsafe m b in
-      let v, t1 = t_open_branch (u, b1, e) in
+      let m1 = Mvs.set_inter m b.bv_vars in
+      let v, t1 = t_open_branch u m1 e in
       let (_, b, _) as x = t_close_branch v t1 in
-      assert (Mvs.is_empty b.bv_subst);
+      (* assert (Mvs.is_empty b.bv_subst); *)
       x in
   let b_subst2 (vl,b,tl,f1 as bq) =
     if Mvs.set_disjoint m b.bv_vars then bq else
-      let b1 = bv_subst_unsafe m b in
-      let vs, tr, t1 = t_open_quant (vl, b1, tl, f1) in
+      let m1 = Mvs.set_inter m b.bv_vars in
+      let vs, tr, t1 = t_open_quant vl m1 tl f1 in
       let (_, b, _, _) as x = t_close_quant vs tr t1 in
-      assert (Mvs.is_empty b.bv_subst);
+      (* assert (Mvs.is_empty b.bv_subst); *)
       x in
   match t.t_node with
   | Tvar u ->
@@ -1230,39 +1240,8 @@ let rec t_subst_unsafe m t =
       t_attr_copy t (t_eps (b_subst bf) t.t_ty)
   | Tquant (q, (vl,b,tl,f1 as bq)) ->
       t_attr_copy t (t_quant q (b_subst2 bq))
-      (* let bq =
-        if Mvs.set_disjoint m b.bv_vars then bq else
-        (vl,bv_subst_unsafe m b,tl,f1) in
-      t_attr_copy t (t_quant q bq) *)
   | _ ->
       t_map_unsafe t_subst t
-
-and bv_subst_unsafe m b =
-  assert (Mvs.is_empty b.bv_subst);
-  (* restrict m to the variables free in b *)
-  let m = Mvs.set_inter m b.bv_vars in
-  (* if m is empty, return early *)
-  if Mvs.is_empty m then b else
-  (* remove from b.bv_vars the variables replaced by m *)
-  let s = Mvs.set_diff b.bv_vars m in
-  (* add to b.bv_vars the free variables added by m *)
-  let s = Mvs.fold2_inter add_nt_vars b.bv_vars m s in
-  (* apply m to the terms in b.bv_subst *)
-  (* let h = Mvs.map (t_subst_unsafe m) b.bv_subst in *)
-  (* join m to b.bv_subst *)
-  (* let h = Mvs.set_union h m in *)
-  (* reconstruct b *)
-  { bv_vars = s ; bv_subst = m }
-and  t_open_bound (v,b,t) =
-  let m,v = vs_rename b.bv_subst v in
-  v, t_subst_unsafe m t
-and t_open_branch (p,b,t) =
-  let m,p = pat_rename b.bv_subst p in
-  p, t_subst_unsafe m t
-and t_open_quant (vl,b,tl,f) =
-  let m,vl = vl_rename b.bv_subst vl in
-  let tl = tr_map (t_subst_unsafe m) tl in
-  vl, tl, t_subst_unsafe m f
 
 let t_subst_unsafe m t =
   if Mvs.is_empty m then t else t_subst_unsafe m t
@@ -1274,6 +1253,20 @@ let t_subst_unsafe m t =
 (* let t_open_branch (p, b, t) = p, t
 
 let t_open_quant (vl, b, tl, f) = vl, tl, f *)
+
+let  t_open_bound (v,b,t) =
+  assert (Mvs.is_empty b.bv_subst);
+  let m,v = vs_rename b.bv_subst v in
+  v, t_subst_unsafe m t
+let t_open_branch (p,b,t) =
+  assert (Mvs.is_empty b.bv_subst);
+  let m,p = pat_rename b.bv_subst p in
+  p, t_subst_unsafe m t
+let t_open_quant (vl,b,tl,f) =
+  assert (Mvs.is_empty b.bv_subst);
+  let m,vl = vl_rename b.bv_subst vl in
+  let tl = tr_map (t_subst_unsafe m) tl in
+  vl, tl, t_subst_unsafe m f
 
 
 
