@@ -99,7 +99,6 @@ module type S =
     val next_ge_enum : key -> 'a enumeration -> 'a enumeration
   end
 
-(* module type OrderedType = Map.OrderedType *)
 module Make(Ord: TaggedType) = struct
 
     type key = Ord.t

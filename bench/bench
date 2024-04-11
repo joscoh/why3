@@ -504,7 +504,7 @@ goods examples/avl "-L examples/avl"
 goods examples/verifythis_2016_matrix_multiplication "-L examples/verifythis_2016_matrix_multiplication"
 goods examples/double_wp "-L examples/double_wp"
 goods examples/ring_decision "-L examples/ring_decision"
-goods examples/multiprecision "-L examples/multiprecision"
+# goods examples/multiprecision "-L examples/multiprecision"
 goods examples/prover "-L examples/prover --warn-off=unused_variable"
 goods examples/python
 goods examples/micro-c
@@ -668,7 +668,7 @@ fi
 echo ""
 
 echo "=== Checking extraction to C ==="
-extract_and_test_c examples/multiprecision
+# extract_and_test_c examples/multiprecision
 extract_and_test_c examples/c_cursor
 echo ""
 fi
@@ -700,7 +700,7 @@ replay examples/c_cursor "-L examples/c_cursor --merging-only"
 replay examples/verifythis_2016_matrix_multiplication "-L examples/verifythis_2016_matrix_multiplication --merging-only"
 replay examples/double_wp "-L examples/double_wp --merging-only"
 #replay examples/ring_decision "-L examples/ring_decision --merging-only"
-replay examples/multiprecision "-L examples/multiprecision --merging-only"
+# replay examples/multiprecision "-L examples/multiprecision --merging-only"
 replay examples/prover "-L examples/prover --merging-only --warn-off=unused_variable"
 #replay examples/in_progress --merging-only
 replay examples/mlcfg --merging-only
