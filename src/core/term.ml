@@ -690,25 +690,17 @@ type term_or_bound =
   | Trm of term (* * frame list*)
   | Bnd of BigInt.t
 
-let descend m t = match t.t_node with
-| Tvar vs -> begin match Mvs.find_opt vs m with
-              | Some i -> Bnd i
-              | None -> Trm t
-              end
-| _ -> Trm t
-(* 
-let descend vml t = match t.t_node with
-  | Tvar vs ->
-      let rec find vs = function
-        | bv::vml ->
-            begin match Mvs.find_opt vs bv with
-            | Some i -> Bnd i
-            | None -> find vs vml
-            end
-        | [] -> Trm (t, [])
-      in
-      find vs vml
-  | _ -> Trm (t, vml) *)
+(*Compare variables v1 and v2.
+  To be equal, they must either be mapped to each other in each map
+  or not in either map and equal*)
+let var_compare (m1: BigInt.t Mvs.t) (m2: BigInt.t Mvs.t) (v1: vsymbol) (v2: vsymbol) : int =
+  begin match Mvs.find_opt v1 m1, Mvs.find_opt v2 m2 with
+    | Some i1, Some i2 ->
+      BigInt.compare i1 i2
+    | None, None -> vs_compare v1 v2
+    | Some _, _ -> -1
+    | _, _ -> 1
+    end
 
 let t_compare ~trigger ~attr ~loc ~const t1 t2 =
   let comp_raise c =
@@ -757,77 +749,71 @@ let t_compare ~trigger ~attr ~loc ~const t1 t2 =
       comp_raise (oty_compare t1.t_ty t2.t_ty);
       if attr then comp_raise (Sattr.compare t1.t_attrs t2.t_attrs);
       if loc then comp_raise (Option.compare Loc.compare t1.t_loc t2.t_loc);
-      match descend vml1 t1, descend vml2 t2 with
-      | Bnd i1, Bnd i2 -> perv_compare i1 i2
-      | Bnd _, Trm _ -> raise CompLT
-      | Trm _, Bnd _ -> raise CompGT
-      | Trm t1, Trm t2 ->
-          begin match t1.t_node, t2.t_node with
-          | Tvar v1, Tvar v2 ->
-              comp_raise (vs_compare v1 v2)
-          | Tconst c1, Tconst c2 ->
-              comp_raise (Constant.compare_const ~structural:const c1 c2)
-          | Tapp (s1,l1), Tapp (s2,l2) ->
-              comp_raise (ls_compare s1 s2);
-              List.iter2 (t_compare bnd vml1 vml2) l1 l2
-          | Tif (f1,t1,e1), Tif (f2,t2,e2) ->
-              t_compare bnd vml1 vml2 f1 f2;
-              t_compare bnd vml1 vml2 t1 t2;
-              t_compare bnd vml1 vml2 e1 e2
-          | Tlet (t1,(v1,b1,e1)), Tlet (t2,(v2,b2,e2)) ->
-              t_compare bnd vml1 vml2 t1 t2;
-              let vml1 = Mvs.add v1 bnd vml1 in
-              let vml2 = Mvs.add v2 bnd vml2 in
-              t_compare (BigInt.succ bnd) vml1 vml2 e1 e2
-          | Tcase (t1,bl1), Tcase (t2,bl2) ->
-              t_compare bnd vml1 vml2 t1 t2;
-              let b_compare (p1,b1,t1) (p2,b2,t2) =
-                let bnd,bv1,bv2 = pat_compare (bnd,Mvs.empty,Mvs.empty) p1 p2 in
-                let vml1 = Mvs.union (fun x n1 n2 -> Some n1) bv1 vml1 in
-                let vml2 = Mvs.union (fun x n1 n2 -> Some n1) bv2 vml2 in
-                t_compare bnd vml1 vml2 t1 t2; 0 in
-              comp_raise (Lists.compare b_compare bl1 bl2)
-          | Teps (v1,b1,e1), Teps (v2,b2,e2) ->
-              let vml1 = Mvs.add v1 bnd vml1 in
-              let vml2 = Mvs.add v2 bnd vml2 in
-              t_compare (BigInt.succ bnd) vml1 vml2 e1 e2
-          | Tquant (q1,(vl1,b1,tr1,f1)), Tquant (q2,(vl2,b2,tr2,f2)) ->
-              perv_compare q1 q2;
-              let rec add bnd bv1 bv2 vl1 vl2 = match vl1, vl2 with
-                | (v1::vl1), (v2::vl2) ->
-                    let bv1 = Mvs.add v1 bnd bv1 in
-                    let bv2 = Mvs.add v2 bnd bv2 in
-                    add (BigInt.succ bnd) bv1 bv2 vl1 vl2
-                | [], (_::_) -> raise CompLT
-                | (_::_), [] -> raise CompGT
-                | [], [] -> bnd, bv1, bv2 in
-              let bnd, bv1, bv2 = add bnd Mvs.empty Mvs.empty vl1 vl2 in
+      match t1.t_node, t2.t_node with
+      | Tvar v1, Tvar v2 ->
+        comp_raise (var_compare vml1 vml2 v1 v2)
+        | Tconst c1, Tconst c2 ->
+            comp_raise (Constant.compare_const ~structural:const c1 c2)
+        | Tapp (s1,l1), Tapp (s2,l2) ->
+            comp_raise (ls_compare s1 s2);
+            List.iter2 (t_compare bnd vml1 vml2) l1 l2
+        | Tif (f1,t1,e1), Tif (f2,t2,e2) ->
+            t_compare bnd vml1 vml2 f1 f2;
+            t_compare bnd vml1 vml2 t1 t2;
+            t_compare bnd vml1 vml2 e1 e2
+        | Tlet (t1,(v1,b1,e1)), Tlet (t2,(v2,b2,e2)) ->
+            t_compare bnd vml1 vml2 t1 t2;
+            let vml1 = Mvs.add v1 bnd vml1 in
+            let vml2 = Mvs.add v2 bnd vml2 in
+            t_compare (BigInt.succ bnd) vml1 vml2 e1 e2
+        | Tcase (t1,bl1), Tcase (t2,bl2) ->
+            t_compare bnd vml1 vml2 t1 t2;
+            let b_compare (p1,b1,t1) (p2,b2,t2) =
+              let bnd,bv1,bv2 = pat_compare (bnd,Mvs.empty,Mvs.empty) p1 p2 in
               let vml1 = Mvs.union (fun x n1 n2 -> Some n1) bv1 vml1 in
               let vml2 = Mvs.union (fun x n1 n2 -> Some n1) bv2 vml2 in
-              let tr_cmp t1 t2 = t_compare bnd vml1 vml2 t1 t2; 0 in
-              if trigger then comp_raise (Lists.compare (Lists.compare tr_cmp) tr1 tr2) else ();
-              t_compare bnd vml1 vml2 f1 f2
-          | Tbinop (op1,f1,g1), Tbinop (op2,f2,g2) ->
-              perv_compare op1 op2;
-              t_compare bnd vml1 vml2 g1 g2;
-              t_compare bnd vml1 vml2 f1 f2
-          | Tnot f1, Tnot f2 ->
-              t_compare bnd vml1 vml2 f1 f2
-          | Ttrue, Ttrue -> ()
-          | Tfalse, Tfalse -> ()
-          | Tvar _, _   -> raise CompLT | _, Tvar _   -> raise CompGT
-          | Tconst _, _ -> raise CompLT | _, Tconst _ -> raise CompGT
-          | Tapp _, _   -> raise CompLT | _, Tapp _   -> raise CompGT
-          | Tif _, _    -> raise CompLT | _, Tif _    -> raise CompGT
-          | Tlet _, _   -> raise CompLT | _, Tlet _   -> raise CompGT
-          | Tcase _, _  -> raise CompLT | _, Tcase _  -> raise CompGT
-          | Teps _, _   -> raise CompLT | _, Teps _   -> raise CompGT
-          | Tquant _, _ -> raise CompLT | _, Tquant _ -> raise CompGT
-          | Tbinop _, _ -> raise CompLT | _, Tbinop _ -> raise CompGT
-          | Tnot _, _   -> raise CompLT | _, Tnot _   -> raise CompGT
-          | Ttrue, _    -> raise CompLT | _, Ttrue    -> raise CompGT
-          end
-    end in
+              t_compare bnd vml1 vml2 t1 t2; 0 in
+            comp_raise (Lists.compare b_compare bl1 bl2)
+        | Teps (v1,b1,e1), Teps (v2,b2,e2) ->
+            let vml1 = Mvs.add v1 bnd vml1 in
+            let vml2 = Mvs.add v2 bnd vml2 in
+            t_compare (BigInt.succ bnd) vml1 vml2 e1 e2
+        | Tquant (q1,(vl1,b1,tr1,f1)), Tquant (q2,(vl2,b2,tr2,f2)) ->
+            perv_compare q1 q2;
+            let rec add bnd bv1 bv2 vl1 vl2 = match vl1, vl2 with
+              | (v1::vl1), (v2::vl2) ->
+                  let bv1 = Mvs.add v1 bnd bv1 in
+                  let bv2 = Mvs.add v2 bnd bv2 in
+                  add (BigInt.succ bnd) bv1 bv2 vl1 vl2
+              | [], (_::_) -> raise CompLT
+              | (_::_), [] -> raise CompGT
+              | [], [] -> bnd, bv1, bv2 in
+            let bnd, bv1, bv2 = add bnd Mvs.empty Mvs.empty vl1 vl2 in
+            let vml1 = Mvs.union (fun x n1 n2 -> Some n1) bv1 vml1 in
+            let vml2 = Mvs.union (fun x n1 n2 -> Some n1) bv2 vml2 in
+            let tr_cmp t1 t2 = t_compare bnd vml1 vml2 t1 t2; 0 in
+            if trigger then comp_raise (Lists.compare (Lists.compare tr_cmp) tr1 tr2) else ();
+            t_compare bnd vml1 vml2 f1 f2
+        | Tbinop (op1,f1,g1), Tbinop (op2,f2,g2) ->
+            perv_compare op1 op2;
+            t_compare bnd vml1 vml2 g1 g2;
+            t_compare bnd vml1 vml2 f1 f2
+        | Tnot f1, Tnot f2 ->
+            t_compare bnd vml1 vml2 f1 f2
+        | Ttrue, Ttrue -> ()
+        | Tfalse, Tfalse -> ()
+        | Tvar _, _   -> raise CompLT | _, Tvar _   -> raise CompGT
+        | Tconst _, _ -> raise CompLT | _, Tconst _ -> raise CompGT
+        | Tapp _, _   -> raise CompLT | _, Tapp _   -> raise CompGT
+        | Tif _, _    -> raise CompLT | _, Tif _    -> raise CompGT
+        | Tlet _, _   -> raise CompLT | _, Tlet _   -> raise CompGT
+        | Tcase _, _  -> raise CompLT | _, Tcase _  -> raise CompGT
+        | Teps _, _   -> raise CompLT | _, Teps _   -> raise CompGT
+        | Tquant _, _ -> raise CompLT | _, Tquant _ -> raise CompGT
+        | Tbinop _, _ -> raise CompLT | _, Tbinop _ -> raise CompGT
+        | Tnot _, _   -> raise CompLT | _, Tnot _   -> raise CompGT
+        | Ttrue, _    -> raise CompLT | _, Ttrue    -> raise CompGT
+        end in
   try t_compare BigInt.zero Mvs.empty Mvs.empty t1 t2; 0
   with CompLT -> -1 | CompGT -> 1
 
@@ -879,61 +865,60 @@ let t_hash ~trigger ~attr ~const t =
       else h
     in
     Hashcons.combine_big h
-      begin match descend vml t with
-      | Bnd i -> BigInt.succ i
-      | Trm t ->
-          begin match t.t_node with
-          | Tvar v -> vs_hash v
-          | Tconst c when const -> BigInt.of_int (Hashtbl.hash c) (*JOSH: make sure*)
-          | Tconst (Constant.ConstInt {Number.il_int = c}) -> BigInt.of_int (Hashtbl.hash c)
-          | Tconst (Constant.ConstReal {Number.rl_real = c}) -> BigInt.of_int (Hashtbl.hash c)
-          | Tconst (Constant.ConstStr c) -> BigInt.of_int (Hashtbl.hash c)
-          | Tapp (s,l) ->
-              Hashcons.combine_big_list (t_hash bnd vml) (ls_hash s) l
-          | Tif (f,t,e) ->
-              let hf = t_hash bnd vml f in
-              let ht = t_hash bnd vml t in
-              let he = t_hash bnd vml e in
-              Hashcons.combine2_big hf ht he
-          | Tlet (t,(v,b,e)) ->
-              let h = t_hash bnd vml t in
-              let vml = Mvs.add v bnd vml in
-              Hashcons.combine_big h (t_hash (BigInt.succ bnd) vml e)
-          | Tcase (t,bl) ->
-              let h = t_hash bnd vml t in
-              let b_hash (p,b,t) =
-                let bnd,bv,hp = pat_hash bnd Mvs.empty p in
-                let vml = Mvs.union (fun x n1 n2 -> Some n1) bv vml in
-                Hashcons.combine_big hp (t_hash bnd vml t) in
-              Hashcons.combine_big_list b_hash h bl
-          | Teps (v,b,e) ->
-              let vml = Mvs.add v bnd vml in
-              t_hash (BigInt.succ bnd) vml e
-          | Tquant (q,(vl,b,tr,f)) ->
-              let h = BigInt.of_int (Hashtbl.hash q) in (*JOSH make sure*)
-              let rec add bnd bv vl = match vl with
-                | v::vl -> add (BigInt.succ bnd) (Mvs.add v bnd bv) vl
-                | [] -> bnd, bv in
-              let bnd, bv = add bnd Mvs.empty vl in
-              let vml = Mvs.union (fun x n1 n2 -> Some n1) bv vml in
-              let h =
-                if trigger then
-                  List.fold_left
-                    (Hashcons.combine_big_list (t_hash bnd vml)) h tr
-                else h
-              in
-              Hashcons.combine_big h (t_hash bnd vml f)
-          | Tbinop (op,f,g) ->
-              let ho = BigInt.of_int (Hashtbl.hash op) in (*JOSH make sure*)
-              let hf = t_hash bnd vml f in
-              let hg = t_hash bnd vml g in
-              Hashcons.combine2_big ho hf hg
-          | Tnot f ->
-              Hashcons.combine_big BigInt.one (t_hash bnd vml f)
-          | Ttrue -> BigInt.of_int 2
-          | Tfalse -> BigInt.of_int 3
-          end
-    end in
+      begin match t.t_node with
+      | Tvar v -> begin match Mvs.find_opt v vml with
+                  | Some i -> BigInt.succ i
+                  | None -> vs_hash v
+                  end
+      | Tconst c when const -> BigInt.of_int (Hashtbl.hash c) (*JOSH: make sure*)
+      | Tconst (Constant.ConstInt {Number.il_int = c}) -> BigInt.of_int (Hashtbl.hash c)
+      | Tconst (Constant.ConstReal {Number.rl_real = c}) -> BigInt.of_int (Hashtbl.hash c)
+      | Tconst (Constant.ConstStr c) -> BigInt.of_int (Hashtbl.hash c)
+      | Tapp (s,l) ->
+          Hashcons.combine_big_list (t_hash bnd vml) (ls_hash s) l
+      | Tif (f,t,e) ->
+          let hf = t_hash bnd vml f in
+          let ht = t_hash bnd vml t in
+          let he = t_hash bnd vml e in
+          Hashcons.combine2_big hf ht he
+      | Tlet (t,(v,b,e)) ->
+          let h = t_hash bnd vml t in
+          let vml = Mvs.add v bnd vml in
+          Hashcons.combine_big h (t_hash (BigInt.succ bnd) vml e)
+      | Tcase (t,bl) ->
+          let h = t_hash bnd vml t in
+          let b_hash (p,b,t) =
+            let bnd,bv,hp = pat_hash bnd Mvs.empty p in
+            let vml = Mvs.union (fun x n1 n2 -> Some n1) bv vml in
+            Hashcons.combine_big hp (t_hash bnd vml t) in
+          Hashcons.combine_big_list b_hash h bl
+      | Teps (v,b,e) ->
+          let vml = Mvs.add v bnd vml in
+          t_hash (BigInt.succ bnd) vml e
+      | Tquant (q,(vl,b,tr,f)) ->
+          let h = BigInt.of_int (Hashtbl.hash q) in (*JOSH make sure*)
+          let rec add bnd bv vl = match vl with
+            | v::vl -> add (BigInt.succ bnd) (Mvs.add v bnd bv) vl
+            | [] -> bnd, bv in
+          let bnd, bv = add bnd Mvs.empty vl in
+          let vml = Mvs.union (fun x n1 n2 -> Some n1) bv vml in
+          let h =
+            if trigger then
+              List.fold_left
+                (Hashcons.combine_big_list (t_hash bnd vml)) h tr
+            else h
+          in
+          Hashcons.combine_big h (t_hash bnd vml f)
+      | Tbinop (op,f,g) ->
+          let ho = BigInt.of_int (Hashtbl.hash op) in (*JOSH make sure*)
+          let hf = t_hash bnd vml f in
+          let hg = t_hash bnd vml g in
+          Hashcons.combine2_big ho hf hg
+      | Tnot f ->
+          Hashcons.combine_big BigInt.one (t_hash bnd vml f)
+      | Ttrue -> BigInt.of_int 2
+      | Tfalse -> BigInt.of_int 3
+      end in
   t_hash BigInt.zero Mvs.empty t
 
 let t_hash_generic ~trigger ~attr ~const t =
