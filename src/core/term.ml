@@ -729,6 +729,14 @@ let binop_compare (b1: binop) (b2: binop) : int =
   | Timplies, _ -> -1
   | _, Timplies -> 1
 
+(*Version of fold_left2 with default values for shorter lists*)
+let rec fold_left2_def (f: 'a -> 'b -> 'c -> 'a) (acc: 'a) (l1 : 'b list) (l2: 'c list) (d1: 'a) (d2: 'a) =
+  match l1, l2 with
+  | [], [] -> acc
+  | x1 :: t1, x2 :: t2 -> fold_left2_def f (f acc x1 x2) t1 t2 d1 d2
+  | [], _ :: _ -> d1
+  | _ :: _, [] -> d2 
+
 let t_compare ~trigger ~attr ~loc ~const t1 t2 =
   let rec pat_compare (bnd,bv1,bv2 as state) p1 p2 =
     match p1.pat_node, p2.pat_node with
@@ -739,10 +747,10 @@ let t_compare ~trigger ~attr ~loc ~const t1 t2 =
     | Papp (s1, l1), Papp (s2, l2) ->
         let i1 = ls_compare s1 s2 in
         let sbnd, sm1, sm2 = state in
-        let i2, bnd, bv1, bv2 = List.fold_left2 (fun acc p1 p2 ->
+        let i2, bnd, bv1, bv2 = fold_left2_def (fun acc p1 p2 ->
             let i, bnd1, m1, m2 = acc in
             let j, bnd2, m1', m2' = pat_compare (bnd1, m1, m2) p1 p2 in
-            lex_comp i j, bnd2, m1', m2') (0, sbnd, sm1, sm2) l1 l2 in 
+            lex_comp i j, bnd2, m1', m2') (0, sbnd, sm1, sm2) l1 l2 (-1, sbnd, sm1, sm2) (1, sbnd, sm1, sm2) in  (*TODO: are these default right think only value matters anyway*)
         lex_comp i1 i2, bnd, bv1, bv2
     | Por (p1, q1), Por (p2, q2) ->
         let (i1,bnd1,bv1,bv2 as res) = pat_compare state p1 p2 in
@@ -754,10 +762,11 @@ let t_compare ~trigger ~attr ~loc ~const t1 t2 =
               BigInt.compare (Mvs.find v1 bv1) (Mvs.find v2 bv2)
           | Papp (s1, l1), Papp (s2, l2) ->
               let i1 = ls_compare s1 s2 in
-              if i1 <> 0 then i1 else (*TODO: do this to avoid lex_comp evaluating ill typed I think? TODO do we need?*)
-                List.fold_left2 (fun i p1 p2 ->
+              if i1 <> 0 then i1 else (*NOTE: we need this everywhere to force short circuiting or else
+                  se have exceptions (TODO: remove exception version)*)
+                fold_left2_def (fun i p1 p2 ->
                   lex_comp i (or_cmp p1 p2)
-                  ) 0 l1 l2
+                  ) 0 l1 l2 (-1) (1)
           | Por (p1, q1), Por (p2, q2) ->
               let i1 = or_cmp p1 p2 in
               if i1 <> 0 then i1 else
@@ -798,8 +807,8 @@ let t_compare ~trigger ~attr ~loc ~const t1 t2 =
           let i1 = ls_compare s1 s2 in
           if i1 <> 0 then i1 else
             (*TODO: might be bad if not equal because of elements but not sizes but checked by typing?*)
-            List.fold_left2 (fun acc t1 t2 ->
-              if acc <> 0 then acc else (t_compare bnd vml1 vml2) t1 t2) 0 l1 l2
+            fold_left2_def (fun acc t1 t2 ->
+              if acc <> 0 then acc else (t_compare bnd vml1 vml2) t1 t2) 0 l1 l2 (-1) 1
         | Tif (f1,t1,e1), Tif (f2,t2,e2) ->
             let i1 = t_compare bnd vml1 vml2 f1 f2 in
             if i1 <> 0 then i1 else
