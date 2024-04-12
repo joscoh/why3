@@ -737,7 +737,29 @@ let rec fold_left2_def (f: 'a -> 'b -> 'c -> 'a) (acc: 'a) (l1 : 'b list) (l2: '
   | [], _ :: _ -> d1
   | _ :: _, [] -> d2 
 
-let t_compare ~trigger ~attr ~loc ~const t1 t2 =
+let rec or_cmp bv1 bv2 q1 q2 = match q1.pat_node, q2.pat_node with
+  | Pwild, Pwild -> 0
+  | Pvar v1, Pvar v2 ->
+      BigInt.compare (Mvs.find v1 bv1) (Mvs.find v2 bv2)
+  | Papp (s1, l1), Papp (s2, l2) ->
+      let i1 = ls_compare s1 s2 in
+      lex_comp i1 (
+        fold_left2_def (fun i p1 p2 ->
+          lex_comp i (or_cmp bv1 bv2 p1 p2)
+          ) 0 l1 l2 (-1) (1))
+  | Por (p1, q1), Por (p2, q2) ->
+      let i1 = or_cmp bv1 bv2 p1 p2 in
+      lex_comp i1 (
+        or_cmp bv1 bv2 q1 q2)
+  | Pas (p1, v1), Pas (p2, v2) ->
+      let i1 = or_cmp bv1 bv2 p1 p2 in
+      lex_comp i1 (
+        BigInt.compare (Mvs.find v1 bv1) (Mvs.find v2 bv2))
+  | Pwild,  _ -> -1 | _, Pwild  -> 1
+  | Pvar _, _ -> -1 | _, Pvar _ -> 1
+  | Papp _, _ -> -1 | _, Papp _ -> 1
+  | Por _,  _ -> -1 | _, Por _  -> 1
+
   let rec pat_compare (bnd,bv1,bv2 as state) p1 p2 =
     match p1.pat_node, p2.pat_node with
     | Pwild, Pwild ->
@@ -756,30 +778,7 @@ let t_compare ~trigger ~attr ~loc ~const t1 t2 =
         let (i1,bnd1,bv1,bv2 as res) = pat_compare state p1 p2 in
         if i1 <> 0 then res
         else
-        let rec or_cmp q1 q2 = match q1.pat_node, q2.pat_node with
-          | Pwild, Pwild -> 0
-          | Pvar v1, Pvar v2 ->
-              BigInt.compare (Mvs.find v1 bv1) (Mvs.find v2 bv2)
-          | Papp (s1, l1), Papp (s2, l2) ->
-              let i1 = ls_compare s1 s2 in
-              lex_comp i1 (
-                fold_left2_def (fun i p1 p2 ->
-                  lex_comp i (or_cmp p1 p2)
-                  ) 0 l1 l2 (-1) (1))
-          | Por (p1, q1), Por (p2, q2) ->
-              let i1 = or_cmp p1 p2 in
-              lex_comp i1 (
-                or_cmp q1 q2)
-          | Pas (p1, v1), Pas (p2, v2) ->
-              let i1 = or_cmp p1 p2 in
-              lex_comp i1 (
-                BigInt.compare (Mvs.find v1 bv1) (Mvs.find v2 bv2))
-          | Pwild,  _ -> -1 | _, Pwild  -> 1
-          | Pvar _, _ -> -1 | _, Pvar _ -> 1
-          | Papp _, _ -> -1 | _, Papp _ -> 1
-          | Por _,  _ -> -1 | _, Por _  -> 1
-        in
-        let i2 = or_cmp q1 q2 in
+        let i2 = or_cmp bv1 bv2 q1 q2 in
         (i2, bnd1, bv1, bv2)
     | Pas (p1, v1), Pas (p2, v2) ->
         let i1, bnd, bv1, bv2 = pat_compare state p1 p2 in
@@ -788,7 +787,8 @@ let t_compare ~trigger ~attr ~loc ~const t1 t2 =
     | Pvar _, _ -> -1, bnd, bv1, bv2 | _, Pvar _ -> 1, bnd, bv1, bv2
     | Papp _, _ -> -1, bnd, bv1, bv2 | _, Papp _ -> 1, bnd, bv1, bv2
     | Por _, _  -> -1, bnd, bv1, bv2 | _, Por _  -> 1, bnd, bv1, bv2
-  in
+
+let t_compare ~trigger ~attr ~loc ~const t1 t2 =
   let rec t_compare bnd (vml1 : BigInt.t Mvs.t) (vml2 : BigInt.t Mvs.t) t1 t2 : int =
     if t1 != t2 || not (Mvs.is_empty vml1) || not (Mvs.is_empty vml2) then begin
       let i1 = oty_compare t1.t_ty t2.t_ty in
@@ -805,7 +805,6 @@ let t_compare ~trigger ~attr ~loc ~const t1 t2 =
         | Tapp (s1,l1), Tapp (s2,l2) ->
           let i1 = ls_compare s1 s2 in
           lex_comp i1 (
-            (*TODO: might be bad if not equal because of elements but not sizes but checked by typing?*)
             fold_left2_def (fun acc t1 t2 ->
               if acc <> 0 then acc else (t_compare bnd vml1 vml2) t1 t2) 0 l1 l2 (-1) 1)
         | Tif (f1,t1,e1), Tif (f2,t2,e2) ->
@@ -893,8 +892,7 @@ let t_similar t1 t2 =
     | Ttrue, Ttrue | Tfalse, Tfalse -> true
     | _, _ -> false
 
-let t_hash ~trigger ~attr ~const t =
-  let rec pat_hash bnd bv p = match p.pat_node with
+    let rec pat_hash bnd bv p = match p.pat_node with
     | Pwild -> bnd, bv, BigInt.zero
     | Pvar v -> BigInt.succ bnd, Mvs.add v bnd bv, BigInt.succ bnd
     | Papp (s,l) ->
@@ -915,7 +913,8 @@ let t_hash ~trigger ~attr ~const t =
     | Pas (p,v) ->
         let bnd,bv,hp = pat_hash bnd bv p in
         BigInt.succ bnd, Mvs.add v bnd bv, Hashcons.combine_big hp (BigInt.succ bnd)
-  in
+
+let t_hash ~trigger ~attr ~const t =
   let rec t_hash (bnd : BigInt.t) (vml: (BigInt.t Mvs.t))  t =
     let h = oty_hash t.t_ty in
     let h =
