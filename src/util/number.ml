@@ -39,6 +39,61 @@ let fp_significand_digits f =
 let float_format_eqb i1 i2 =
   (&&) (BigInt.eq i1.fp_exponent_digits i2.fp_exponent_digits)
     (BigInt.eq i1.fp_significand_digits i2.fp_significand_digits)
+
+type int_value = BigInt.t
+
+type int_literal_kind =
+| ILitUnk
+| ILitDec
+| ILitHex
+| ILitOct
+| ILitBin
+
+type int_constant = { il_kind : int_literal_kind; il_int : BigInt.t }
+
+(** val il_kind : int_constant -> int_literal_kind **)
+
+let il_kind i =
+  i.il_kind
+
+(** val il_int : int_constant -> BigInt.t **)
+
+let il_int i =
+  i.il_int
+
+type real_value = { rv_sig : BigInt.t; rv_pow2 : BigInt.t; rv_pow5 : BigInt.t }
+
+(** val rv_sig : real_value -> BigInt.t **)
+
+let rv_sig r =
+  r.rv_sig
+
+(** val rv_pow2 : real_value -> BigInt.t **)
+
+let rv_pow2 r =
+  r.rv_pow2
+
+(** val rv_pow5 : real_value -> BigInt.t **)
+
+let rv_pow5 r =
+  r.rv_pow5
+
+type real_literal_kind =
+| RLitUnk
+| RLitDec of Stdlib.Int.t
+| RLitHex of Stdlib.Int.t
+
+type real_constant = { rl_kind : real_literal_kind; rl_real : real_value }
+
+(** val rl_kind : real_constant -> real_literal_kind **)
+
+let rl_kind r =
+  r.rl_kind
+
+(** val rl_real : real_constant -> real_value **)
+
+let rl_real r =
+  r.rl_real
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -51,13 +106,97 @@ let float_format_eqb i1 i2 =
 (********************************************************************)
 
 open Mysexplib.Std [@@warning "-33"]
+open Sexplib.Conv
 
 let debug_float = Debug.register_info_flag "float"
   ~desc:"Avoid@ catching@ exceptions@ in@ order@ to@ get@ \
          float@ literal@ checks@ messages."
 
+(*Need sexp*)
+let sexp_of_int_value (x: int_value) : Sexplib0.Sexp.t =
+  BigInt.sexp_of_t x
+
+let int_value_of_sexp (x: Sexplib0.Sexp.t) : int_value =
+  BigInt.t_of_sexp x
+
+let sexp_of_int_literal_kind (x: int_literal_kind) : Sexplib0.Sexp.t =
+  match x with
+  | ILitUnk -> Sexplib0.Sexp.Atom "ILitUnk" 
+  | ILitDec -> Sexplib0.Sexp.Atom "ILitDec" 
+  | ILitHex -> Sexplib0.Sexp.Atom "ILitHex" 
+  | ILitOct -> Sexplib0.Sexp.Atom "ILitOct" 
+  | ILitBin -> Sexplib0.Sexp.Atom "ILitBin"
+
+let int_literal_kind_of_sexp (x: Sexplib0.Sexp.t) : int_literal_kind =
+  match x with
+  | Sexplib0.Sexp.Atom "ILitUnk" -> ILitUnk
+  | Sexplib0.Sexp.Atom "ILitDec"  -> ILitDec 
+  | Sexplib0.Sexp.Atom "ILitHex" -> ILitHex
+  | Sexplib0.Sexp.Atom "ILitOct" -> ILitOct  
+  | Sexplib0.Sexp.Atom "ILitBin" -> ILitBin
+  | _ -> of_sexp_error "int_literal_kind_of_sexp" x 
+
+let sexp_of_int_constant x =
+  Sexplib0.Sexp.List [sexp_of_int_literal_kind x.il_kind;
+    sexp_of_int_value x.il_int]
+
+let int_constant_of_sexp x =
+  match x with
+  | Sexplib0.Sexp.List [a; b] -> {il_kind = int_literal_kind_of_sexp a;
+    il_int = int_value_of_sexp b}
+  | _ -> of_sexp_error "int_constant_of_sexp" x 
+
+let sexp_of_real_literal_kind x =
+  match x with
+  | RLitUnk -> Sexplib0.Sexp.Atom "RealLitUnk"
+  | RLitDec i -> Sexplib0.Sexp.List [
+    Sexplib0.Sexp.Atom "RLitDec";
+    Sexplib0.Sexp_conv.sexp_of_int i
+    ]
+  | RLitHex i -> Sexplib0.Sexp.List [
+    Sexplib0.Sexp.Atom "RLitHex";
+    Sexplib0.Sexp_conv.sexp_of_int i
+    ]
+
+let real_literal_kind_of_sexp x =
+  match x with
+  | Sexplib0.Sexp.Atom "RealLitUnk" -> RLitUnk
+  | Sexplib0.Sexp.List [ Sexplib0.Sexp.Atom "RLitDec"; a] ->
+    RLitDec (Sexplib0.Sexp_conv.int_of_sexp a)
+  | Sexplib0.Sexp.List [ Sexplib0.Sexp.Atom "RLitHex"; a] ->
+    RLitHex (Sexplib0.Sexp_conv.int_of_sexp a)
+  | _ -> of_sexp_error "real_literal_kind_of_sexp" x 
+
+let sexp_of_real_value x =
+  Sexplib0.Sexp.List [
+    BigInt.sexp_of_t x.rv_sig;
+    BigInt.sexp_of_t x.rv_pow2;
+    BigInt.sexp_of_t x.rv_pow5
+  ]
+
+let real_value_of_sexp x =
+  match x with
+  | Sexplib0.Sexp.List [a; b; c] ->
+    {rv_sig = BigInt.t_of_sexp a;
+     rv_pow2 = BigInt.t_of_sexp b;
+     rv_pow5 = BigInt.t_of_sexp c}
+  | _ -> of_sexp_error "real_value_of_sexp" x
+
+let sexp_of_real_constant x =
+  Sexplib0.Sexp.List [
+    sexp_of_real_literal_kind x.rl_kind;
+    sexp_of_real_value x.rl_real
+  ]
+
+let real_constant_of_sexp x =
+  match x with
+  | Sexplib0.Sexp.List [a; b] ->
+      {rl_kind = real_literal_kind_of_sexp a;
+       rl_real = real_value_of_sexp b}
+  | _ -> of_sexp_error "real_constant_of_sexp" x
+
 (** Construction *)
-type int_value = BigInt.t
+(* type int_value = BigInt.t
 [@@deriving sexp]
 
 type int_literal_kind =
@@ -85,7 +224,7 @@ type real_constant = {
   rl_kind : real_literal_kind;
   rl_real : real_value
 }
-[@@deriving sexp]
+[@@deriving sexp] *)
 
 let compare_real ?(structural=true) { rv_sig = s1; rv_pow2 = p21; rv_pow5 = p51 }
                                     { rv_sig = s2; rv_pow2 = p22; rv_pow5 = p52 } =

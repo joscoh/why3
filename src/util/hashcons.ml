@@ -40,6 +40,7 @@ module Make =
     ref (BigInt.one, CoqHashtbl.create_hashset)
 
   (** val unique : t -> (BigInt.t * H.t hashset, t) st **)
+
   let unique d =
     (@@) (fun i ->
       let d0 = H.tag i d in
@@ -47,6 +48,7 @@ module Make =
         (let old = !hash_st in
     hash_st := (BigInt.succ (fst old), (snd old))))
       (fst !hash_st)
+
   (** val hashcons : t -> (BigInt.t * H.t hashset, t) st **)
 
   let hashcons d =
@@ -118,6 +120,7 @@ let combine_option h = function
 
 let combine_pair h1 h2 x =
   combine (h1 (fst x)) (h2 (snd x))
+
 (** val combine_big : BigInt.t -> BigInt.t -> BigInt.t **)
 
 let combine_big acc n =
