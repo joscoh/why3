@@ -14,9 +14,13 @@ module Z :
 
   val add : coq_Z -> coq_Z -> coq_Z
 
+  val opp : coq_Z -> coq_Z
+
   val succ : coq_Z -> coq_Z
 
   val pred : coq_Z -> coq_Z
+
+  val sub : coq_Z -> coq_Z -> coq_Z
 
   val mul : coq_Z -> coq_Z -> coq_Z
 
@@ -33,6 +37,8 @@ module Z :
   val geb : coq_Z -> coq_Z -> bool
 
   val eqb : coq_Z -> coq_Z -> bool
+
+  val min : coq_Z -> coq_Z -> coq_Z
 
   val of_nat : nat -> coq_Z
  end

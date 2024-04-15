@@ -61,6 +61,13 @@ module Z =
        | Zpos y' -> pos_sub y' x'
        | Zneg y' -> Zneg (Pos.add x' y'))
 
+  (** val opp : coq_Z -> coq_Z **)
+
+  let opp = function
+  | Z0 -> Z0
+  | Zpos x0 -> Zneg x0
+  | Zneg x0 -> Zpos x0
+
   (** val succ : coq_Z -> coq_Z **)
 
   let succ x =
@@ -70,6 +77,11 @@ module Z =
 
   let pred x =
     add x (Zneg Coq_xH)
+
+  (** val sub : coq_Z -> coq_Z -> coq_Z **)
+
+  let sub m n =
+    add m (opp n)
 
   (** val mul : coq_Z -> coq_Z -> coq_Z **)
 
@@ -149,6 +161,13 @@ module Z =
     | Zneg p -> (match y with
                  | Zneg q -> Pos.eqb p q
                  | _ -> false)
+
+  (** val min : coq_Z -> coq_Z -> coq_Z **)
+
+  let min n m =
+    match compare n m with
+    | Gt -> m
+    | _ -> n
 
   (** val of_nat : nat -> coq_Z **)
 

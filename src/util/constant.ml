@@ -1,9 +1,40 @@
 open Number
+open IntFuncs
 
 type constant =
 | ConstInt of int_constant
 | ConstReal of real_constant
 | ConstStr of string
+
+(** val compare_const_aux : bool -> constant -> constant -> Stdlib.Int.t **)
+
+let compare_const_aux structural c1 c2 =
+  match c1 with
+  | ConstInt i1 ->
+    (match c2 with
+     | ConstInt i2 ->
+       let c =
+         if structural
+         then int_literal_kind_compare i1.il_kind i2.il_kind
+         else Stdlib.Int.zero
+       in
+       lex_comp c (BigInt.compare i1.il_int i2.il_int)
+     | _ -> Stdlib.Int.minus_one)
+  | ConstReal r1 ->
+    (match c2 with
+     | ConstInt _ -> Stdlib.Int.one
+     | ConstReal r2 ->
+       let c =
+         if structural
+         then real_literal_kind_compare r1.rl_kind r2.rl_kind
+         else Stdlib.Int.zero
+       in
+       lex_comp c (compare_real_aux structural r1.rl_real r2.rl_real)
+     | ConstStr _ -> Stdlib.Int.minus_one)
+  | ConstStr s1 ->
+    (match c2 with
+     | ConstStr s2 -> String.compare s1 s2
+     | _ -> Stdlib.Int.one)
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -53,6 +84,8 @@ let constant_of_sexp x =
   | _ -> Sexplib0.Sexp_conv.of_sexp_error "constant_of_sexp" x
 
 let compare_const ?(structural=true) c1 c2 =
+  compare_const_aux structural c1 c2 
+(* 
   match c1, c2 with
   | ConstInt { il_kind = k1; il_int = i1 }, ConstInt { il_kind = k2; il_int = i2 } ->
       let c = if structural then Stdlib.compare k1 k2 else 0 in
@@ -61,7 +94,7 @@ let compare_const ?(structural=true) c1 c2 =
       let c = if structural then Stdlib.compare k1 k2 else 0 in
       if c <> 0 then c else compare_real ~structural r1 r2
   | _, _ ->
-      Stdlib.compare c1 c2
+      Stdlib.compare c1 c2 *)
 
 let int_const ?(il_kind=ILitUnk) n =
   ConstInt { il_kind; il_int = n }

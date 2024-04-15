@@ -1,3 +1,4 @@
+open IntFuncs
 
 type int_range = { ir_lower : BigInt.t; ir_upper : BigInt.t }
 
@@ -49,6 +50,36 @@ type int_literal_kind =
 | ILitOct
 | ILitBin
 
+(** val int_literal_kind_compare :
+    int_literal_kind -> int_literal_kind -> Stdlib.Int.t **)
+
+let int_literal_kind_compare i1 i2 =
+  match i1 with
+  | ILitUnk ->
+    (match i2 with
+     | ILitUnk -> Stdlib.Int.zero
+     | _ -> Stdlib.Int.minus_one)
+  | ILitDec ->
+    (match i2 with
+     | ILitUnk -> Stdlib.Int.one
+     | ILitDec -> Stdlib.Int.zero
+     | _ -> Stdlib.Int.minus_one)
+  | ILitHex ->
+    (match i2 with
+     | ILitUnk -> Stdlib.Int.one
+     | ILitDec -> Stdlib.Int.one
+     | ILitHex -> Stdlib.Int.zero
+     | _ -> Stdlib.Int.minus_one)
+  | ILitOct ->
+    (match i2 with
+     | ILitOct -> Stdlib.Int.zero
+     | ILitBin -> Stdlib.Int.minus_one
+     | _ -> Stdlib.Int.one)
+  | ILitBin ->
+    (match i2 with
+     | ILitBin -> Stdlib.Int.zero
+     | _ -> Stdlib.Int.one)
+
 type int_constant = { il_kind : int_literal_kind; il_int : BigInt.t }
 
 (** val il_kind : int_constant -> int_literal_kind **)
@@ -83,6 +114,25 @@ type real_literal_kind =
 | RLitDec of Stdlib.Int.t
 | RLitHex of Stdlib.Int.t
 
+(** val real_literal_kind_compare :
+    real_literal_kind -> real_literal_kind -> Stdlib.Int.t **)
+
+let real_literal_kind_compare r1 r2 =
+  match r1 with
+  | RLitUnk ->
+    (match r2 with
+     | RLitUnk -> Stdlib.Int.zero
+     | _ -> Stdlib.Int.minus_one)
+  | RLitDec i1 ->
+    (match r2 with
+     | RLitUnk -> Stdlib.Int.one
+     | RLitDec i2 -> Stdlib.Int.compare i1 i2
+     | RLitHex _ -> Stdlib.Int.minus_one)
+  | RLitHex i1 ->
+    (match r2 with
+     | RLitHex i2 -> Stdlib.Int.compare i1 i2
+     | _ -> Stdlib.Int.one)
+
 type real_constant = { rl_kind : real_literal_kind; rl_real : real_value }
 
 (** val rl_kind : real_constant -> real_literal_kind **)
@@ -94,6 +144,33 @@ let rl_kind r =
 
 let rl_real r =
   r.rl_real
+
+(** val compare_real_aux :
+    bool -> real_value -> real_value -> Stdlib.Int.t **)
+
+let compare_real_aux structural r1 r2 =
+  let s1 = r1.rv_sig in
+  let s2 = r2.rv_sig in
+  let p21 = r1.rv_pow2 in
+  let p22 = r2.rv_pow2 in
+  let p51 = r1.rv_pow5 in
+  let p52 = r2.rv_pow5 in
+  if structural
+  then let c = BigInt.compare s1 s2 in
+       lex_comp c
+         (let c1 = BigInt.compare p21 p22 in
+          lex_comp c1 (BigInt.compare p51 p52))
+  else let p2_min = BigInt.min p21 p22 in
+       let p5_min = BigInt.min p51 p52 in
+       let v1 = BigInt.pow_int_pos_bigint 2 (BigInt.sub p21 p2_min) in
+       let v1' =
+         BigInt.mul v1 (BigInt.pow_int_pos_bigint 5 (BigInt.sub p51 p5_min))
+       in
+       let v1'' = BigInt.mul s1 v1' in
+       let v2' =
+         BigInt.mul v1 (BigInt.pow_int_pos_bigint 5 (BigInt.sub p52 p5_min))
+       in
+       let v2'' = BigInt.mul s2 v2' in BigInt.compare v1'' v2''
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -226,7 +303,10 @@ type real_constant = {
 }
 [@@deriving sexp] *)
 
-let compare_real ?(structural=true) { rv_sig = s1; rv_pow2 = p21; rv_pow5 = p51 }
+let compare_real ?(structural=true) r1 r2 =
+  compare_real_aux structural r1 r2
+  
+  (*{ rv_sig = s1; rv_pow2 = p21; rv_pow5 = p51 }
                                     { rv_sig = s2; rv_pow2 = p22; rv_pow5 = p52 } =
   if structural then
     let c = BigInt.compare s1 s2 in
@@ -242,7 +322,7 @@ let compare_real ?(structural=true) { rv_sig = s1; rv_pow2 = p21; rv_pow5 = p51 
     let v2 = BigInt.pow_int_pos_bigint 2 (BigInt.sub p22 p2_min) in
     let v2 = BigInt.mul v2 (BigInt.pow_int_pos_bigint 5 (BigInt.sub p52 p5_min)) in
     let v2 = BigInt.mul s2 v2 in
-    BigInt.compare v1 v2
+    BigInt.compare v1 v2 *)
 
 let neg_int { il_kind; il_int = i } =
   { il_kind; il_int = BigInt.minus i }
