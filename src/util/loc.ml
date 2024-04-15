@@ -1,6 +1,8 @@
 (*A horrible hack for the moment until I set up a better action/bash script*)
 open Mysexplib.Std [@@warning "-33"]
 open Lexing
+open IntFuncs
+
 type position = { pos_file_tag : Stdlib.Int.t; pos_start : Stdlib.Int.t;
                   pos_end : Stdlib.Int.t }
 
@@ -16,6 +18,13 @@ let position_eqb p1 p2 =
 
 let equal =
   position_eqb
+
+(** val compare : position -> position -> Stdlib.Int.t **)
+
+let compare p1 p2 =
+  lex_comp (Stdlib.Int.compare p1.pos_file_tag p2.pos_file_tag)
+    (lex_comp (Stdlib.Int.compare p1.pos_start p2.pos_start)
+      (Stdlib.Int.compare p1.pos_end p2.pos_end))
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)

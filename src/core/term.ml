@@ -310,7 +310,7 @@ type term_node =
 | Tif of (term_node term_o) * (term_node term_o) * (term_node term_o)
 | Tlet of (term_node term_o) * ((vsymbol * bind_info) * (term_node term_o))
 | Tcase of (term_node term_o)
-   * ((pattern * bind_info) * (term_node term_o)) list
+   * (((pattern_node pattern_o) * bind_info) * (term_node term_o)) list
 | Teps of ((vsymbol * bind_info) * (term_node term_o))
 | Tquant of quant
    * (((vsymbol list * bind_info) * (term_node term_o) list
@@ -322,7 +322,7 @@ type term_node =
 
 type term_bound = (vsymbol * bind_info) * (term_node term_o)
 
-type term_branch = (pattern * bind_info) * (term_node term_o)
+type term_branch = ((pattern_node pattern_o) * bind_info) * (term_node term_o)
 
 type trigger = (term_node term_o) list list
 
@@ -351,10 +351,13 @@ exception FunctionSymbolExpected of lsymbol
 exception PredicateSymbolExpected of lsymbol
 exception ConstructorExpected of lsymbol
 
+open Constant
 open CoqHashtbl
 open Datatypes
+open Ident
 open IntFuncs
 open List0
+open Loc
 open Monads
 
 open Ty
@@ -684,6 +687,224 @@ let rec pat_compare state p1 p2 =
         (((i1, (BigInt.succ bnd0)), (Mvs.add v1 bnd0 bv4)),
         (Mvs.add v2 bnd0 bv3))
       | _ -> (((Stdlib.Int.one, bnd), bv1), bv2)))
+
+(** val list_compare :
+    ('a1 -> 'a2 -> Stdlib.Int.t) -> 'a1 list -> 'a2 list -> Stdlib.Int.t **)
+
+let list_compare cmp l1 l2 =
+  fold_left2_def (fun acc x1 x2 -> lex_comp acc (cmp x1 x2))
+    Stdlib.Int.minus_one Stdlib.Int.one l1 l2 Stdlib.Int.zero
+
+(** val t_compare_aux :
+    bool -> bool -> bool -> bool -> BigInt.t -> BigInt.t Mvs.t -> BigInt.t
+    Mvs.t -> (term_node term_o) -> (term_node term_o) -> Stdlib.Int.t **)
+
+let rec t_compare_aux trigger attr loc const bnd vml1 vml2 t1 t2 =
+  let i1 = oty_compare (t_ty t1) (t_ty t2) in
+  lex_comp i1
+    (let i2 =
+       if attr
+       then Sattr.compare (t_attrs t1) (t_attrs t2)
+       else Stdlib.Int.zero
+     in
+     lex_comp i2
+       (let i3 =
+          if loc
+          then option_compare compare (t_loc t1) (t_loc t2)
+          else Stdlib.Int.zero
+        in
+        lex_comp i3
+          (match t_node t1 with
+           | Tvar v1 ->
+             (match t_node t2 with
+              | Tvar v2 -> var_compare vml1 vml2 v1 v2
+              | _ -> Stdlib.Int.minus_one)
+           | Tconst c1 ->
+             (match t_node t2 with
+              | Tvar _ -> Stdlib.Int.one
+              | Tconst c2 -> compare_const_aux const c1 c2
+              | _ -> Stdlib.Int.minus_one)
+           | Tapp (s1, l1) ->
+             (match t_node t2 with
+              | Tvar _ -> Stdlib.Int.one
+              | Tconst _ -> Stdlib.Int.one
+              | Tapp (s2, l2) ->
+                let i4 = ls_compare s1 s2 in
+                lex_comp i4
+                  (fold_left2_def (fun acc t3 t4 ->
+                    lex_comp acc
+                      (t_compare_aux trigger attr loc const bnd vml1 vml2 t3
+                        t4)) Stdlib.Int.minus_one Stdlib.Int.one l1 l2
+                    Stdlib.Int.zero)
+              | _ -> Stdlib.Int.minus_one)
+           | Tif (f1, t3, e1) ->
+             (match t_node t2 with
+              | Tvar _ -> Stdlib.Int.one
+              | Tconst _ -> Stdlib.Int.one
+              | Tapp (_, _) -> Stdlib.Int.one
+              | Tif (f2, t4, e2) ->
+                let i4 =
+                  t_compare_aux trigger attr loc const bnd vml1 vml2 f1 f2
+                in
+                lex_comp i4
+                  (let i5 =
+                     t_compare_aux trigger attr loc const bnd vml1 vml2 t3 t4
+                   in
+                   lex_comp i5
+                     (t_compare_aux trigger attr loc const bnd vml1 vml2 e1
+                       e2))
+              | _ -> Stdlib.Int.minus_one)
+           | Tlet (t3, p) ->
+             let (p0, e1) = p in
+             let (v1, _) = p0 in
+             (match t_node t2 with
+              | Tvar _ -> Stdlib.Int.one
+              | Tconst _ -> Stdlib.Int.one
+              | Tapp (_, _) -> Stdlib.Int.one
+              | Tif (_, _, _) -> Stdlib.Int.one
+              | Tlet (t4, p1) ->
+                let (p2, e2) = p1 in
+                let (v2, _) = p2 in
+                let i4 =
+                  t_compare_aux trigger attr loc const bnd vml1 vml2 t3 t4
+                in
+                lex_comp i4
+                  (let vml3 = Mvs.add v1 bnd vml1 in
+                   let vml4 = Mvs.add v2 bnd vml2 in
+                   t_compare_aux trigger attr loc const (BigInt.succ bnd)
+                     vml3 vml4 e1 e2)
+              | _ -> Stdlib.Int.minus_one)
+           | Tcase (t3, bl1) ->
+             (match t_node t2 with
+              | Tvar _ -> Stdlib.Int.one
+              | Tconst _ -> Stdlib.Int.one
+              | Tapp (_, _) -> Stdlib.Int.one
+              | Tif (_, _, _) -> Stdlib.Int.one
+              | Tlet (_, _) -> Stdlib.Int.one
+              | Tcase (t4, bl2) ->
+                let i4 =
+                  t_compare_aux trigger attr loc const bnd vml1 vml2 t3 t4
+                in
+                lex_comp i4
+                  (let b_compare = fun x1 x2 ->
+                     let (y, t5) = x1 in
+                     let (p1, _) = y in
+                     let (y0, t6) = x2 in
+                     let (p2, _) = y0 in
+                     let (p, bv2) =
+                       pat_compare ((bnd, Mvs.empty), Mvs.empty) p1 p2
+                     in
+                     let (p0, bv1) = p in
+                     let (ip, bnd0) = p0 in
+                     lex_comp ip
+                       (let vml3 = Mvs.union (fun _ n1 _ -> Some n1) bv1 vml1
+                        in
+                        let vml4 = Mvs.union (fun _ n1 _ -> Some n1) bv2 vml2
+                        in
+                        t_compare_aux trigger attr loc const bnd0 vml3 vml4
+                          t5 t6)
+                   in
+                   list_compare b_compare bl1 bl2)
+              | _ -> Stdlib.Int.minus_one)
+           | Teps p ->
+             let (p0, e1) = p in
+             let (v1, _) = p0 in
+             (match t_node t2 with
+              | Teps p1 ->
+                let (p2, e2) = p1 in
+                let (v2, _) = p2 in
+                let vml3 = Mvs.add v1 bnd vml1 in
+                let vml4 = Mvs.add v2 bnd vml2 in
+                t_compare_aux trigger attr loc const (BigInt.succ bnd) vml3
+                  vml4 e1 e2
+              | Tquant (_, _) -> Stdlib.Int.minus_one
+              | Tbinop (_, _, _) -> Stdlib.Int.minus_one
+              | Tnot _ -> Stdlib.Int.minus_one
+              | Ttrue -> Stdlib.Int.minus_one
+              | Tfalse -> Stdlib.Int.minus_one
+              | _ -> Stdlib.Int.one)
+           | Tquant (q1, p) ->
+             let (p0, f1) = p in
+             let (p1, tr1) = p0 in
+             let (vl1, _) = p1 in
+             (match t_node t2 with
+              | Tquant (q2, p2) ->
+                let (p3, f2) = p2 in
+                let (p4, tr2) = p3 in
+                let (vl2, _) = p4 in
+                let i4 = quant_compare q1 q2 in
+                lex_comp i4
+                  (let add0 = fun bnd0 bv1 bv2 vl3 vl4 ->
+                     fold_left2_def (fun acc v1 v2 ->
+                       let (y, bv3) = acc in
+                       let (y0, bv4) = y in
+                       let (val0, bnd1) = y0 in
+                       (((val0, (BigInt.succ bnd1)), (Mvs.add v1 bnd1 bv4)),
+                       (Mvs.add v2 bnd1 bv3))) (((Stdlib.Int.minus_one,
+                       bnd0), bv1), bv2) (((Stdlib.Int.one, bnd0), bv1), bv2)
+                       vl3 vl4 (((Stdlib.Int.zero, bnd0), bv1), bv2)
+                   in
+                   let (p5, bv2) = add0 bnd Mvs.empty Mvs.empty vl1 vl2 in
+                   let (p6, bv1) = p5 in
+                   let (i5, bnd0) = p6 in
+                   lex_comp i5
+                     (let vml3 = Mvs.union (fun _ n1 _ -> Some n1) bv1 vml1 in
+                      let vml4 = Mvs.union (fun _ n1 _ -> Some n1) bv2 vml2 in
+                      let tr_cmp = fun t3 t4 ->
+                        t_compare_aux trigger attr loc const bnd0 vml3 vml4
+                          t3 t4
+                      in
+                      let i6 =
+                        if trigger
+                        then list_compare (list_compare tr_cmp) tr1 tr2
+                        else Stdlib.Int.zero
+                      in
+                      lex_comp i6
+                        (t_compare_aux trigger attr loc const bnd0 vml3 vml4
+                          f1 f2)))
+              | Tbinop (_, _, _) -> Stdlib.Int.minus_one
+              | Tnot _ -> Stdlib.Int.minus_one
+              | Ttrue -> Stdlib.Int.minus_one
+              | Tfalse -> Stdlib.Int.minus_one
+              | _ -> Stdlib.Int.one)
+           | Tbinop (op1, f1, g1) ->
+             (match t_node t2 with
+              | Tbinop (op2, f2, g2) ->
+                let i4 = binop_compare op1 op2 in
+                lex_comp i4
+                  (let i5 =
+                     t_compare_aux trigger attr loc const bnd vml1 vml2 g1 g2
+                   in
+                   lex_comp i5
+                     (t_compare_aux trigger attr loc const bnd vml1 vml2 f1
+                       f2))
+              | Tnot _ -> Stdlib.Int.minus_one
+              | Ttrue -> Stdlib.Int.minus_one
+              | Tfalse -> Stdlib.Int.minus_one
+              | _ -> Stdlib.Int.one)
+           | Tnot f1 ->
+             (match t_node t2 with
+              | Tnot f2 ->
+                t_compare_aux trigger attr loc const bnd vml1 vml2 f1 f2
+              | Ttrue -> Stdlib.Int.minus_one
+              | Tfalse -> Stdlib.Int.minus_one
+              | _ -> Stdlib.Int.one)
+           | Ttrue ->
+             (match t_node t2 with
+              | Ttrue -> Stdlib.Int.zero
+              | Tfalse -> Stdlib.Int.minus_one
+              | _ -> Stdlib.Int.one)
+           | Tfalse ->
+             (match t_node t2 with
+              | Tfalse -> Stdlib.Int.zero
+              | _ -> Stdlib.Int.one))))
+
+(** val t_compare_full :
+    bool -> bool -> bool -> bool -> (term_node term_o) -> (term_node term_o)
+    -> Stdlib.Int.t **)
+
+let t_compare_full trigger attr loc const t1 t2 =
+  t_compare_aux trigger attr loc const BigInt.zero Mvs.empty Mvs.empty t1 t2
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -1053,7 +1274,8 @@ let rec or_cmp bv1 bv2 q1 q2 = match q1.pat_node, q2.pat_node with
     | Por _, _  -> -1, bnd, bv1, bv2 | _, Por _  -> 1, bnd, bv1, bv2 *)
 
 let t_compare ~trigger ~attr ~loc ~const t1 t2 =
-  let rec t_compare bnd (vml1 : BigInt.t Mvs.t) (vml2 : BigInt.t Mvs.t) t1 t2 : int =
+  t_compare_full trigger attr loc const t1 t2
+  (* let rec t_compare bnd (vml1 : BigInt.t Mvs.t) (vml2 : BigInt.t Mvs.t) t1 t2 : int =
     if t1 != t2 || not (Mvs.is_empty vml1) || not (Mvs.is_empty vml2) then begin
       let i1 = oty_compare t1.t_ty t2.t_ty in
       lex_comp i1 (
@@ -1138,7 +1360,7 @@ let t_compare ~trigger ~attr ~loc ~const t1 t2 =
         | Tnot _, _   -> -1 | _, Tnot _   -> 1
         | Ttrue, _    -> -1 | _, Ttrue    -> 1
       ))) end else 0 in
-  t_compare BigInt.zero Mvs.empty Mvs.empty t1 t2
+  t_compare BigInt.zero Mvs.empty Mvs.empty t1 t2 *)
 
 let t_similar t1 t2 =
   oty_equal t1.t_ty t2.t_ty &&
