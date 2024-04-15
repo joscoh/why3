@@ -7,3 +7,5 @@ val option_compare :
 val iota_aux : BigInt.t -> BigInt.t list
 
 val iota : BigInt.t -> BigInt.t list
+
+val lex_comp : Stdlib.Int.t -> Stdlib.Int.t -> Stdlib.Int.t

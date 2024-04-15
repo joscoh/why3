@@ -501,6 +501,189 @@ let pat_as p v =
 
 let pat_or p q =
   (@@) (fun _ -> pat_or_aux p q) (ty_equal_check (pat_ty p) (pat_ty q))
+
+(** val list_comp : Stdlib.Int.t list -> Stdlib.Int.t **)
+
+let list_comp l =
+  fold_left lex_comp l Stdlib.Int.zero
+
+(** val var_compare :
+    BigInt.t Mvs.t -> BigInt.t Mvs.t -> vsymbol -> vsymbol -> Stdlib.Int.t **)
+
+let var_compare m1 m2 v1 v2 =
+  match Mvs.find_opt v1 m1 with
+  | Some i1 ->
+    (match Mvs.find_opt v2 m2 with
+     | Some i2 -> BigInt.compare i1 i2
+     | None -> Stdlib.Int.minus_one)
+  | None ->
+    (match Mvs.find_opt v2 m2 with
+     | Some _ -> Stdlib.Int.one
+     | None -> vs_compare v1 v2)
+
+(** val quant_compare : quant -> quant -> Stdlib.Int.t **)
+
+let quant_compare q1 q2 =
+  match q1 with
+  | Tforall ->
+    (match q2 with
+     | Tforall -> Stdlib.Int.zero
+     | Texists -> Stdlib.Int.minus_one)
+  | Texists ->
+    (match q2 with
+     | Tforall -> Stdlib.Int.one
+     | Texists -> Stdlib.Int.zero)
+
+(** val binop_compare : binop -> binop -> Stdlib.Int.t **)
+
+let binop_compare b1 b2 =
+  match b1 with
+  | Tand ->
+    (match b2 with
+     | Tand -> Stdlib.Int.zero
+     | _ -> Stdlib.Int.minus_one)
+  | Tor ->
+    (match b2 with
+     | Tand -> Stdlib.Int.one
+     | Tor -> Stdlib.Int.zero
+     | _ -> Stdlib.Int.minus_one)
+  | Timplies ->
+    (match b2 with
+     | Timplies -> Stdlib.Int.zero
+     | Tiff -> Stdlib.Int.minus_one
+     | _ -> Stdlib.Int.one)
+  | Tiff -> (match b2 with
+             | Tiff -> Stdlib.Int.zero
+             | _ -> Stdlib.Int.one)
+
+(** val fold_left2_def :
+    ('a1 -> 'a2 -> 'a3 -> 'a1) -> 'a1 -> 'a1 -> 'a2 list -> 'a3 list -> 'a1
+    -> 'a1 **)
+
+let rec fold_left2_def f d1 d2 l1 l2 acc =
+  match l1 with
+  | [] -> (match l2 with
+           | [] -> acc
+           | _ :: _ -> d1)
+  | x1 :: t1 ->
+    (match l2 with
+     | [] -> d2
+     | x2 :: t2 -> fold_left2_def f d1 d2 t1 t2 (f acc x1 x2))
+
+(** val or_cmp_vsym :
+    BigInt.t Mvs.t -> BigInt.t Mvs.t -> vsymbol -> vsymbol -> Stdlib.Int.t **)
+
+let or_cmp_vsym bv1 bv2 v1 v2 =
+  match Mvs.find_opt v1 bv1 with
+  | Some i1 ->
+    (match Mvs.find_opt v2 bv2 with
+     | Some i2 -> BigInt.compare i1 i2
+     | None -> Stdlib.Int.minus_one)
+  | None ->
+    (match Mvs.find_opt v2 bv2 with
+     | Some _ -> Stdlib.Int.one
+     | None -> Stdlib.Int.zero)
+
+(** val or_cmp :
+    BigInt.t Mvs.t -> BigInt.t Mvs.t -> (pattern_node pattern_o) ->
+    (pattern_node pattern_o) -> Stdlib.Int.t **)
+
+let rec or_cmp bv1 bv2 q1 q2 =
+  match pat_node q1 with
+  | Pwild ->
+    (match pat_node q2 with
+     | Pwild -> Stdlib.Int.zero
+     | _ -> Stdlib.Int.minus_one)
+  | Pvar v1 ->
+    (match pat_node q2 with
+     | Pwild -> Stdlib.Int.one
+     | Pvar v2 -> or_cmp_vsym bv1 bv2 v1 v2
+     | _ -> Stdlib.Int.minus_one)
+  | Papp (s1, l1) ->
+    (match pat_node q2 with
+     | Pwild -> Stdlib.Int.one
+     | Pvar _ -> Stdlib.Int.one
+     | Papp (s2, l2) ->
+       let i1 = ls_compare s1 s2 in
+       lex_comp i1
+         (fold_left2_def (fun i p1 p2 -> lex_comp i (or_cmp bv1 bv2 p1 p2))
+           Stdlib.Int.minus_one Stdlib.Int.one l1 l2 Stdlib.Int.zero)
+     | _ -> Stdlib.Int.minus_one)
+  | Por (p1, q3) ->
+    (match pat_node q2 with
+     | Por (p2, q4) ->
+       let i1 = or_cmp bv1 bv2 p1 p2 in lex_comp i1 (or_cmp bv1 bv2 q3 q4)
+     | Pas (_, _) -> Stdlib.Int.minus_one
+     | _ -> Stdlib.Int.one)
+  | Pas (p1, v1) ->
+    (match pat_node q2 with
+     | Pas (p2, v2) ->
+       let i1 = or_cmp bv1 bv2 p1 p2 in
+       lex_comp i1 (or_cmp_vsym bv1 bv2 v1 v2)
+     | _ -> Stdlib.Int.one)
+
+(** val pat_compare :
+    ((BigInt.t * BigInt.t Mvs.t) * BigInt.t Mvs.t) ->
+    (pattern_node pattern_o) -> (pattern_node pattern_o) ->
+    ((Stdlib.Int.t * BigInt.t) * BigInt.t Mvs.t) * BigInt.t Mvs.t **)
+
+let rec pat_compare state p1 p2 =
+  let (p, bv2) = state in
+  let (bnd, bv1) = p in
+  (match pat_node p1 with
+   | Pwild ->
+     (match pat_node p2 with
+      | Pwild -> (((Stdlib.Int.zero, bnd), bv1), bv2)
+      | _ -> (((Stdlib.Int.minus_one, bnd), bv1), bv2))
+   | Pvar v1 ->
+     (match pat_node p2 with
+      | Pwild -> (((Stdlib.Int.one, bnd), bv1), bv2)
+      | Pvar v2 ->
+        (((Stdlib.Int.zero, (BigInt.succ bnd)), (Mvs.add v1 bnd bv1)),
+          (Mvs.add v2 bnd bv2))
+      | _ -> (((Stdlib.Int.minus_one, bnd), bv1), bv2))
+   | Papp (s1, l1) ->
+     (match pat_node p2 with
+      | Pwild -> (((Stdlib.Int.one, bnd), bv1), bv2)
+      | Pvar _ -> (((Stdlib.Int.one, bnd), bv1), bv2)
+      | Papp (s2, l2) ->
+        let i1 = ls_compare s1 s2 in
+        let (p0, sm2) = state in
+        let (sbnd, sm1) = p0 in
+        let (p3, bv3) =
+          fold_left2_def (fun acc p3 p4 ->
+            let (y, m2) = acc in
+            let (y0, m1) = y in
+            let (i, bnd1) = y0 in
+            let (p5, m2') = pat_compare ((bnd1, m1), m2) p3 p4 in
+            let (p6, m1') = p5 in
+            let (j, bnd2) = p6 in ((((lex_comp i j), bnd2), m1'), m2'))
+            (((Stdlib.Int.minus_one, sbnd), sm1), sm2) (((Stdlib.Int.one,
+            sbnd), sm1), sm2) l1 l2 (((Stdlib.Int.zero, sbnd), sm1), sm2)
+        in
+        let (p4, bv4) = p3 in
+        let (i2, bnd0) = p4 in ((((lex_comp i1 i2), bnd0), bv4), bv3)
+      | _ -> (((Stdlib.Int.minus_one, bnd), bv1), bv2))
+   | Por (p3, q1) ->
+     (match pat_node p2 with
+      | Por (p4, q2) ->
+        let (p0, bv3) = pat_compare state p3 p4 in
+        let (p5, bv4) = p0 in
+        let (i1, bnd1) = p5 in
+        if negb ((fun x -> Stdlib.Int.equal x Stdlib.Int.zero) i1)
+        then (((i1, bnd1), bv4), bv3)
+        else let i2 = or_cmp bv4 bv4 q1 q2 in (((i2, bnd1), bv4), bv3)
+      | Pas (_, _) -> (((Stdlib.Int.minus_one, bnd), bv1), bv2)
+      | _ -> (((Stdlib.Int.one, bnd), bv1), bv2))
+   | Pas (p3, v1) ->
+     (match pat_node p2 with
+      | Pas (p4, v2) ->
+        let (p0, bv3) = pat_compare state p3 p4 in
+        let (p5, bv4) = p0 in
+        let (i1, bnd0) = p5 in
+        (((i1, (BigInt.succ bnd0)), (Mvs.add v1 bnd0 bv4)),
+        (Mvs.add v2 bnd0 bv3))
+      | _ -> (((Stdlib.Int.one, bnd), bv1), bv2)))
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -773,7 +956,7 @@ type term_or_bound =
 
 
 (*lexicographic comparison*)
-let lex_comp x1 x2 : int =
+(* let lex_comp x1 x2 : int =
   if x1 = 0 then x2 else x1
 
 let list_comp l : int =
@@ -867,7 +1050,7 @@ let rec or_cmp bv1 bv2 q1 q2 = match q1.pat_node, q2.pat_node with
     | Pwild, _  -> -1, bnd, bv1, bv2 | _, Pwild  -> 1, bnd, bv1, bv2
     | Pvar _, _ -> -1, bnd, bv1, bv2 | _, Pvar _ -> 1, bnd, bv1, bv2
     | Papp _, _ -> -1, bnd, bv1, bv2 | _, Papp _ -> 1, bnd, bv1, bv2
-    | Por _, _  -> -1, bnd, bv1, bv2 | _, Por _  -> 1, bnd, bv1, bv2
+    | Por _, _  -> -1, bnd, bv1, bv2 | _, Por _  -> 1, bnd, bv1, bv2 *)
 
 let t_compare ~trigger ~attr ~loc ~const t1 t2 =
   let rec t_compare bnd (vml1 : BigInt.t Mvs.t) (vml2 : BigInt.t Mvs.t) t1 t2 : int =
@@ -887,7 +1070,7 @@ let t_compare ~trigger ~attr ~loc ~const t1 t2 =
           let i1 = ls_compare s1 s2 in
           lex_comp i1 (
             fold_left2_def (fun acc t1 t2 ->
-              if acc <> 0 then acc else (t_compare bnd vml1 vml2) t1 t2) 0 l1 l2 (-1) 1)
+              if acc <> 0 then acc else (t_compare bnd vml1 vml2) t1 t2) (-1) 1 l1 l2 0)
         | Tif (f1,t1,e1), Tif (f2,t2,e2) ->
             let i1 = t_compare bnd vml1 vml2 f1 f2 in
             lex_comp i1 (
@@ -904,7 +1087,7 @@ let t_compare ~trigger ~attr ~loc ~const t1 t2 =
             let i1 = t_compare bnd vml1 vml2 t1 t2 in
             lex_comp i1 (
             let b_compare ((p1,b1),t1) ((p2,b2),t2) =
-              let ip, bnd,bv1,bv2 = pat_compare (bnd,Mvs.empty,Mvs.empty) p1 p2 in
+              let ((ip, bnd),bv1),bv2 = pat_compare ((bnd,Mvs.empty),Mvs.empty) p1 p2 in
               if ip <> 0 then ip else
               let vml1 = Mvs.union (fun x n1 n2 -> Some n1) bv1 vml1 in
               let vml2 = Mvs.union (fun x n1 n2 -> Some n1) bv2 vml2 in

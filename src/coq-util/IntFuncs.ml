@@ -29,3 +29,8 @@ let rec iota_aux z =
 
 let iota =
   iota_aux
+
+(** val lex_comp : Stdlib.Int.t -> Stdlib.Int.t -> Stdlib.Int.t **)
+
+let lex_comp x1 x2 =
+  if (fun x -> Stdlib.Int.equal x Stdlib.Int.zero) x1 then x2 else x1
