@@ -342,6 +342,192 @@ let build_term_o t0 o a l =
 let trd = function
 | (_, y) -> y
 
+(** val fold_right2 :
+    ('a1 -> 'a2 -> 'a3 -> 'a3) -> 'a1 list -> 'a2 list -> 'a3 -> 'a3 option **)
+
+let rec fold_right2 f l1 l2 base =
+  match l1 with
+  | [] -> (match l2 with
+           | [] -> Some base
+           | _ :: _ -> None)
+  | x1 :: t1 ->
+    (match l2 with
+     | [] -> None
+     | x2 :: t2 -> option_map (f x1 x2) (fold_right2 f t1 t2 base))
+
+(** val lists_equal_aux :
+    ('a1 -> 'a2 -> bool) -> 'a1 list -> 'a2 list -> bool option **)
+
+let lists_equal_aux cmp l1 l2 =
+  fold_right2 (fun x1 x2 acc -> (&&) (cmp x1 x2) acc) l1 l2 true
+
+(** val true_opt : bool option -> bool **)
+
+let true_opt = function
+| Some y -> y
+| None -> false
+
+(** val lists_equal : ('a1 -> 'a2 -> bool) -> 'a1 list -> 'a2 list -> bool **)
+
+let lists_equal cmp l1 l2 =
+  true_opt (lists_equal_aux cmp l1 l2)
+
+(** val bind_info_eqb : bind_info -> bind_info -> bool **)
+
+let bind_info_eqb b1 b2 =
+  Mvs.equal BigInt.eq b1.bv_vars b2.bv_vars
+
+(** val quant_eqb : quant -> quant -> bool **)
+
+let quant_eqb q1 q2 =
+  match q1 with
+  | Tforall -> (match q2 with
+                | Tforall -> true
+                | Texists -> false)
+  | Texists -> (match q2 with
+                | Tforall -> false
+                | Texists -> true)
+
+(** val binop_eqb : binop -> binop -> bool **)
+
+let binop_eqb b1 b2 =
+  match b1 with
+  | Tand -> (match b2 with
+             | Tand -> true
+             | _ -> false)
+  | Tor -> (match b2 with
+            | Tor -> true
+            | _ -> false)
+  | Timplies -> (match b2 with
+                 | Timplies -> true
+                 | _ -> false)
+  | Tiff -> (match b2 with
+             | Tiff -> true
+             | _ -> false)
+
+(** val term_eqb : (term_node term_o) -> (term_node term_o) -> bool **)
+
+let rec term_eqb t1 t2 =
+  (&&)
+    ((&&)
+      ((&&) (term_node_eqb (t_node t1) (t_node t2))
+        (option_eqb ty_eqb (t_ty t1) (t_ty t2)))
+      (Sattr.equal (t_attrs t1) (t_attrs t2)))
+    (option_eqb position_eqb (t_loc t1) (t_loc t2))
+
+(** val term_node_eqb : term_node -> term_node -> bool **)
+
+and term_node_eqb t1 t2 =
+  match t1 with
+  | Tvar v1 -> (match t2 with
+                | Tvar v2 -> vsymbol_eqb v1 v2
+                | _ -> false)
+  | Tconst c1 -> (match t2 with
+                  | Tconst c2 -> constant_eqb c1 c2
+                  | _ -> false)
+  | Tapp (l1, ts1) ->
+    (match t2 with
+     | Tapp (l2, ts2) ->
+       (&&) (lsymbol_eqb l1 l2) (lists_equal term_eqb ts1 ts2)
+     | _ -> false)
+  | Tif (t3, t4, t5) ->
+    (match t2 with
+     | Tif (e1, e2, e3) ->
+       (&&) ((&&) (term_eqb t3 e1) (term_eqb t4 e2)) (term_eqb t5 e3)
+     | _ -> false)
+  | Tlet (t3, p) ->
+    let (p0, t4) = p in
+    let (v1, b1) = p0 in
+    (match t2 with
+     | Tlet (t5, p1) ->
+       let (p2, t6) = p1 in
+       let (v2, b2) = p2 in
+       (&&)
+         ((&&) ((&&) (term_eqb t3 t5) (vsymbol_eqb v1 v2))
+           (bind_info_eqb b1 b2)) (term_eqb t4 t6)
+     | _ -> false)
+  | Tcase (t3, tbs1) ->
+    (match t2 with
+     | Tcase (t4, tbs2) ->
+       (&&) (term_eqb t3 t4)
+         (lists_equal (fun x1 x2 ->
+           let (y, t5) = x1 in
+           let (p1, b1) = y in
+           let (y0, t6) = x2 in
+           let (p2, b2) = y0 in
+           (&&) ((&&) (pattern_eqb p1 p2) (bind_info_eqb b1 b2))
+             (term_eqb t5 t6)) tbs1 tbs2)
+     | _ -> false)
+  | Teps p ->
+    let (p0, t3) = p in
+    let (v1, b1) = p0 in
+    (match t2 with
+     | Teps p1 ->
+       let (p2, t4) = p1 in
+       let (v2, b2) = p2 in
+       (&&) ((&&) (vsymbol_eqb v1 v2) (bind_info_eqb b1 b2)) (term_eqb t3 t4)
+     | _ -> false)
+  | Tquant (q1, p) ->
+    let (p0, t3) = p in
+    let (p1, tr1) = p0 in
+    let (l1, b1) = p1 in
+    (match t2 with
+     | Tquant (q2, p2) ->
+       let (p3, t4) = p2 in
+       let (p4, tr2) = p3 in
+       let (l2, b2) = p4 in
+       (&&)
+         ((&&)
+           ((&&) ((&&) (quant_eqb q1 q2) (lists_equal vsymbol_eqb l1 l2))
+             (bind_info_eqb b1 b2))
+           (lists_equal (lists_equal term_eqb) tr1 tr2)) (term_eqb t3 t4)
+     | _ -> false)
+  | Tbinop (b1, t3, t4) ->
+    (match t2 with
+     | Tbinop (b2, t5, t6) ->
+       (&&) ((&&) (binop_eqb b1 b2) (term_eqb t3 t5)) (term_eqb t4 t6)
+     | _ -> false)
+  | Tnot t3 -> (match t2 with
+                | Tnot t4 -> term_eqb t3 t4
+                | _ -> false)
+  | Ttrue -> (match t2 with
+              | Ttrue -> true
+              | _ -> false)
+  | Tfalse -> (match t2 with
+               | Tfalse -> true
+               | _ -> false)
+
+(** val term_bound_eqb : term_bound -> term_bound -> bool **)
+
+let term_bound_eqb t1 t2 =
+  let (p, t3) = t1 in
+  let (v1, b1) = p in
+  let (p0, t4) = t2 in
+  let (v2, b2) = p0 in
+  (&&) ((&&) (vsymbol_eqb v1 v2) (bind_info_eqb b1 b2)) (term_eqb t3 t4)
+
+(** val term_branch_eqb : term_branch -> term_branch -> bool **)
+
+let term_branch_eqb tb1 tb2 =
+  let (p, t1) = tb1 in
+  let (p1, b1) = p in
+  let (p0, t2) = tb2 in
+  let (p2, b2) = p0 in
+  (&&) ((&&) (pattern_eqb p1 p2) (bind_info_eqb b1 b2)) (term_eqb t1 t2)
+
+(** val term_quant_eqb : term_quant -> term_quant -> bool **)
+
+let term_quant_eqb tq1 tq2 =
+  let (p, t1) = tq1 in
+  let (p0, tr1) = p in
+  let (vs1, b1) = p0 in
+  let (p1, t2) = tq2 in
+  let (p2, tr2) = p1 in
+  let (vs2, b2) = p2 in
+  (&&)
+    ((&&) ((&&) (list_eqb vsymbol_eqb vs1 vs2) (bind_info_eqb b1 b2))
+      (list_eqb (list_eqb term_eqb) tr1 tr2)) (term_eqb t1 t2)
+
 
 exception UncoveredVar of vsymbol
 exception DuplicateVar of vsymbol
@@ -353,6 +539,7 @@ exception ConstructorExpected of lsymbol
 
 open Constant
 open CoqHashtbl
+open Number
 open Datatypes
 open Ident
 open IntFuncs
@@ -362,6 +549,7 @@ open Monads
 
 open Ty
 
+open Hashcons
 
 (** val mk_pattern :
     pattern_node -> Svs.t -> ty_node_c ty_o -> (pattern_node pattern_o) **)
@@ -905,6 +1093,200 @@ let rec t_compare_aux trigger attr loc const bnd vml1 vml2 t1 t2 =
 
 let t_compare_full trigger attr loc const t1 t2 =
   t_compare_aux trigger attr loc const BigInt.zero Mvs.empty Mvs.empty t1 t2
+
+(** val t_similar : (term_node term_o) -> (term_node term_o) -> bool **)
+
+let t_similar t1 t2 =
+  (&&) (oty_equal (t_ty t1) (t_ty t2))
+    (match t_node t1 with
+     | Tvar v1 ->
+       (match t_node t2 with
+        | Tvar v2 -> vs_equal v1 v2
+        | _ -> false)
+     | Tconst c1 ->
+       (match t_node t2 with
+        | Tconst c2 ->
+          Stdlib.Int.equal (compare_const_aux true c1 c2) Stdlib.Int.zero
+        | _ -> false)
+     | Tapp (s1, l1) ->
+       (match t_node t2 with
+        | Tapp (s2, l2) -> (&&) (ls_equal s1 s2) (lists_equal term_eqb l1 l2)
+        | _ -> false)
+     | Tif (f1, t3, e1) ->
+       (match t_node t2 with
+        | Tif (f2, t4, e2) ->
+          (&&) ((&&) (term_eqb f1 f2) (term_eqb t3 t4)) (term_eqb e1 e2)
+        | _ -> false)
+     | Tlet (t3, bv1) ->
+       (match t_node t2 with
+        | Tlet (t4, bv2) -> (&&) (term_eqb t3 t4) (term_bound_eqb bv1 bv2)
+        | _ -> false)
+     | Tcase (t3, bl1) ->
+       (match t_node t2 with
+        | Tcase (t4, bl2) ->
+          (&&) (term_eqb t3 t4) (lists_equal term_branch_eqb bl1 bl2)
+        | _ -> false)
+     | Teps bv1 ->
+       (match t_node t2 with
+        | Teps bv2 -> term_bound_eqb bv1 bv2
+        | _ -> false)
+     | Tquant (q1, bv1) ->
+       (match t_node t2 with
+        | Tquant (q2, bv2) -> (&&) (quant_eqb q1 q2) (term_quant_eqb bv1 bv2)
+        | _ -> false)
+     | Tbinop (o1, f1, g1) ->
+       (match t_node t2 with
+        | Tbinop (o2, f2, g2) ->
+          (&&) ((&&) (binop_eqb o1 o2) (term_eqb f1 f2)) (term_eqb g1 g2)
+        | _ -> false)
+     | Tnot f1 ->
+       (match t_node t2 with
+        | Tnot f2 -> term_eqb f1 f2
+        | _ -> false)
+     | Ttrue -> (match t_node t2 with
+                 | Ttrue -> true
+                 | _ -> false)
+     | Tfalse -> (match t_node t2 with
+                  | Tfalse -> true
+                  | _ -> false))
+
+(** val or_hash : BigInt.t Mvs.t -> (pattern_node pattern_o) -> BigInt.t **)
+
+let rec or_hash bv q =
+  match pat_node q with
+  | Pwild -> BigInt.zero
+  | Pvar v ->
+    BigInt.succ
+      (match Mvs.find_opt v bv with
+       | Some i -> i
+       | None -> BigInt.zero)
+  | Papp (s, l) -> combine_big_list (or_hash bv) (ls_hash s) l
+  | Por (p, q0) -> combine_big (or_hash bv p) (or_hash bv q0)
+  | Pas (p, v) ->
+    let j = match Mvs.find_opt v bv with
+            | Some i -> i
+            | None -> BigInt.zero in
+    combine_big (or_hash bv p) (BigInt.succ j)
+
+(** val pat_hash :
+    BigInt.t -> BigInt.t Mvs.t -> (pattern_node pattern_o) ->
+    (BigInt.t * BigInt.t Mvs.t) * BigInt.t **)
+
+let rec pat_hash bnd bv p =
+  match pat_node p with
+  | Pwild -> ((bnd, bv), BigInt.zero)
+  | Pvar v -> (((BigInt.succ bnd), (Mvs.add v bnd bv)), (BigInt.succ bnd))
+  | Papp (s, l) ->
+    fold_left (fun acc p0 ->
+      let (y, h) = acc in
+      let (bnd0, bv0) = y in
+      let (p1, hp) = pat_hash bnd0 bv0 p0 in (p1, (combine_big h hp))) l
+      ((bnd, bv), (ls_hash s))
+  | Por (p0, q) ->
+    let (p1, hp) = pat_hash bnd bv p0 in
+    let (bnd1, bv1) = p1 in ((bnd1, bv1), (combine_big hp (or_hash bv1 q)))
+  | Pas (p0, v) ->
+    let (p1, hp) = pat_hash bnd bv p0 in
+    let (bnd1, _) = p1 in
+    (((BigInt.succ bnd1), (Mvs.add v bnd bv)),
+    (combine_big hp (BigInt.succ bnd1)))
+
+(** val q_hash : quant -> BigInt.t **)
+
+let q_hash = function
+| Tforall -> BigInt.zero
+| Texists -> BigInt.one
+
+(** val binop_hash : binop -> BigInt.t **)
+
+let binop_hash = function
+| Tand -> BigInt.zero
+| Tor -> BigInt.one
+| Timplies -> (BigInt.of_int 2)
+| Tiff -> (BigInt.of_int 3)
+
+(** val t_hash_aux :
+    bool -> bool -> bool -> BigInt.t -> BigInt.t Mvs.t -> (term_node term_o)
+    -> BigInt.t **)
+
+let rec t_hash_aux trigger attr const bnd vml t0 =
+  let h = oty_hash (t_ty t0) in
+  let h1 =
+    if attr
+    then Sattr.fold (fun l h0 -> combine_big (attr_hash l) h0) (t_attrs t0) h
+    else h
+  in
+  combine_big h1
+    (match t_node t0 with
+     | Tvar v ->
+       (match Mvs.find_opt v vml with
+        | Some i -> BigInt.succ i
+        | None -> vs_hash v)
+     | Tconst c ->
+       if const
+       then constant_hash c
+       else (match c with
+             | ConstInt i -> i.il_int
+             | ConstReal r -> real_value_hash r.rl_real
+             | ConstStr c0 -> str_hash c0)
+     | Tapp (s, l) ->
+       combine_big_list (t_hash_aux trigger attr const bnd vml) (ls_hash s) l
+     | Tif (f, t1, e) ->
+       combine2_big (t_hash_aux trigger attr const bnd vml f)
+         (t_hash_aux trigger attr const bnd vml t1)
+         (t_hash_aux trigger attr const bnd vml e)
+     | Tlet (t1, p) ->
+       let (p0, e) = p in
+       let (v, _) = p0 in
+       combine_big (t_hash_aux trigger attr const bnd vml t1)
+         (t_hash_aux trigger attr const (BigInt.succ bnd) (Mvs.add v bnd vml)
+           e)
+     | Tcase (_, bl) ->
+       let b_hash = fun x ->
+         let (y, t1) = x in
+         let (p, _) = y in
+         let (p0, hp) = pat_hash bnd Mvs.empty p in
+         let (bnd0, bv) = p0 in
+         let vml0 = Mvs.union (fun _ n1 _ -> Some n1) bv vml in
+         combine_big hp (t_hash_aux trigger attr const bnd0 vml0 t1)
+       in
+       combine_big_list b_hash h bl
+     | Teps p ->
+       let (p0, e) = p in
+       let (v, _) = p0 in
+       t_hash_aux trigger attr const (BigInt.succ bnd) (Mvs.add v bnd vml) e
+     | Tquant (q, p) ->
+       let (p0, f) = p in
+       let (p1, tr) = p0 in
+       let (vl, _) = p1 in
+       let h0 = q_hash q in
+       let (bnd0, bv) =
+         fold_left (fun acc v ->
+           let (bnd0, bv) = acc in ((BigInt.succ bnd0), (Mvs.add v bnd0 bv)))
+           vl (bnd, Mvs.empty)
+       in
+       let vml0 = Mvs.union (fun _ n1 _ -> Some n1) bv vml in
+       let h2 =
+         if trigger
+         then fold_left
+                (combine_big_list (t_hash_aux trigger attr const bnd0 vml0))
+                tr h0
+         else h0
+       in
+       combine_big h2 (t_hash_aux trigger attr const bnd0 vml0 f)
+     | Tbinop (op, f, g) ->
+       combine2_big (binop_hash op) (t_hash_aux trigger attr const bnd vml f)
+         (t_hash_aux trigger attr const bnd vml g)
+     | Tnot f ->
+       combine_big BigInt.one (t_hash_aux trigger attr const bnd vml f)
+     | Ttrue -> (BigInt.of_int 2)
+     | Tfalse -> (BigInt.of_int 3))
+
+(** val t_hash_full :
+    bool -> bool -> bool -> (term_node term_o) -> BigInt.t **)
+
+let t_hash_full trigger attr const t0 =
+  t_hash_aux trigger attr const BigInt.zero Mvs.empty t0
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -1362,7 +1744,7 @@ let t_compare ~trigger ~attr ~loc ~const t1 t2 =
       ))) end else 0 in
   t_compare BigInt.zero Mvs.empty Mvs.empty t1 t2 *)
 
-let t_similar t1 t2 =
+(* let t_similar t1 t2 =
   oty_equal t1.t_ty t2.t_ty &&
   match t1.t_node, t2.t_node with
     | Tvar v1, Tvar v2 -> vs_equal v1 v2
@@ -1376,9 +1758,9 @@ let t_similar t1 t2 =
     | Tbinop (o1,f1,g1), Tbinop (o2,f2,g2) -> o1 = o2 && f1 == f2 && g1 == g2
     | Tnot f1, Tnot f2 -> f1 == f2
     | Ttrue, Ttrue | Tfalse, Tfalse -> true
-    | _, _ -> false
+    | _, _ -> false *)
 
-    let rec pat_hash bnd bv p = match p.pat_node with
+    (* let rec pat_hash bnd bv p = match p.pat_node with
     | Pwild -> bnd, bv, BigInt.zero
     | Pvar v -> BigInt.succ bnd, Mvs.add v bnd bv, BigInt.succ bnd
     | Papp (s,l) ->
@@ -1398,10 +1780,11 @@ let t_similar t1 t2 =
         bnd, bv, Hashcons.combine_big hp (or_hash q)
     | Pas (p,v) ->
         let bnd,bv,hp = pat_hash bnd bv p in
-        BigInt.succ bnd, Mvs.add v bnd bv, Hashcons.combine_big hp (BigInt.succ bnd)
+        BigInt.succ bnd, Mvs.add v bnd bv, Hashcons.combine_big hp (BigInt.succ bnd) *)
 
 let t_hash ~trigger ~attr ~const t =
-  let rec t_hash (bnd : BigInt.t) (vml: (BigInt.t Mvs.t))  t =
+    t_hash_full trigger attr const t
+  (*let rec t_hash (bnd : BigInt.t) (vml: (BigInt.t Mvs.t))  t =
     let h = oty_hash t.t_ty in
     let h =
       if attr then
@@ -1433,7 +1816,7 @@ let t_hash ~trigger ~attr ~const t =
       | Tcase (t,bl) ->
           let h = t_hash bnd vml t in
           let b_hash ((p,b),t) =
-            let bnd,bv,hp = pat_hash bnd Mvs.empty p in
+            let (bnd,bv),hp = pat_hash bnd Mvs.empty p in
             let vml = Mvs.union (fun x n1 n2 -> Some n1) bv vml in
             Hashcons.combine_big hp (t_hash bnd vml t) in
           Hashcons.combine_big_list b_hash h bl
@@ -1464,7 +1847,7 @@ let t_hash ~trigger ~attr ~const t =
       | Ttrue -> BigInt.of_int 2
       | Tfalse -> BigInt.of_int 3
       end in
-  t_hash BigInt.zero Mvs.empty t
+  t_hash BigInt.zero Mvs.empty t *)
 
 let t_hash_generic ~trigger ~attr ~const t =
   t_hash ~trigger ~attr ~const t

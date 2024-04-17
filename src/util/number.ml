@@ -1,4 +1,5 @@
 open IntFuncs
+open Hashcons
 
 type int_range = { ir_lower : BigInt.t; ir_upper : BigInt.t }
 
@@ -171,6 +172,94 @@ let compare_real_aux structural r1 r2 =
          BigInt.mul v1 (BigInt.pow_int_pos_bigint 5 (BigInt.sub p52 p5_min))
        in
        let v2'' = BigInt.mul s2 v2' in BigInt.compare v1'' v2''
+
+(** val int_literal_kind_eqb :
+    int_literal_kind -> int_literal_kind -> bool **)
+
+let int_literal_kind_eqb i1 i2 =
+  match i1 with
+  | ILitUnk -> (match i2 with
+                | ILitUnk -> true
+                | _ -> false)
+  | ILitDec -> (match i2 with
+                | ILitDec -> true
+                | _ -> false)
+  | ILitHex -> (match i2 with
+                | ILitHex -> true
+                | _ -> false)
+  | ILitOct -> (match i2 with
+                | ILitOct -> true
+                | _ -> false)
+  | ILitBin -> (match i2 with
+                | ILitBin -> true
+                | _ -> false)
+
+(** val int_constant_eqb : int_constant -> int_constant -> bool **)
+
+let int_constant_eqb i1 i2 =
+  (&&) (int_literal_kind_eqb i1.il_kind i2.il_kind)
+    (BigInt.eq i1.il_int i2.il_int)
+
+(** val real_value_eqb : real_value -> real_value -> bool **)
+
+let real_value_eqb r1 r2 =
+  (&&)
+    ((&&) (BigInt.eq r1.rv_sig r2.rv_sig) (BigInt.eq r1.rv_pow2 r2.rv_pow2))
+    (BigInt.eq r1.rv_pow5 r2.rv_pow5)
+
+(** val real_literal_kind_eqb :
+    real_literal_kind -> real_literal_kind -> bool **)
+
+let real_literal_kind_eqb r1 r2 =
+  match r1 with
+  | RLitUnk -> (match r2 with
+                | RLitUnk -> true
+                | _ -> false)
+  | RLitDec i1 ->
+    (match r2 with
+     | RLitDec i2 -> Stdlib.Int.equal i1 i2
+     | _ -> false)
+  | RLitHex i1 ->
+    (match r2 with
+     | RLitHex i2 -> Stdlib.Int.equal i1 i2
+     | _ -> false)
+
+(** val real_constant_eqb : real_constant -> real_constant -> bool **)
+
+let real_constant_eqb r1 r2 =
+  (&&) (real_literal_kind_eqb r1.rl_kind r2.rl_kind)
+    (real_value_eqb r1.rl_real r2.rl_real)
+
+(** val int_literal_kind_hash : int_literal_kind -> BigInt.t **)
+
+let int_literal_kind_hash = function
+| ILitUnk -> BigInt.zero
+| ILitDec -> BigInt.one
+| ILitHex -> (BigInt.of_int 2)
+| ILitOct -> (BigInt.of_int 3)
+| ILitBin -> (BigInt.of_int 4)
+
+(** val int_constant_hash : int_constant -> BigInt.t **)
+
+let int_constant_hash i =
+  combine_big (int_literal_kind_hash i.il_kind) i.il_int
+
+(** val real_literal_kind_hash : real_literal_kind -> BigInt.t **)
+
+let real_literal_kind_hash = function
+| RLitUnk -> BigInt.zero
+| RLitDec i -> BigInt.of_int i
+| RLitHex i -> BigInt.of_int i
+
+(** val real_value_hash : real_value -> BigInt.t **)
+
+let real_value_hash r =
+  combine2_big r.rv_sig r.rv_pow2 r.rv_pow5
+
+(** val real_constant_hash : real_constant -> BigInt.t **)
+
+let real_constant_hash r =
+  combine_big (real_literal_kind_hash r.rl_kind) (real_value_hash r.rl_real)
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)

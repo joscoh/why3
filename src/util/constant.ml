@@ -1,10 +1,28 @@
+open BinNums
 open Number
+open CoqUtil
 open IntFuncs
 
 type constant =
 | ConstInt of int_constant
 | ConstReal of real_constant
 | ConstStr of string
+
+(** val constant_eqb : constant -> constant -> bool **)
+
+let constant_eqb c1 c2 =
+  match c1 with
+  | ConstInt i1 ->
+    (match c2 with
+     | ConstInt i2 -> int_constant_eqb i1 i2
+     | _ -> false)
+  | ConstReal r1 ->
+    (match c2 with
+     | ConstReal r2 -> real_constant_eqb r1 r2
+     | _ -> false)
+  | ConstStr s1 -> (match c2 with
+                    | ConstStr s2 -> (=) s1 s2
+                    | _ -> false)
 
 (** val compare_const_aux : bool -> constant -> constant -> Stdlib.Int.t **)
 
@@ -35,6 +53,18 @@ let compare_const_aux structural c1 c2 =
     (match c2 with
      | ConstStr s2 -> String.compare s1 s2
      | _ -> Stdlib.Int.one)
+
+(** val str_hash : string -> BigInt.t **)
+
+let str_hash s =
+  ZCompat.of_Z_big (Zpos (str_to_pos s))
+
+(** val constant_hash : constant -> BigInt.t **)
+
+let constant_hash = function
+| ConstInt i -> int_constant_hash i
+| ConstReal r -> real_constant_hash r
+| ConstStr s -> str_hash s
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
