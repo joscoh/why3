@@ -233,11 +233,11 @@ let real_constant_eqb r1 r2 =
 (** val int_literal_kind_hash : int_literal_kind -> BigInt.t **)
 
 let int_literal_kind_hash = function
-| ILitUnk -> BigInt.zero
-| ILitDec -> BigInt.one
-| ILitHex -> (BigInt.of_int 2)
-| ILitOct -> (BigInt.of_int 3)
-| ILitBin -> (BigInt.of_int 4)
+| ILitUnk -> (BigInt.of_int 2)
+| ILitDec -> (BigInt.of_int 3)
+| ILitHex -> (BigInt.of_int 5)
+| ILitOct -> (BigInt.of_int 7)
+| ILitBin -> (BigInt.of_int 11)
 
 (** val int_constant_hash : int_constant -> BigInt.t **)
 
@@ -247,9 +247,9 @@ let int_constant_hash i =
 (** val real_literal_kind_hash : real_literal_kind -> BigInt.t **)
 
 let real_literal_kind_hash = function
-| RLitUnk -> BigInt.zero
-| RLitDec i -> BigInt.of_int i
-| RLitHex i -> BigInt.of_int i
+| RLitUnk -> (BigInt.of_int 13)
+| RLitDec i -> combine_big (BigInt.of_int 2) (BigInt.of_int i)
+| RLitHex i -> combine_big (BigInt.of_int 3) (BigInt.of_int i)
 
 (** val real_value_hash : real_value -> BigInt.t **)
 

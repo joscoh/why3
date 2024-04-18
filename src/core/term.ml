@@ -1110,38 +1110,51 @@ let t_similar t1 t2 =
         | _ -> false)
      | Tapp (s1, l1) ->
        (match t_node t2 with
-        | Tapp (s2, l2) -> (&&) (ls_equal s1 s2) (lists_equal term_eqb l1 l2)
+        | Tapp (s2, l2) ->
+          (&&) (ls_equal s1 s2)
+            (lists_equal (fun x y -> x == y || term_eqb x y) l1 l2)
         | _ -> false)
      | Tif (f1, t3, e1) ->
        (match t_node t2 with
         | Tif (f2, t4, e2) ->
-          (&&) ((&&) (term_eqb f1 f2) (term_eqb t3 t4)) (term_eqb e1 e2)
+          (&&)
+            ((&&) ((fun x y -> x == y || term_eqb x y) f1 f2)
+              ((fun x y -> x == y || term_eqb x y) t3 t4))
+            ((fun x y -> x == y || term_eqb x y) e1 e2)
         | _ -> false)
      | Tlet (t3, bv1) ->
        (match t_node t2 with
-        | Tlet (t4, bv2) -> (&&) (term_eqb t3 t4) (term_bound_eqb bv1 bv2)
+        | Tlet (t4, bv2) ->
+          (&&) ((fun x y -> x == y || term_eqb x y) t3 t4)
+            ((fun x y -> x == y || term_bound_eqb x y) bv1 bv2)
         | _ -> false)
      | Tcase (t3, bl1) ->
        (match t_node t2 with
         | Tcase (t4, bl2) ->
-          (&&) (term_eqb t3 t4) (lists_equal term_branch_eqb bl1 bl2)
+          (&&) ((fun x y -> x == y || term_eqb x y) t3 t4)
+            (lists_equal (fun x y -> x == y || term_branch_eqb x y) bl1 bl2)
         | _ -> false)
      | Teps bv1 ->
        (match t_node t2 with
-        | Teps bv2 -> term_bound_eqb bv1 bv2
+        | Teps bv2 -> (fun x y -> x == y || term_bound_eqb x y) bv1 bv2
         | _ -> false)
      | Tquant (q1, bv1) ->
        (match t_node t2 with
-        | Tquant (q2, bv2) -> (&&) (quant_eqb q1 q2) (term_quant_eqb bv1 bv2)
+        | Tquant (q2, bv2) ->
+          (&&) (quant_eqb q1 q2)
+            ((fun x y -> x == y || term_quant_eqb x y) bv1 bv2)
         | _ -> false)
      | Tbinop (o1, f1, g1) ->
        (match t_node t2 with
         | Tbinop (o2, f2, g2) ->
-          (&&) ((&&) (binop_eqb o1 o2) (term_eqb f1 f2)) (term_eqb g1 g2)
+          (&&)
+            ((&&) (binop_eqb o1 o2)
+              ((fun x y -> x == y || term_eqb x y) f1 f2))
+            ((fun x y -> x == y || term_eqb x y) g1 g2)
         | _ -> false)
      | Tnot f1 ->
        (match t_node t2 with
-        | Tnot f2 -> term_eqb f1 f2
+        | Tnot f2 -> (fun x y -> x == y || term_eqb x y) f1 f2
         | _ -> false)
      | Ttrue -> (match t_node t2 with
                  | Ttrue -> true
@@ -1194,16 +1207,16 @@ let rec pat_hash bnd bv p =
 (** val q_hash : quant -> BigInt.t **)
 
 let q_hash = function
-| Tforall -> BigInt.zero
-| Texists -> BigInt.one
+| Tforall -> (BigInt.of_int 5)
+| Texists -> (BigInt.of_int 7)
 
 (** val binop_hash : binop -> BigInt.t **)
 
 let binop_hash = function
-| Tand -> BigInt.zero
-| Tor -> BigInt.one
-| Timplies -> (BigInt.of_int 2)
-| Tiff -> (BigInt.of_int 3)
+| Tand -> (BigInt.of_int 11)
+| Tor -> (BigInt.of_int 13)
+| Timplies -> (BigInt.of_int 17)
+| Tiff -> (BigInt.of_int 19)
 
 (** val t_hash_aux :
     bool -> bool -> bool -> BigInt.t -> BigInt.t Mvs.t -> (term_node term_o)
