@@ -1,5 +1,17 @@
 open Datatypes
 
+(** val rev_append : 'a1 list -> 'a1 list -> 'a1 list **)
+
+let rec rev_append l l' =
+  match l with
+  | [] -> l'
+  | a :: l0 -> rev_append l0 (a :: l')
+
+(** val rev' : 'a1 list -> 'a1 list **)
+
+let rev' l =
+  rev_append l []
+
 (** val concat : 'a1 list list -> 'a1 list **)
 
 let rec concat = function

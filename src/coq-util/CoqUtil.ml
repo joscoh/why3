@@ -100,3 +100,13 @@ let null = function
 let option_fold none some = function
 | Some x -> some x
 | None -> none
+
+(** val map_fold_left :
+    ('a1 -> 'a2 -> 'a1 * 'a3) -> 'a1 -> 'a2 list -> 'a1 * 'a3 list **)
+
+let map_fold_left f acc l =
+  let res =
+    fold_left (fun x e ->
+      let y = f (fst x) e in ((fst y), ((snd y) :: (snd x)))) l (acc, [])
+  in
+  ((fst res), (rev' (snd res)))

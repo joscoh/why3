@@ -537,9 +537,12 @@ exception FunctionSymbolExpected of lsymbol
 exception PredicateSymbolExpected of lsymbol
 exception ConstructorExpected of lsymbol
 
+exception TermExpected of term
+exception FmlaExpected of term
 open Constant
 open CoqHashtbl
 open Number
+open CoqUtil
 open Datatypes
 open Ident
 open IntFuncs
@@ -1300,6 +1303,90 @@ let rec t_hash_aux trigger attr const bnd vml t0 =
 
 let t_hash_full trigger attr const t0 =
   t_hash_aux trigger attr const BigInt.zero Mvs.empty t0
+
+(** val t_hash_strict : (term_node term_o) -> BigInt.t **)
+
+let t_hash_strict t0 =
+  t_hash_full true true true t0
+
+(** val t_equal_strict : (term_node term_o) -> (term_node term_o) -> bool **)
+
+let t_equal_strict t1 t2 =
+  Stdlib.Int.equal (t_compare_full true true true true t1 t2) Stdlib.Int.zero
+
+(** val t_compare_strict :
+    (term_node term_o) -> (term_node term_o) -> Stdlib.Int.t **)
+
+let t_compare_strict t1 t2 =
+  t_compare_full true true true true t1 t2
+
+(** val t_hash : (term_node term_o) -> BigInt.t **)
+
+let t_hash t0 =
+  t_hash_full false false false t0
+
+(** val t_equal : (term_node term_o) -> (term_node term_o) -> bool **)
+
+let t_equal t1 t2 =
+  Stdlib.Int.equal (t_compare_full false false false false t1 t2)
+    Stdlib.Int.zero
+
+(** val t_compare :
+    (term_node term_o) -> (term_node term_o) -> Stdlib.Int.t **)
+
+let t_compare t1 t2 =
+  t_compare_full false false false false t1 t2
+
+(** val t_type : (term_node term_o) -> ty_node_c ty_o errorM **)
+
+let t_type t0 =
+  match t_ty t0 with
+  | Some ty ->  ty
+  | None -> raise (TermExpected t0)
+
+(** val t_prop : (term_node term_o) -> (term_node term_o) errorM **)
+
+let t_prop f =
+  if negb (isSome (t_ty f)) then  f else raise (FmlaExpected f)
+
+(** val t_ty_check :
+    (term_node term_o) -> ty_node_c ty_o option -> unit errorM **)
+
+let t_ty_check t0 = function
+| Some l ->
+  (match t_ty t0 with
+   | Some r -> ty_equal_check l r
+   | None -> raise (TermExpected t0))
+| None -> (match t_ty t0 with
+           | Some _ -> raise (FmlaExpected t0)
+           | None ->  ())
+
+(** val vs_check : vsymbol -> (term_node term_o) -> unit errorM **)
+
+let vs_check v t0 =
+  (@@) (fun typ -> ty_equal_check v.vs_ty typ) (t_type t0)
+
+(** val tr_equal :
+    (term_node term_o) list list -> (term_node term_o) list list -> bool **)
+
+let tr_equal =
+  lists_equal (lists_equal t_equal)
+
+(** val tr_map : ('a1 -> 'a2) -> 'a1 list list -> 'a2 list list **)
+
+let tr_map fn =
+  map (map fn)
+
+(** val tr_fold : ('a1 -> 'a2 -> 'a1) -> 'a1 -> 'a2 list list -> 'a1 **)
+
+let tr_fold fn acc l =
+  fold_left (fun acc0 tms -> fold_left fn tms acc0) l acc
+
+(** val tr_map_fold :
+    ('a1 -> 'a2 -> 'a1 * 'a3) -> 'a1 -> 'a2 list list -> 'a1 * 'a3 list list **)
+
+let tr_map_fold fn =
+  map_fold_left (map_fold_left fn)
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -1668,8 +1755,8 @@ let rec or_cmp bv1 bv2 q1 q2 = match q1.pat_node, q2.pat_node with
     | Papp _, _ -> -1, bnd, bv1, bv2 | _, Papp _ -> 1, bnd, bv1, bv2
     | Por _, _  -> -1, bnd, bv1, bv2 | _, Por _  -> 1, bnd, bv1, bv2 *)
 
-let t_compare ~trigger ~attr ~loc ~const t1 t2 =
-  t_compare_full trigger attr loc const t1 t2
+(* let t_compare ~trigger ~attr ~loc ~const t1 t2 =
+  t_compare_full trigger attr loc const t1 t2 *)
   (* let rec t_compare bnd (vml1 : BigInt.t Mvs.t) (vml2 : BigInt.t Mvs.t) t1 t2 : int =
     if t1 != t2 || not (Mvs.is_empty vml1) || not (Mvs.is_empty vml2) then begin
       let i1 = oty_compare t1.t_ty t2.t_ty in
@@ -1795,8 +1882,8 @@ let t_compare ~trigger ~attr ~loc ~const t1 t2 =
         let bnd,bv,hp = pat_hash bnd bv p in
         BigInt.succ bnd, Mvs.add v bnd bv, Hashcons.combine_big hp (BigInt.succ bnd) *)
 
-let t_hash ~trigger ~attr ~const t =
-    t_hash_full trigger attr const t
+(* let t_hash ~trigger ~attr ~const t =
+    t_hash_full trigger attr const t *)
   (*let rec t_hash (bnd : BigInt.t) (vml: (BigInt.t Mvs.t))  t =
     let h = oty_hash t.t_ty in
     let h =
@@ -1863,19 +1950,19 @@ let t_hash ~trigger ~attr ~const t =
   t_hash BigInt.zero Mvs.empty t *)
 
 let t_hash_generic ~trigger ~attr ~const t =
-  t_hash ~trigger ~attr ~const t
+  t_hash_full trigger attr const t
 let t_compare_generic ~trigger ~attr ~loc ~const t1 t2=
-  t_compare ~trigger ~attr ~loc ~const t1 t2
+  t_compare_full trigger attr loc const t1 t2
 let t_equal_generic ~trigger ~attr ~loc ~const t1 t2 =
-  t_compare ~trigger ~attr ~loc ~const t1 t2 = 0
+  t_compare_full trigger attr loc const t1 t2 = 0
 
 let mterm_generic ~trigger ~attr ~loc ~const
     : (module (Extmap.S with type key = term)) =
   (module (Extmap.Make(struct
       type t = term
-      let tag t = t_hash ~trigger ~attr ~const t (*TODO JOSH hash*)
+      let tag t = t_hash_full trigger attr const t (*TODO JOSH hash*)
       (* let compare t1 t2 = t_compare ~trigger ~attr ~loc ~const t1 t2 *)
-      let equal x y = (t_compare ~trigger ~attr ~loc ~const x y = 0) (*JOSH TODO equal*)
+      let equal x y = (t_compare_full trigger attr loc const x y = 0) (*JOSH TODO equal*)
     end)))
 
 let sterm_generic ~trigger ~attr ~loc ~const
@@ -1887,16 +1974,16 @@ let hterm_generic ~trigger ~attr ~loc ~const
     : (module (Exthtbl.S with type key = term)) =
   (module (Exthtbl.Make(struct
       type t = term
-      let hash t = BigInt.hash (t_hash ~trigger ~attr ~const t)
-      let equal t1 t2 = t_compare ~trigger ~attr ~loc ~const t1 t2 = 0
+      let hash t = BigInt.hash (t_hash_full trigger attr const t)
+      let equal t1 t2 = t_compare_full trigger attr loc const t1 t2 = 0
     end)))
 
-let t_hash_strict t =
+(* let t_hash_strict t =
   t_hash ~trigger:true ~attr:true ~const:true t
 let t_equal_strict t1 t2 =
   t_compare ~trigger:true ~attr:true ~loc:true ~const:true t1 t2 = 0
 let t_compare_strict t1 t2 =
-  t_compare ~trigger:true ~attr:true ~loc:true ~const:true t1 t2
+  t_compare ~trigger:true ~attr:true ~loc:true ~const:true t1 t2 *)
 
 module Mterm_strict =
   (val (mterm_generic ~trigger:true ~attr:true ~loc:true ~const:true))
@@ -1905,12 +1992,12 @@ module Sterm_strict =
 module Hterm_strict=
   (val (hterm_generic ~trigger:true ~attr:true ~loc:true ~const:true))
 
-let t_hash t =
+(* let t_hash t =
   t_hash ~trigger:false ~attr:false ~const:false t
 let t_equal t1 t2 =
   t_compare ~trigger:false ~attr:false ~loc:false ~const:false t1 t2 = 0
 let t_compare t1 t2 =
-  t_compare ~trigger:false ~attr:false ~loc:false ~const:false t1 t2
+  t_compare ~trigger:false ~attr:false ~loc:false ~const:false t1 t2 *)
 
 module Mterm =
   (val (mterm_generic ~trigger:false ~attr:false ~loc:false ~const:false))
@@ -1920,7 +2007,7 @@ module Hterm =
   (val (hterm_generic ~trigger:false ~attr:false ~loc:false ~const:false))
 
 (* type checking *)
-
+(* 
 exception TermExpected of term
 exception FmlaExpected of term
 
@@ -1945,7 +2032,7 @@ let tr_equal = Lists.equal (Lists.equal t_equal)
 
 let tr_map fn = List.map (List.map fn)
 let tr_fold fn = List.fold_left (List.fold_left fn)
-let tr_map_fold fn = Lists.map_fold_left (Lists.map_fold_left fn)
+let tr_map_fold fn = Lists.map_fold_left (Lists.map_fold_left fn) *)
 
 (* bind_info equality, hash, and traversal *)
 
