@@ -54,6 +54,11 @@ let isSome = function
 | Some _ -> true
 | None -> false
 
+(** val isNone : 'a1 option -> bool **)
+
+let isNone x =
+  negb (isSome x)
+
 (** val option_eqb :
     ('a1 -> 'a1 -> bool) -> 'a1 option -> 'a1 option -> bool **)
 

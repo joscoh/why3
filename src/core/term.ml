@@ -1387,6 +1387,198 @@ let tr_fold fn acc l =
 
 let tr_map_fold fn =
   map_fold_left (map_fold_left fn)
+
+(** val vars_union : BigInt.t Mvs.t -> BigInt.t Mvs.t -> BigInt.t Mvs.t **)
+
+let vars_union s1 s2 =
+  Mvs.union (fun _ m n -> Some (BigInt.add m n)) s1 s2
+
+(** val add_b_vars :
+    BigInt.t Mvs.t -> (('a1 * bind_info) * 'a2) -> BigInt.t Mvs.t **)
+
+let add_b_vars s = function
+| (p, _) -> let (_, b) = p in vars_union s b.bv_vars
+
+(** val t_vars : (term_node term_o) -> BigInt.t Mvs.t **)
+
+let rec t_vars t0 =
+  match t_node t0 with
+  | Tvar v -> Mvs.singleton v BigInt.one
+  | Tapp (_, tl) ->
+    fold_left (fun s x -> vars_union s (t_vars x)) tl Mvs.empty
+  | Tif (f, t1, e) ->
+    vars_union (vars_union (t_vars f) (t_vars t1)) (t_vars e)
+  | Tlet (t1, bt) -> add_b_vars (t_vars t1) bt
+  | Tcase (t1, bl) -> fold_left add_b_vars bl (t_vars t1)
+  | Teps p -> let (p0, _) = p in let (_, b) = p0 in b.bv_vars
+  | Tquant (_, p) ->
+    let (p0, _) = p in let (p1, _) = p0 in let (_, b) = p1 in b.bv_vars
+  | Tbinop (_, f1, f2) -> vars_union (t_vars f1) (t_vars f2)
+  | Tnot f -> t_vars f
+  | _ -> Mvs.empty
+
+(** val add_t_vars :
+    BigInt.t Mvs.t -> (term_node term_o) -> BigInt.t Mvs.t **)
+
+let add_t_vars s t0 =
+  vars_union s (t_vars t0)
+
+(** val mk_term : term_node -> ty_node_c ty_o option -> (term_node term_o) **)
+
+let mk_term n t0 =
+  (fun (a, b, c, d) -> build_term_o a b c d) (n, t0, Sattr.empty, None)
+
+(** val t_var : vsymbol -> (term_node term_o) **)
+
+let t_var v =
+  mk_term (Tvar v) (Some v.vs_ty)
+
+(** val t_const : constant -> ty_node_c ty_o -> (term_node term_o) **)
+
+let t_const c t0 =
+  mk_term (Tconst c) (Some t0)
+
+(** val t_app :
+    lsymbol -> (term_node term_o) list -> ty_node_c ty_o option ->
+    (term_node term_o) **)
+
+let t_app f tl t0 =
+  mk_term (Tapp (f, tl)) t0
+
+(** val t_if :
+    (term_node term_o) -> (term_node term_o) -> (term_node term_o) ->
+    (term_node term_o) **)
+
+let t_if f t1 t2 =
+  mk_term (Tif (f, t1, t2)) (t_ty t2)
+
+(** val t_let :
+    (term_node term_o) -> ((vsymbol * bind_info) * (term_node term_o)) ->
+    ty_node_c ty_o option -> (term_node term_o) **)
+
+let t_let t1 bt t0 =
+  mk_term (Tlet (t1, bt)) t0
+
+(** val t_case :
+    (term_node term_o) ->
+    (((pattern_node pattern_o) * bind_info) * (term_node term_o)) list ->
+    ty_node_c ty_o option -> (term_node term_o) **)
+
+let t_case t1 bl t0 =
+  mk_term (Tcase (t1, bl)) t0
+
+(** val t_eps :
+    ((vsymbol * bind_info) * (term_node term_o)) -> ty_node_c ty_o option ->
+    (term_node term_o) **)
+
+let t_eps bf t0 =
+  mk_term (Teps bf) t0
+
+(** val t_quant :
+    quant -> (((vsymbol list * bind_info) * (term_node term_o) list
+    list) * (term_node term_o)) -> (term_node term_o) **)
+
+let t_quant q qf =
+  mk_term (Tquant (q, qf)) None
+
+(** val t_binary :
+    binop -> (term_node term_o) -> (term_node term_o) -> (term_node term_o) **)
+
+let t_binary op f g =
+  mk_term (Tbinop (op, f, g)) None
+
+(** val t_not : (term_node term_o) -> (term_node term_o) **)
+
+let t_not f =
+  mk_term (Tnot f) None
+
+(** val t_true : (term_node term_o) **)
+
+let t_true =
+  mk_term Ttrue None
+
+(** val t_false : (term_node term_o) **)
+
+let t_false =
+  mk_term Tfalse None
+
+(** val t_attr_set1 :
+    position option -> Sattr.t -> (term_node term_o) -> (term_node term_o) **)
+
+let t_attr_set1 loc l t0 =
+  (fun (a, b, c, d) -> build_term_o a b c d) ((t_node t0), (t_ty t0), l, loc)
+
+(** val t_attr_add : attribute -> (term_node term_o) -> (term_node term_o) **)
+
+let t_attr_add l t0 =
+  (fun (a, b, c, d) -> build_term_o a b c d) ((t_node t0), (t_ty t0),
+    (Sattr.add l (t_attrs t0)), (t_loc t0))
+
+(** val t_attr_remove :
+    attribute -> (term_node term_o) -> (term_node term_o) **)
+
+let t_attr_remove l t0 =
+  (fun (a, b, c, d) -> build_term_o a b c d) ((t_node t0), (t_ty t0),
+    (Sattr.remove l (t_attrs t0)), (t_loc t0))
+
+(** val t_attr_copy :
+    (term_node term_o) -> (term_node term_o) -> (term_node term_o) **)
+
+let t_attr_copy s t0 =
+  if (&&) ((&&) (t_similar s t0) (Sattr.is_empty (t_attrs t0)))
+       (negb (isSome (t_loc t0)))
+  then s
+  else let attrs = Sattr.union (t_attrs s) (t_attrs t0) in
+       let loc = if isNone (t_loc t0) then t_loc s else t_loc t0 in
+       (fun (a, b, c, d) -> build_term_o a b c d) ((t_node t0), (t_ty t0),
+       attrs, loc)
+
+(** val bound_map :
+    ('a1 -> 'a2) -> (('a3 * 'a4) * 'a1) -> ('a3 * 'a4) * 'a2 **)
+
+let bound_map f = function
+| (p, e) -> (p, (f e))
+
+(** val t_map_unsafe :
+    ((term_node term_o) -> (term_node term_o)) -> (term_node term_o) ->
+    (term_node term_o) **)
+
+let t_map_unsafe fn t0 =
+  t_attr_copy t0
+    (match t_node t0 with
+     | Tapp (f, tl) -> t_app f (map fn tl) (t_ty t0)
+     | Tif (f, t1, t2) -> t_if (fn f) (fn t1) (fn t2)
+     | Tlet (e, b) -> t_let (fn e) (bound_map fn b) (t_ty t0)
+     | Tcase (e, bl) -> t_case (fn e) (map (bound_map fn) bl) (t_ty t0)
+     | Teps b -> t_eps (bound_map fn b) (t_ty t0)
+     | Tquant (q, p) ->
+       let (p0, f) = p in
+       let (p1, tl) = p0 in t_quant q ((p1, (tr_map fn tl)), (fn f))
+     | Tbinop (op, f1, f2) -> t_binary op (fn f1) (fn f2)
+     | Tnot f1 -> t_not (fn f1)
+     | _ -> t0)
+
+(** val bound_fold :
+    ('a1 -> 'a2 -> 'a3) -> 'a1 -> (('a4 * 'a5) * 'a2) -> 'a3 **)
+
+let bound_fold fn acc = function
+| (_, e) -> fn acc e
+
+(** val t_fold_unsafe :
+    ('a1 -> (term_node term_o) -> 'a1) -> 'a1 -> (term_node term_o) -> 'a1 **)
+
+let t_fold_unsafe fn acc t0 =
+  match t_node t0 with
+  | Tapp (_, tl) -> fold_left fn tl acc
+  | Tif (f, t1, t2) -> fn (fn (fn acc f) t1) t2
+  | Tlet (e, b) -> fn (bound_fold fn acc b) e
+  | Tcase (e, bl) -> fold_left (bound_fold fn) bl (fn acc e)
+  | Teps b -> bound_fold fn acc b
+  | Tquant (_, p) ->
+    let (p0, f1) = p in let (_, tl) = p0 in fn (tr_fold fn acc tl) f1
+  | Tbinop (_, f1, f2) -> fn (fn acc f1) f2
+  | Tnot f1 -> fn acc f1
+  | _ -> acc
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -2046,7 +2238,7 @@ let tr_map_fold fn = Lists.map_fold_left (Lists.map_fold_left fn) *)
 
 (* hash-consing for terms and formulas *)
 
-let vars_union s1 s2 = Mvs.union (fun _ m n -> Some (BigInt.add m n)) s1 s2
+(* let vars_union s1 s2 = Mvs.union (fun _ m n -> Some (BigInt.add m n)) s1 s2
 
 let add_b_vars s ((_,b),_) = vars_union s b.bv_vars
 
@@ -2088,9 +2280,10 @@ let t_quant q qf    = mk_term (Tquant (q, qf)) None
 let t_binary op f g = mk_term (Tbinop (op, f, g)) None
 let t_not f         = mk_term (Tnot f) None
 let t_true          = mk_term (Ttrue) None
-let t_false         = mk_term (Tfalse) None
+let t_false         = mk_term (Tfalse) None*)
 
-let t_attr_set ?loc l t = { t with t_attrs = l; t_loc = loc }
+let t_attr_set ?loc l t = t_attr_set1 loc l t 
+(*{ t with t_attrs = l; t_loc = loc }
 
 let t_attr_add l t = { t with t_attrs = Sattr.add l t.t_attrs }
 
@@ -2133,7 +2326,7 @@ let t_fold_unsafe fn acc t = match t.t_node with
   | Tquant (_,(((_,b),tl),f1)) -> fn (tr_fold fn acc tl) f1
   | Tbinop (_,f1,f2) -> fn (fn acc f1) f2
   | Tnot f1 -> fn acc f1
-  | Ttrue | Tfalse -> acc
+  | Ttrue | Tfalse -> acc *)
 
 (* unsafe map_fold *)
 
