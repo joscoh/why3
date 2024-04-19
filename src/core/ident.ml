@@ -280,6 +280,15 @@ let create_ident name attrs loc =
 
 let id_fresh1 s =
   create_ident s Sattr.empty None
+
+(** val id_clone1 : position option -> unit Sattr.M.t -> ident -> preid **)
+
+let id_clone1 loc attrs i =
+  let aa = Sattr.union attrs i.id_attrs in
+  let loc0 = match loc with
+             | Some _ -> loc
+             | None -> i.id_loc in
+  create_ident i.id_string aa loc0
 module Hsattr = Hashcons.Make (struct
   type t = attribute
   let equal a1 a2 = a1.attr_string = a2.attr_string
@@ -387,12 +396,13 @@ let id_attr id attrs =
   create_ident id.id_string attrs id.id_loc
 
 let id_clone ?loc ?(attrs = Sattr.empty) id =
-  let aa = Sattr.union attrs id.id_attrs in
+  id_clone1 loc attrs id
+  (* let aa = Sattr.union attrs id.id_attrs in
   let loc = match loc with
     | None -> id.id_loc
     | Some _ -> loc
   in
-  create_ident id.id_string aa loc
+  create_ident id.id_string aa loc *)
 
 let id_derive ?(attrs = Sattr.empty) nm id =
   let aa = Sattr.union attrs id.id_attrs in

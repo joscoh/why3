@@ -625,6 +625,16 @@ let pat_map fn =
     let res = fn p in
     (@@) (fun _ ->  res) (ty_equal_check (pat_ty p) (pat_ty res)))
 
+(** val pat_map_err :
+    ((pattern_node pattern_o) -> (pattern_node pattern_o) errorM) ->
+    (pattern_node pattern_o) -> (pattern_node pattern_o) errorM **)
+
+let pat_map_err fn =
+  pat_map_aux (fun p ->
+    (@@) (fun res ->
+      (@@) (fun _ ->  res) (ty_equal_check (pat_ty p) (pat_ty res))) 
+      (fn p))
+
 (** val pat_fold :
     ('a1 -> (pattern_node pattern_o) -> 'a1) -> 'a1 ->
     (pattern_node pattern_o) -> 'a1 **)
@@ -695,6 +705,53 @@ let pat_as p v =
 
 let pat_or p q =
   (@@) (fun _ -> pat_or_aux p q) (ty_equal_check (pat_ty p) (pat_ty q))
+
+(** val pat_app_unsafe :
+    lsymbol -> (pattern_node pattern_o) list -> ty_node_c ty_o ->
+    (pattern_node pattern_o) **)
+
+let pat_app_unsafe f pl t0 =
+  let un = fold_left (fun s p -> Svs.union s (pat_vars p)) pl Svs.empty in
+  mk_pattern (Papp (f, pl)) un t0
+
+(** val pat_as_unsafe :
+    (pattern_node pattern_o) -> vsymbol -> (pattern_node pattern_o) **)
+
+let pat_as_unsafe p v =
+  let s = Svs.add v (pat_vars p) in mk_pattern (Pas (p, v)) s v.vs_ty
+
+(** val pat_or_unsafe :
+    (pattern_node pattern_o) -> (pattern_node pattern_o) ->
+    (pattern_node pattern_o) **)
+
+let pat_or_unsafe p q =
+  mk_pattern (Por (p, q)) (pat_vars p) (pat_ty p)
+
+(** val pat_map_unsafe :
+    ((pattern_node pattern_o) -> (pattern_node pattern_o)) ->
+    (pattern_node pattern_o) -> (pattern_node pattern_o) **)
+
+let pat_map_unsafe fn p =
+  match pat_node p with
+  | Papp (s, pl) -> pat_app_unsafe s (map fn pl) (pat_ty p)
+  | Por (p0, q) -> pat_or_unsafe (fn p0) (fn q)
+  | Pas (p0, v) -> pat_as_unsafe (fn p0) v
+  | _ -> p
+
+(** val pat_rename_all :
+    vsymbol Mvs.t -> (pattern_node pattern_o) -> (pattern_node pattern_o) **)
+
+let rec pat_rename_all m p =
+  match pat_node p with
+  | Pvar v -> (match Mvs.find_opt v m with
+               | Some v1 -> pat_var v1
+               | None -> p)
+  | Pas (p0, v) ->
+    let p1 = pat_rename_all m p0 in
+    pat_as_unsafe p1 (match Mvs.find_opt v m with
+                      | Some v1 -> v1
+                      | None -> v)
+  | _ -> pat_map_unsafe (pat_rename_all m) p
 
 (** val list_comp : Stdlib.Int.t list -> Stdlib.Int.t **)
 
@@ -1579,6 +1636,151 @@ let t_fold_unsafe fn acc t0 =
   | Tbinop (_, f1, f2) -> fn (fn acc f1) f2
   | Tnot f1 -> fn acc f1
   | _ -> acc
+
+(** val bound_map_fold :
+    ('a1 -> 'a2 -> 'a3 * 'a4) -> 'a1 -> (('a5 * 'a6) * 'a2) ->
+    'a3 * (('a5 * 'a6) * 'a4) **)
+
+let bound_map_fold fn acc = function
+| (p, e) -> let (acc0, e0) = fn acc e in (acc0, (p, e0))
+
+(** val t_map_fold_unsafe :
+    ('a1 -> (term_node term_o) -> 'a1 * (term_node term_o)) -> 'a1 ->
+    (term_node term_o) -> 'a1 * (term_node term_o) **)
+
+let t_map_fold_unsafe fn acc t0 =
+  match t_node t0 with
+  | Tapp (f, tl) ->
+    let (acc0, sl) = map_fold_left fn acc tl in
+    (acc0, (t_attr_copy t0 (t_app f sl (t_ty t0))))
+  | Tif (f, t1, t2) ->
+    let (acc0, g) = fn acc f in
+    let (acc1, s1) = fn acc0 t1 in
+    let (acc2, s2) = fn acc1 t2 in (acc2, (t_attr_copy t0 (t_if g s1 s2)))
+  | Tlet (e, b) ->
+    let (acc0, e0) = fn acc e in
+    let (acc1, b0) = bound_map_fold fn acc0 b in
+    (acc1, (t_attr_copy t0 (t_let e0 b0 (t_ty t0))))
+  | Tcase (e, bl) ->
+    let (acc0, e0) = fn acc e in
+    let (acc1, bl0) = map_fold_left (bound_map_fold fn) acc0 bl in
+    (acc1, (t_attr_copy t0 (t_case e0 bl0 (t_ty t0))))
+  | Teps b ->
+    let (acc0, b0) = bound_map_fold fn acc b in
+    (acc0, (t_attr_copy t0 (t_eps b0 (t_ty t0))))
+  | Tquant (q, p) ->
+    let (p0, f1) = p in
+    let (p1, tl) = p0 in
+    let (acc0, tl0) = tr_map_fold fn acc tl in
+    let (acc1, f2) = fn acc0 f1 in
+    (acc1, (t_attr_copy t0 (t_quant q ((p1, tl0), f2))))
+  | Tbinop (op, f1, f2) ->
+    let (acc0, g1) = fn acc f1 in
+    let (acc1, g2) = fn acc0 f2 in
+    (acc1, (t_attr_copy t0 (t_binary op g1 g2)))
+  | Tnot f1 ->
+    let (acc0, g1) = fn acc f1 in (acc0, (t_attr_copy t0 (t_not g1)))
+  | _ -> (acc, t0)
+
+(** val fresh_vsymbol : vsymbol -> (BigInt.t, vsymbol) st **)
+
+let fresh_vsymbol v =
+  create_vsymbol (id_clone1 None Sattr.empty v.vs_name) v.vs_ty
+
+(** val vs_rename :
+    (term_node term_o) Mvs.t -> vsymbol -> (BigInt.t, (term_node term_o)
+    Mvs.t * vsymbol) st **)
+
+let vs_rename h v =
+  (@@) (fun u -> (fun x -> x) ((Mvs.add v (t_var u) h), u)) (fresh_vsymbol v)
+
+(** val bnd_new : BigInt.t Mvs.t -> bind_info **)
+
+let bnd_new s =
+  { bv_vars = s }
+
+(** val t_close_bound :
+    vsymbol -> (term_node term_o) ->
+    (vsymbol * bind_info) * (term_node term_o) **)
+
+let t_close_bound v t0 =
+  ((v, (bnd_new (Mvs.remove v (t_vars t0)))), t0)
+
+(** val add_vars : vsymbol list -> (BigInt.t, vsymbol Mvs.t) st **)
+
+let rec add_vars = function
+| [] -> (fun x -> x) Mvs.empty
+| v :: vs ->
+  (@@) (fun v1 ->
+    (@@) (fun m -> (fun x -> x) (Mvs.add v v1 m)) (add_vars vs))
+    (fresh_vsymbol v)
+
+(** val pat_rename :
+    (term_node term_o) Mvs.t -> (pattern_node pattern_o) -> (BigInt.t,
+    (term_node term_o) Mvs.t * (pattern_node pattern_o)) st **)
+
+let pat_rename h p =
+  (@@) (fun m ->
+    let p0 = pat_rename_all m p in
+    (fun x -> x) ((Mvs.union (fun _ _ t0 -> Some t0) h (Mvs.map t_var m)), p0))
+    (add_vars (Svs.elements (pat_vars p)))
+
+(** val t_close_branch :
+    (pattern_node pattern_o) -> (term_node term_o) ->
+    ((pattern_node pattern_o) * bind_info) * (term_node term_o) **)
+
+let t_close_branch p t0 =
+  ((p, (bnd_new (Mvs.set_diff (t_vars t0) (pat_vars p)))), t0)
+
+(** val t_close_quant_unsafe :
+    vsymbol list -> (term_node term_o) list list -> (term_node term_o) ->
+    ((vsymbol list * bind_info) * (term_node term_o) list
+    list) * (term_node term_o) **)
+
+let t_close_quant_unsafe vl tl f =
+  let del_v = fun s v -> Mvs.remove v s in
+  let s = tr_fold add_t_vars (t_vars f) tl in
+  let s0 = fold_left del_v vl s in (((vl, (bnd_new s0)), tl), f)
+
+(** val t_close_quant :
+    vsymbol list -> (term_node term_o) list list -> (term_node term_o) ->
+    (((vsymbol list * bind_info) * (term_node term_o) list
+    list) * (term_node term_o)) errorM **)
+
+let t_close_quant vl tl f =
+  let (p, f0) = t_close_quant_unsafe vl tl f in
+  (@@) (fun p0 ->  (p, p0)) (t_prop f0)
+
+(** val vl_rename_aux :
+    vsymbol list -> (BigInt.t, (term_node term_o) Mvs.t * vsymbol list) st ->
+    (BigInt.t, (term_node term_o) Mvs.t * vsymbol list) st **)
+
+let rec vl_rename_aux vl acc =
+  match vl with
+  | [] -> acc
+  | v :: vs ->
+    (@@) (fun x ->
+      let (m, vls) = x in
+      (@@) (fun x1 ->
+        let (m1, v1) = x1 in vl_rename_aux vs ((fun x -> x) (m1, (v1 :: vls))))
+        (vs_rename m v)) acc
+
+(** val vl_rename :
+    (term_node term_o) Mvs.t -> vsymbol list -> (BigInt.t, (term_node term_o)
+    Mvs.t * vsymbol list) st **)
+
+let vl_rename h vl =
+  (@@) (fun x -> (fun x -> x) ((fst x), (rev' (snd x))))
+    (vl_rename_aux vl ((fun x -> x) (h, [])))
+
+(** val st_tr :
+    (BigInt.t, 'a1) st list list -> (BigInt.t, 'a1 list list) st **)
+
+let rec st_tr = function
+| [] -> (fun x -> x) []
+| l1 :: tl ->
+  (@@) (fun l2 -> (@@) (fun tl2 -> (fun x -> x) (l2 :: tl2)) (st_tr tl))
+    (st_list l1)
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -2330,7 +2532,7 @@ let t_fold_unsafe fn acc t = match t.t_node with
 
 (* unsafe map_fold *)
 
-let bound_map_fold fn acc ((u,b),e) =
+(* let bound_map_fold fn acc ((u,b),e) =
   let acc, e = fn acc e in
   acc, ((u,b),e)
 
@@ -2398,7 +2600,7 @@ let t_close_quant vl tl f =
   (((vl, bnd_new s), tl), t_prop f)
 
 let vl_rename h vl =
-  Lists.map_fold_left vs_rename h vl
+  Lists.map_fold_left vs_rename h vl*)
 
 let rec t_subst_unsafe m t =
   let t_subst t = t_subst_unsafe m t in
@@ -2445,7 +2647,7 @@ let rec t_subst_unsafe m t =
   | Tquant (q, (((vl,b),tl),f1 as bq)) ->
       t_attr_copy t (t_quant q (b_subst2 bq))
   | _ ->
-      t_map_unsafe t_subst t
+      t_map_unsafe t_subst t 
 
 let t_subst_unsafe m t =
   if Mvs.is_empty m then t else t_subst_unsafe m t
