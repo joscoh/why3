@@ -529,6 +529,8 @@ let term_quant_eqb tq1 tq2 =
       (list_eqb (list_eqb term_eqb) tr1 tr2)) (term_eqb t1 t2)
 
 
+
+
 exception UncoveredVar of vsymbol
 exception DuplicateVar of vsymbol
 
@@ -947,7 +949,7 @@ let list_compare cmp l1 l2 =
     bool -> bool -> bool -> bool -> BigInt.t -> BigInt.t Mvs.t -> BigInt.t
     Mvs.t -> (term_node term_o) -> (term_node term_o) -> Stdlib.Int.t **)
 
-let rec t_compare_aux trigger attr loc const bnd vml1 vml2 t1 t2 =
+let rec t_compare_aux trigger0 attr loc const bnd vml1 vml2 t1 t2 =
   let i1 = oty_compare (t_ty t1) (t_ty t2) in
   lex_comp i1
     (let i2 =
@@ -981,7 +983,7 @@ let rec t_compare_aux trigger attr loc const bnd vml1 vml2 t1 t2 =
                 lex_comp i4
                   (fold_left2_def (fun acc t3 t4 ->
                     lex_comp acc
-                      (t_compare_aux trigger attr loc const bnd vml1 vml2 t3
+                      (t_compare_aux trigger0 attr loc const bnd vml1 vml2 t3
                         t4)) Stdlib.Int.minus_one Stdlib.Int.one l1 l2
                     Stdlib.Int.zero)
               | _ -> Stdlib.Int.minus_one)
@@ -992,14 +994,14 @@ let rec t_compare_aux trigger attr loc const bnd vml1 vml2 t1 t2 =
               | Tapp (_, _) -> Stdlib.Int.one
               | Tif (f2, t4, e2) ->
                 let i4 =
-                  t_compare_aux trigger attr loc const bnd vml1 vml2 f1 f2
+                  t_compare_aux trigger0 attr loc const bnd vml1 vml2 f1 f2
                 in
                 lex_comp i4
                   (let i5 =
-                     t_compare_aux trigger attr loc const bnd vml1 vml2 t3 t4
+                     t_compare_aux trigger0 attr loc const bnd vml1 vml2 t3 t4
                    in
                    lex_comp i5
-                     (t_compare_aux trigger attr loc const bnd vml1 vml2 e1
+                     (t_compare_aux trigger0 attr loc const bnd vml1 vml2 e1
                        e2))
               | _ -> Stdlib.Int.minus_one)
            | Tlet (t3, p) ->
@@ -1014,12 +1016,12 @@ let rec t_compare_aux trigger attr loc const bnd vml1 vml2 t1 t2 =
                 let (p2, e2) = p1 in
                 let (v2, _) = p2 in
                 let i4 =
-                  t_compare_aux trigger attr loc const bnd vml1 vml2 t3 t4
+                  t_compare_aux trigger0 attr loc const bnd vml1 vml2 t3 t4
                 in
                 lex_comp i4
                   (let vml3 = Mvs.add v1 bnd vml1 in
                    let vml4 = Mvs.add v2 bnd vml2 in
-                   t_compare_aux trigger attr loc const (BigInt.succ bnd)
+                   t_compare_aux trigger0 attr loc const (BigInt.succ bnd)
                      vml3 vml4 e1 e2)
               | _ -> Stdlib.Int.minus_one)
            | Tcase (t3, bl1) ->
@@ -1031,7 +1033,7 @@ let rec t_compare_aux trigger attr loc const bnd vml1 vml2 t1 t2 =
               | Tlet (_, _) -> Stdlib.Int.one
               | Tcase (t4, bl2) ->
                 let i4 =
-                  t_compare_aux trigger attr loc const bnd vml1 vml2 t3 t4
+                  t_compare_aux trigger0 attr loc const bnd vml1 vml2 t3 t4
                 in
                 lex_comp i4
                   (let b_compare = fun x1 x2 ->
@@ -1049,7 +1051,7 @@ let rec t_compare_aux trigger attr loc const bnd vml1 vml2 t1 t2 =
                         in
                         let vml4 = Mvs.union (fun _ n1 _ -> Some n1) bv2 vml2
                         in
-                        t_compare_aux trigger attr loc const bnd0 vml3 vml4
+                        t_compare_aux trigger0 attr loc const bnd0 vml3 vml4
                           t5 t6)
                    in
                    list_compare b_compare bl1 bl2)
@@ -1063,7 +1065,7 @@ let rec t_compare_aux trigger attr loc const bnd vml1 vml2 t1 t2 =
                 let (v2, _) = p2 in
                 let vml3 = Mvs.add v1 bnd vml1 in
                 let vml4 = Mvs.add v2 bnd vml2 in
-                t_compare_aux trigger attr loc const (BigInt.succ bnd) vml3
+                t_compare_aux trigger0 attr loc const (BigInt.succ bnd) vml3
                   vml4 e1 e2
               | Tquant (_, _) -> Stdlib.Int.minus_one
               | Tbinop (_, _, _) -> Stdlib.Int.minus_one
@@ -1099,16 +1101,16 @@ let rec t_compare_aux trigger attr loc const bnd vml1 vml2 t1 t2 =
                      (let vml3 = Mvs.union (fun _ n1 _ -> Some n1) bv1 vml1 in
                       let vml4 = Mvs.union (fun _ n1 _ -> Some n1) bv2 vml2 in
                       let tr_cmp = fun t3 t4 ->
-                        t_compare_aux trigger attr loc const bnd0 vml3 vml4
+                        t_compare_aux trigger0 attr loc const bnd0 vml3 vml4
                           t3 t4
                       in
                       let i6 =
-                        if trigger
+                        if trigger0
                         then list_compare (list_compare tr_cmp) tr1 tr2
                         else Stdlib.Int.zero
                       in
                       lex_comp i6
-                        (t_compare_aux trigger attr loc const bnd0 vml3 vml4
+                        (t_compare_aux trigger0 attr loc const bnd0 vml3 vml4
                           f1 f2)))
               | Tbinop (_, _, _) -> Stdlib.Int.minus_one
               | Tnot _ -> Stdlib.Int.minus_one
@@ -1121,10 +1123,10 @@ let rec t_compare_aux trigger attr loc const bnd vml1 vml2 t1 t2 =
                 let i4 = binop_compare op1 op2 in
                 lex_comp i4
                   (let i5 =
-                     t_compare_aux trigger attr loc const bnd vml1 vml2 g1 g2
+                     t_compare_aux trigger0 attr loc const bnd vml1 vml2 g1 g2
                    in
                    lex_comp i5
-                     (t_compare_aux trigger attr loc const bnd vml1 vml2 f1
+                     (t_compare_aux trigger0 attr loc const bnd vml1 vml2 f1
                        f2))
               | Tnot _ -> Stdlib.Int.minus_one
               | Ttrue -> Stdlib.Int.minus_one
@@ -1133,7 +1135,7 @@ let rec t_compare_aux trigger attr loc const bnd vml1 vml2 t1 t2 =
            | Tnot f1 ->
              (match t_node t2 with
               | Tnot f2 ->
-                t_compare_aux trigger attr loc const bnd vml1 vml2 f1 f2
+                t_compare_aux trigger0 attr loc const bnd vml1 vml2 f1 f2
               | Ttrue -> Stdlib.Int.minus_one
               | Tfalse -> Stdlib.Int.minus_one
               | _ -> Stdlib.Int.one)
@@ -1151,8 +1153,8 @@ let rec t_compare_aux trigger attr loc const bnd vml1 vml2 t1 t2 =
     bool -> bool -> bool -> bool -> (term_node term_o) -> (term_node term_o)
     -> Stdlib.Int.t **)
 
-let t_compare_full trigger attr loc const t1 t2 =
-  t_compare_aux trigger attr loc const BigInt.zero Mvs.empty Mvs.empty t1 t2
+let t_compare_full trigger0 attr loc const t1 t2 =
+  t_compare_aux trigger0 attr loc const BigInt.zero Mvs.empty Mvs.empty t1 t2
 
 (** val t_similar : (term_node term_o) -> (term_node term_o) -> bool **)
 
@@ -1282,7 +1284,7 @@ let binop_hash = function
     bool -> bool -> bool -> BigInt.t -> BigInt.t Mvs.t -> (term_node term_o)
     -> BigInt.t **)
 
-let rec t_hash_aux trigger attr const bnd vml t0 =
+let rec t_hash_aux trigger0 attr const bnd vml t0 =
   let h = oty_hash (t_ty t0) in
   let h1 =
     if attr
@@ -1303,17 +1305,17 @@ let rec t_hash_aux trigger attr const bnd vml t0 =
              | ConstReal r -> real_value_hash r.rl_real
              | ConstStr c0 -> str_hash c0)
      | Tapp (s, l) ->
-       combine_big_list (t_hash_aux trigger attr const bnd vml) (ls_hash s) l
+       combine_big_list (t_hash_aux trigger0 attr const bnd vml) (ls_hash s) l
      | Tif (f, t1, e) ->
-       combine2_big (t_hash_aux trigger attr const bnd vml f)
-         (t_hash_aux trigger attr const bnd vml t1)
-         (t_hash_aux trigger attr const bnd vml e)
+       combine2_big (t_hash_aux trigger0 attr const bnd vml f)
+         (t_hash_aux trigger0 attr const bnd vml t1)
+         (t_hash_aux trigger0 attr const bnd vml e)
      | Tlet (t1, p) ->
        let (p0, e) = p in
        let (v, _) = p0 in
-       combine_big (t_hash_aux trigger attr const bnd vml t1)
-         (t_hash_aux trigger attr const (BigInt.succ bnd) (Mvs.add v bnd vml)
-           e)
+       combine_big (t_hash_aux trigger0 attr const bnd vml t1)
+         (t_hash_aux trigger0 attr const (BigInt.succ bnd)
+           (Mvs.add v bnd vml) e)
      | Tcase (_, bl) ->
        let b_hash = fun x ->
          let (y, t1) = x in
@@ -1321,13 +1323,13 @@ let rec t_hash_aux trigger attr const bnd vml t0 =
          let (p0, hp) = pat_hash bnd Mvs.empty p in
          let (bnd0, bv) = p0 in
          let vml0 = Mvs.union (fun _ n1 _ -> Some n1) bv vml in
-         combine_big hp (t_hash_aux trigger attr const bnd0 vml0 t1)
+         combine_big hp (t_hash_aux trigger0 attr const bnd0 vml0 t1)
        in
        combine_big_list b_hash h bl
      | Teps p ->
        let (p0, e) = p in
        let (v, _) = p0 in
-       t_hash_aux trigger attr const (BigInt.succ bnd) (Mvs.add v bnd vml) e
+       t_hash_aux trigger0 attr const (BigInt.succ bnd) (Mvs.add v bnd vml) e
      | Tquant (q, p) ->
        let (p0, f) = p in
        let (p1, tr) = p0 in
@@ -1340,26 +1342,27 @@ let rec t_hash_aux trigger attr const bnd vml t0 =
        in
        let vml0 = Mvs.union (fun _ n1 _ -> Some n1) bv vml in
        let h2 =
-         if trigger
+         if trigger0
          then fold_left
-                (combine_big_list (t_hash_aux trigger attr const bnd0 vml0))
+                (combine_big_list (t_hash_aux trigger0 attr const bnd0 vml0))
                 tr h0
          else h0
        in
-       combine_big h2 (t_hash_aux trigger attr const bnd0 vml0 f)
+       combine_big h2 (t_hash_aux trigger0 attr const bnd0 vml0 f)
      | Tbinop (op, f, g) ->
-       combine2_big (binop_hash op) (t_hash_aux trigger attr const bnd vml f)
-         (t_hash_aux trigger attr const bnd vml g)
+       combine2_big (binop_hash op)
+         (t_hash_aux trigger0 attr const bnd vml f)
+         (t_hash_aux trigger0 attr const bnd vml g)
      | Tnot f ->
-       combine_big BigInt.one (t_hash_aux trigger attr const bnd vml f)
+       combine_big BigInt.one (t_hash_aux trigger0 attr const bnd vml f)
      | Ttrue -> (BigInt.of_int 2)
      | Tfalse -> (BigInt.of_int 3))
 
 (** val t_hash_full :
     bool -> bool -> bool -> (term_node term_o) -> BigInt.t **)
 
-let t_hash_full trigger attr const t0 =
-  t_hash_aux trigger attr const BigInt.zero Mvs.empty t0
+let t_hash_full trigger0 attr const t0 =
+  t_hash_aux trigger0 attr const BigInt.zero Mvs.empty t0
 
 (** val t_hash_strict : (term_node term_o) -> BigInt.t **)
 
@@ -1827,24 +1830,25 @@ let vl_rename h vl =
   (@@) (fun x -> (fun x -> x) ((fst x), (rev' (snd x))))
     (vl_rename_aux vl ((fun x -> x) (h, [])))
 
-(** val t_subst_unsafe :
+(** val t_subst_unsafe_aux :
     (term_node term_o) Mvs.t -> (term_node term_o) -> (BigInt.t,
     (term_node term_o)) st **)
 
-let rec t_subst_unsafe m t0 =
-  let t_subst = fun t1 -> t_subst_unsafe m t1 in
+let rec t_subst_unsafe_aux m t0 =
+  let t_subst = fun t1 -> t_subst_unsafe_aux m t1 in
   let t_open_bnd = fun v m0 t1 f ->
     (@@) (fun x ->
       let (m1, v0) = x in
-      (@@) (fun t2 -> (fun x -> x) (v0, t2)) (t_subst_unsafe m1 t1)) 
+      (@@) (fun t2 -> (fun x -> x) (v0, t2)) (t_subst_unsafe_aux m1 t1))
       (f m0 v)
   in
   let t_open_quant = fun vl m0 tl f ->
     (@@) (fun x ->
       let (m1, vl0) = x in
       (@@) (fun tl0 ->
-        (@@) (fun f1 -> (fun x -> x) ((vl0, tl0), f1)) (t_subst_unsafe m1 f))
-        (st_tr (tr_map (t_subst_unsafe m1) tl))) (vl_rename m0 vl)
+        (@@) (fun f1 -> (fun x -> x) ((vl0, tl0), f1))
+          (t_subst_unsafe_aux m1 f))
+        (st_tr (tr_map (t_subst_unsafe_aux m1) tl))) (vl_rename m0 vl)
   in
   let b_subst = fun bv f cl ->
     let (y, e) = bv in
@@ -1889,6 +1893,109 @@ let rec t_subst_unsafe m t0 =
      (@@) (fun bq1 -> (fun x -> x) (t_attr_copy t0 (t_quant q bq1)))
        (b_subst3 bq)
    | _ -> t_map_ctr_unsafe t_subst t0)
+
+(** val t_subst_unsafe :
+    (term_node term_o) Mvs.t -> (term_node term_o) -> (BigInt.t,
+    (term_node term_o)) st **)
+
+let t_subst_unsafe m t0 =
+  if Mvs.is_empty m then (fun x -> x) t0 else t_subst_unsafe_aux m t0
+
+(** val t_open_bound :
+    term_bound -> (BigInt.t, vsymbol * (term_node term_o)) st **)
+
+let t_open_bound = function
+| (p, t0) ->
+  let (v, _) = p in
+  (@@) (fun y ->
+    let (m, v0) = y in
+    (@@) (fun t1 -> (fun x -> x) (v0, t1)) (t_subst_unsafe m t0))
+    (vs_rename Mvs.empty v)
+
+(** val t_open_branch :
+    term_branch -> (BigInt.t, (pattern_node pattern_o) * (term_node term_o))
+    st **)
+
+let t_open_branch = function
+| (p0, t0) ->
+  let (p, _) = p0 in
+  (@@) (fun y ->
+    let (m, p1) = y in
+    (@@) (fun t1 -> (fun x -> x) (p1, t1)) (t_subst_unsafe m t0))
+    (pat_rename Mvs.empty p)
+
+(** val t_open_quant1 :
+    term_quant -> (BigInt.t, (vsymbol list * trigger) * (term_node term_o)) st **)
+
+let t_open_quant1 = function
+| (p, f) ->
+  let (p0, tl) = p in
+  let (vl, _) = p0 in
+  (@@) (fun y ->
+    let (m, vl0) = y in
+    (@@) (fun tl0 ->
+      (@@) (fun t1 -> (fun x -> x) ((vl0, tl0), t1)) (t_subst_unsafe m f))
+      (st_tr (tr_map (t_subst_unsafe m) tl))) (vl_rename Mvs.empty vl)
+
+(** val t_open_bound_with :
+    (term_node term_o) -> term_bound -> (BigInt.t, (term_node term_o))
+    errState **)
+
+let t_open_bound_with e = function
+| (p, t0) ->
+  let (v, _) = p in
+  (@@) (fun _ -> let m = Mvs.singleton v e in  (t_subst_unsafe m t0))
+    ( (vs_check v e))
+
+(** val t_open_bound_cb1 :
+    term_bound -> (BigInt.t, (vsymbol * (term_node term_o)) * (vsymbol ->
+    (term_node term_o) -> (vsymbol * bind_info) * (term_node term_o))) st **)
+
+let t_open_bound_cb1 tb =
+  (@@) (fun x ->
+    let (v, t0) = x in
+    let close = fun v' t' ->
+      if (&&) ((fun x y -> x == y || term_eqb x y) t0 t') (vs_equal v v')
+      then tb
+      else t_close_bound v' t'
+    in
+    (fun x -> x) ((v, t0), close)) (t_open_bound tb)
+
+(** val t_open_branch_cb1 :
+    term_branch -> (BigInt.t,
+    ((pattern_node pattern_o) * (term_node term_o)) * ((pattern_node pattern_o)
+    -> (term_node term_o) -> term_branch)) st **)
+
+let t_open_branch_cb1 tbr =
+  (@@) (fun x ->
+    let (p, t0) = x in
+    let close = fun p' t' ->
+      if (&&) ((fun x y -> x == y || term_eqb x y) t0 t')
+           ((fun x y -> x == y || pattern_eqb x y) p p')
+      then tbr
+      else t_close_branch p' t'
+    in
+    (fun x -> x) ((p, t0), close)) (t_open_branch tbr)
+
+(** val t_open_quant_cb1 :
+    term_quant -> (BigInt.t, ((vsymbol
+    list * trigger) * (term_node term_o)) * (vsymbol list -> trigger ->
+    (term_node term_o) -> (((vsymbol
+    list * bind_info) * trigger) * (term_node term_o)) errorM)) st **)
+
+let t_open_quant_cb1 fq =
+  (@@) (fun x ->
+    let (y, f) = x in
+    let (vl, tl) = y in
+    let close = fun vl' tl' f' ->
+      if (&&)
+           ((&&) ((fun x y -> x == y || term_eqb x y) f f')
+             (lists_equal (lists_equal (fun x y -> x == y || term_eqb x y))
+               tl tl')) (lists_equal vs_equal vl vl')
+      then  fq
+      else t_close_quant vl' tl' f'
+    in
+    (fun x -> x) (((vl, tl), f), close)) (t_open_quant1 fq)
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -2757,8 +2864,8 @@ let vl_rename h vl =
   | _ ->
       t_map_unsafe t_subst t  *)
 
-let t_subst_unsafe m t =
-  if Mvs.is_empty m then t else t_subst_unsafe m t
+(* let t_subst_unsafe m t =
+  if Mvs.is_empty m then t else t_subst_unsafe m t *)
 
 (* close bindings *)
 
@@ -2768,16 +2875,27 @@ let t_subst_unsafe m t =
 
 let t_open_quant (vl, b, tl, f) = vl, tl, f *)
 
-let  t_open_bound ((v,b),t) =
+(* let  t_open_bound ((v,b),t) =
   let m,v = vs_rename Mvs.empty v in
   v, t_subst_unsafe m t
 let t_open_branch ((p,b),t) =
   let m,p = pat_rename Mvs.empty p in
-  p, t_subst_unsafe m t
-let t_open_quant (((vl,b),tl),f) =
-  let m,vl = vl_rename Mvs.empty vl in
+  p, t_subst_unsafe m t*)
+
+(*JOSH: TODO MOVE
+  Equal in Coq but not OCaml*)
+let coq_to_ocaml_tup3 (x: ('a * 'b) * 'c) : 'a * 'b * 'c =
+  let (a, b), c = x in
+  a, b, c
+let coq_to_ocaml_tup4 (x: (('a * 'b) * 'c) * 'd) : 'a * 'b * 'c * 'd =
+  let ((a, b), c), d = x in
+  a, b, c, d
+
+let t_open_quant bq =
+  coq_to_ocaml_tup3 (t_open_quant1 bq)
+  (* let m,vl = vl_rename Mvs.empty vl in
   let tl = tr_map (t_subst_unsafe m) tl in
-  vl, tl, t_subst_unsafe m f
+  vl, tl, t_subst_unsafe m f *)
 
 
 
@@ -2795,10 +2913,10 @@ let t_open_quant (((vl,b),tl),f) =
   let m,v = vs_rename b.bv_subst v in
   v, t_subst_unsafe m t *)
 
-let t_open_bound_with e ((v,b),t) =
+(*let t_open_bound_with e ((v,b),t) =
   vs_check v e;
   let m = Mvs.singleton v e in
-  t_subst_unsafe m t
+  t_subst_unsafe m t *)
 
 
 
@@ -2810,28 +2928,33 @@ let t_clone_bound_id ?loc ?attrs ((v,_),_) =
 (** open bindings with optimized closing callbacks *)
 
 let t_open_bound_cb tb =
+  coq_to_ocaml_tup3 (t_open_bound_cb1 tb)
+  (* let (a, b), c = t_open_bound_cb1 tb in
+  a, b, c
   let v, t = t_open_bound tb in
   let close v' t' =
     if t == t' && vs_equal v v' then tb else t_close_bound v' t'
   in
-  v, t, close
+  v, t, close *)
 
 let t_open_branch_cb tbr =
-  let p, t = t_open_branch tbr in
+  coq_to_ocaml_tup3 (t_open_branch_cb1 tbr)
+  (* let p, t = t_open_branch tbr in
   let close p' t' =
     if t == t' && p == p' then tbr else t_close_branch p' t'
   in
-  p, t, close
+  p, t, close *)
 
 let t_open_quant_cb fq =
-  let vl, tl, f = t_open_quant fq in
+  coq_to_ocaml_tup4 (t_open_quant_cb1 fq)
+  (* let vl, tl, f = t_open_quant fq in
   let close vl' tl' f' =
     if f == f' &&
       Lists.equal (Lists.equal ((==) : term -> term -> bool)) tl tl' &&
       Lists.equal vs_equal vl vl'
     then fq else t_close_quant vl' tl' f'
   in
-  vl, tl, f, close
+  vl, tl, f, close *)
 
 (* retrieve bound identifiers (useful to detect sharing) *)
 
