@@ -541,6 +541,9 @@ exception ConstructorExpected of lsymbol
 
 exception TermExpected of term
 exception FmlaExpected of term
+
+(*TODO: move*)
+exception AssertFail of string
 open Constant
 open CoqHashtbl
 open Number
@@ -1498,11 +1501,11 @@ let t_var v =
 let t_const c t0 =
   mk_term (Tconst c) (Some t0)
 
-(** val t_app :
+(** val t_app1 :
     lsymbol -> (term_node term_o) list -> ty_node_c ty_o option ->
     (term_node term_o) **)
 
-let t_app f tl t0 =
+let t_app1 f tl t0 =
   mk_term (Tapp (f, tl)) t0
 
 (** val t_if :
@@ -1606,7 +1609,7 @@ let bound_map f = function
 let t_map_unsafe fn t0 =
   t_attr_copy t0
     (match t_node t0 with
-     | Tapp (f, tl) -> t_app f (map fn tl) (t_ty t0)
+     | Tapp (f, tl) -> t_app1 f (map fn tl) (t_ty t0)
      | Tif (f, t1, t2) -> t_if (fn f) (fn t1) (fn t2)
      | Tlet (e, b) -> t_let (fn e) (bound_map fn b) (t_ty t0)
      | Tcase (e, bl) -> t_case (fn e) (map (bound_map fn) bl) (t_ty t0)
@@ -1642,7 +1645,7 @@ let t_map_ctr_unsafe fn t0 =
   (@@) (fun t1 -> (fun x -> x) (t_attr_copy t0 t1))
     (match t_node t0 with
      | Tapp (f, tl) ->
-       (@@) (fun l -> (fun x -> x) (t_app f l (t_ty t0)))
+       (@@) (fun l -> (fun x -> x) (t_app1 f l (t_ty t0)))
          (st_list (map fn tl))
      | Tif (f, t1, t2) ->
        (@@) (fun f1 ->
@@ -1709,7 +1712,7 @@ let t_map_fold_unsafe fn acc t0 =
   match t_node t0 with
   | Tapp (f, tl) ->
     let (acc0, sl) = map_fold_left fn acc tl in
-    (acc0, (t_attr_copy t0 (t_app f sl (t_ty t0))))
+    (acc0, (t_attr_copy t0 (t_app1 f sl (t_ty t0))))
   | Tif (f, t1, t2) ->
     let (acc0, g) = fn acc f in
     let (acc1, s1) = fn acc0 t1 in
@@ -1996,6 +1999,113 @@ let t_open_quant_cb1 fq =
       else t_close_quant vl' tl' f'
     in
     (fun x -> x) (((vl, tl), f), close)) (t_open_quant1 fq)
+
+(** val t_peek_bound : term_bound -> ident **)
+
+let t_peek_bound = function
+| (p, _) -> let (v, _) = p in v.vs_name
+
+(** val t_peek_branch : term_branch -> Sid.t **)
+
+let t_peek_branch = function
+| (p0, _) ->
+  let (p, _) = p0 in
+  Svs.fold (fun v a -> Sid.add v.vs_name a) (pat_vars p) Sid.empty
+
+(** val t_peek_quant : term_quant -> ident list **)
+
+let t_peek_quant = function
+| (p, _) -> let (p0, _) = p in let (vl, _) = p0 in map (fun v -> v.vs_name) vl
+
+(** val ls_arg_inst :
+    lsymbol -> (term_node term_o) list -> (BigInt.t * ty_node_c ty_o hashset,
+    ty_node_c ty_o Mtv.t) errState **)
+
+let ls_arg_inst ls tl =
+  let mtch = fun s typ t0 -> (@@) (fun t1 -> ty_match s typ t1) ( (t_type t0))
+  in
+  (@@) (fun o ->
+    match o with
+    | Some l ->  l
+    | None ->  (raise (BadArity (ls, (int_length tl)))))
+    (fold_left2_errorHashcons mtch Mtv.empty ls.ls_args tl)
+
+(** val ls_app_inst :
+    lsymbol -> (term_node term_o) list -> ty_node_c ty_o option ->
+    (BigInt.t * ty_node_c ty_o hashset, ty_node_c ty_o Mtv.t) errState **)
+
+let ls_app_inst ls tl typ =
+  (@@) (fun s ->
+    match ls.ls_value with
+    | Some vty ->
+      (match typ with
+       | Some typ0 -> ty_match s vty typ0
+       | None ->  (raise (PredicateSymbolExpected ls)))
+    | None ->
+      (match typ with
+       | Some _ ->  (raise (FunctionSymbolExpected ls))
+       | None ->  s)) (ls_arg_inst ls tl)
+
+(** val t_app_infer :
+    lsymbol -> (term_node term_o) list -> (BigInt.t * ty_node_c ty_o hashset,
+    (term_node term_o)) errState **)
+
+let t_app_infer ls tl =
+  (@@) (fun s ->
+    let o = oty_inst s ls.ls_value in
+    (match o with
+     | Some h -> (@@) (fun h1 ->  (t_app1 ls tl (Some h1))) ( h)
+     | None ->  (t_app1 ls tl None))) (ls_arg_inst ls tl)
+
+(** val t_app :
+    lsymbol -> (term_node term_o) list -> ty_node_c ty_o option ->
+    (BigInt.t * ty_node_c ty_o hashset, (term_node term_o)) errState **)
+
+let t_app ls tl typ =
+  (@@) (fun _ ->  (t_app1 ls tl typ)) (ls_app_inst ls tl typ)
+
+(** val fs_app :
+    lsymbol -> (term_node term_o) list -> ty_node_c ty_o ->
+    (BigInt.t * ty_node_c ty_o hashset, (term_node term_o)) errState **)
+
+let fs_app fs tl ty =
+  t_app fs tl (Some ty)
+
+(** val ps_app :
+    lsymbol -> (term_node term_o) list -> (BigInt.t * ty_node_c ty_o hashset,
+    (term_node term_o)) errState **)
+
+let ps_app ps tl =
+  t_app ps tl None
+
+(** val coq_assert : bool -> string -> unit errorM **)
+
+let coq_assert b msg =
+  if b then  () else raise (AssertFail msg)
+
+(** val t_nat_const :
+    Stdlib.Int.t -> (BigInt.t * ty_node_c ty_o hashset, (term_node term_o))
+    errState **)
+
+let t_nat_const n =
+  (@@) (fun _ ->
+    (@@) (fun t0 ->  (t_const (int_const_of_int n) t0)) ( ty_int))
+    (
+      (coq_assert
+        ((fun x y -> Stdlib.Int.compare x y >= 0) n Stdlib.Int.zero)
+        "t_nat_const negative"))
+
+(** val t_int_const :
+    BigInt.t -> (BigInt.t * ty_node_c ty_o hashset, (term_node term_o)) st **)
+
+let t_int_const n =
+  (@@) (fun t0 -> (fun x -> x) (t_const (int_const1 ILitUnk n) t0)) ty_int
+
+(** val t_string_const :
+    string -> (BigInt.t * ty_node_c ty_o hashset, (term_node term_o)) st **)
+
+let t_string_const s =
+  (@@) (fun t0 -> (fun x -> x) (t_const (string_const s) t0)) ty_str
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -2958,17 +3068,17 @@ let t_open_quant_cb fq =
 
 (* retrieve bound identifiers (useful to detect sharing) *)
 
-let t_peek_bound ((v,_),_) = v.vs_name
+(* let t_peek_bound ((v,_),_) = v.vs_name
 
 let t_peek_branch ((p,_),_) =
   Svs.fold (fun v a -> Sid.add v.vs_name a) p.pat_vars Sid.empty
 
 let t_peek_quant (((vl,_),_),_) =
-  List.map (fun v -> v.vs_name) vl
+  List.map (fun v -> v.vs_name) vl *)
 
 (* constructors with type checking *)
 
-let ls_arg_inst ls tl =
+(* let ls_arg_inst ls tl =
   let mtch s ty t = ty_match s ty (t_type t) in
   try List.fold_left2 mtch Mtv.empty ls.ls_args tl with
     | Invalid_argument _ -> raise (BadArity (ls, (BigInt.of_int (List.length tl)))) (*JOSH of_int*)
@@ -2995,13 +3105,13 @@ let t_nat_const n =
   t_const (Constant.int_const_of_int n) ty_int
 
 let t_int_const n =
-  t_const (Constant.int_const n) Ty.ty_int
+  t_const (Constant.int_const n) Ty.ty_int *)
 
 let t_real_const ?pow2 ?pow5 s =
   t_const (Constant.real_const ?pow2 ?pow5 s) Ty.ty_real
 
-let t_string_const s =
-  t_const (Constant.string_const s) Ty.ty_str
+(* let t_string_const s =
+  t_const (Constant.string_const s) Ty.ty_str *)
 
 exception InvalidIntegerLiteralType of ty
 exception InvalidRealLiteralType of ty

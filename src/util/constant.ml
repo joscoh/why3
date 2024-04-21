@@ -65,6 +65,21 @@ let constant_hash = function
 | ConstInt i -> int_constant_hash i
 | ConstReal r -> real_constant_hash r
 | ConstStr s -> str_hash s
+
+(** val int_const1 : int_literal_kind -> BigInt.t -> constant **)
+
+let int_const1 k n =
+  ConstInt { il_kind = k; il_int = n }
+
+(** val int_const_of_int : Stdlib.Int.t -> constant **)
+
+let int_const_of_int n =
+  int_const1 ILitUnk (BigInt.of_int n)
+
+(** val string_const : string -> constant **)
+
+let string_const s =
+  ConstStr s
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -127,10 +142,11 @@ let compare_const ?(structural=true) c1 c2 =
       Stdlib.compare c1 c2 *)
 
 let int_const ?(il_kind=ILitUnk) n =
-  ConstInt { il_kind; il_int = n }
+int_const1 il_kind n
+  (* ConstInt { il_kind; il_int = n } *)
 
-let int_const_of_int n =
-  int_const (BigInt.of_int n)
+(* let int_const_of_int n =
+  int_const (BigInt.of_int n) *)
 
 let real_const ?(pow2 = BigInt.zero) ?(pow5 = BigInt.zero) i =
   ConstReal { rl_kind = RLitUnk; rl_real = real_value ~pow2 ~pow5 i }
