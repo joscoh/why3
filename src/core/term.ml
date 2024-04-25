@@ -548,6 +548,8 @@ exception AssertFail of string
 exception InvalidIntegerLiteralType of ty
 exception InvalidRealLiteralType of ty
 exception InvalidStringLiteralType of ty
+
+exception EmptyCase
 open Constant
 open CoqHashtbl
 open CoqUtil
@@ -1513,51 +1515,51 @@ let t_const1 c t0 =
 let t_app1 f tl t0 =
   mk_term (Tapp (f, tl)) t0
 
-(** val t_if :
+(** val t_if1 :
     (term_node term_o) -> (term_node term_o) -> (term_node term_o) ->
     (term_node term_o) **)
 
-let t_if f t1 t2 =
+let t_if1 f t1 t2 =
   mk_term (Tif (f, t1, t2)) (t_ty t2)
 
-(** val t_let :
+(** val t_let1 :
     (term_node term_o) -> ((vsymbol * bind_info) * (term_node term_o)) ->
     ty_node_c ty_o option -> (term_node term_o) **)
 
-let t_let t1 bt t0 =
+let t_let1 t1 bt t0 =
   mk_term (Tlet (t1, bt)) t0
 
-(** val t_case :
+(** val t_case1 :
     (term_node term_o) ->
     (((pattern_node pattern_o) * bind_info) * (term_node term_o)) list ->
     ty_node_c ty_o option -> (term_node term_o) **)
 
-let t_case t1 bl t0 =
+let t_case1 t1 bl t0 =
   mk_term (Tcase (t1, bl)) t0
 
-(** val t_eps :
+(** val t_eps1 :
     ((vsymbol * bind_info) * (term_node term_o)) -> ty_node_c ty_o option ->
     (term_node term_o) **)
 
-let t_eps bf t0 =
+let t_eps1 bf t0 =
   mk_term (Teps bf) t0
 
-(** val t_quant :
+(** val t_quant1 :
     quant -> (((vsymbol list * bind_info) * (term_node term_o) list
     list) * (term_node term_o)) -> (term_node term_o) **)
 
-let t_quant q qf =
+let t_quant1 q qf =
   mk_term (Tquant (q, qf)) None
 
-(** val t_binary :
+(** val t_binary1 :
     binop -> (term_node term_o) -> (term_node term_o) -> (term_node term_o) **)
 
-let t_binary op f g =
+let t_binary1 op f g =
   mk_term (Tbinop (op, f, g)) None
 
-(** val t_not : (term_node term_o) -> (term_node term_o) **)
+(** val t_not1 : (term_node term_o) -> (term_node term_o) **)
 
-let t_not f =
+let t_not1 f =
   mk_term (Tnot f) None
 
 (** val t_true : (term_node term_o) **)
@@ -1615,15 +1617,15 @@ let t_map_unsafe fn t0 =
   t_attr_copy t0
     (match t_node t0 with
      | Tapp (f, tl) -> t_app1 f (map fn tl) (t_ty t0)
-     | Tif (f, t1, t2) -> t_if (fn f) (fn t1) (fn t2)
-     | Tlet (e, b) -> t_let (fn e) (bound_map fn b) (t_ty t0)
-     | Tcase (e, bl) -> t_case (fn e) (map (bound_map fn) bl) (t_ty t0)
-     | Teps b -> t_eps (bound_map fn b) (t_ty t0)
+     | Tif (f, t1, t2) -> t_if1 (fn f) (fn t1) (fn t2)
+     | Tlet (e, b) -> t_let1 (fn e) (bound_map fn b) (t_ty t0)
+     | Tcase (e, bl) -> t_case1 (fn e) (map (bound_map fn) bl) (t_ty t0)
+     | Teps b -> t_eps1 (bound_map fn b) (t_ty t0)
      | Tquant (q, p) ->
        let (p0, f) = p in
-       let (p1, tl) = p0 in t_quant q ((p1, (tr_map fn tl)), (fn f))
-     | Tbinop (op, f1, f2) -> t_binary op (fn f1) (fn f2)
-     | Tnot f1 -> t_not (fn f1)
+       let (p1, tl) = p0 in t_quant1 q ((p1, (tr_map fn tl)), (fn f))
+     | Tbinop (op, f1, f2) -> t_binary1 op (fn f1) (fn f2)
+     | Tnot f1 -> t_not1 (fn f1)
      | _ -> t0)
 
 (** val bound_map_ctr :
@@ -1655,29 +1657,30 @@ let t_map_ctr_unsafe fn t0 =
      | Tif (f, t1, t2) ->
        (@@) (fun f1 ->
          (@@) (fun t1' ->
-           (@@) (fun t2' -> (fun x -> x) (t_if f1 t1' t2')) (fn t2)) 
+           (@@) (fun t2' -> (fun x -> x) (t_if1 f1 t1' t2')) (fn t2)) 
            (fn t1)) (fn f)
      | Tlet (e, b) ->
        (@@) (fun e1 ->
-         (@@) (fun b1 -> (fun x -> x) (t_let e1 b1 (t_ty t0)))
+         (@@) (fun b1 -> (fun x -> x) (t_let1 e1 b1 (t_ty t0)))
            (bound_map_ctr fn b)) (fn e)
      | Tcase (e, bl) ->
        (@@) (fun e1 ->
-         (@@) (fun l -> (fun x -> x) (t_case e1 l (t_ty t0)))
+         (@@) (fun l -> (fun x -> x) (t_case1 e1 l (t_ty t0)))
            (st_list (map (bound_map_ctr fn) bl))) (fn e)
      | Teps b ->
-       (@@) (fun b1 -> (fun x -> x) (t_eps b1 (t_ty t0))) (bound_map_ctr fn b)
+       (@@) (fun b1 -> (fun x -> x) (t_eps1 b1 (t_ty t0)))
+         (bound_map_ctr fn b)
      | Tquant (q, p) ->
        let (p0, f) = p in
        let (p1, tl) = p0 in
        (@@) (fun l ->
-         (@@) (fun f1 -> (fun x -> x) (t_quant q ((p1, l), f1))) (fn f))
+         (@@) (fun f1 -> (fun x -> x) (t_quant1 q ((p1, l), f1))) (fn f))
          (st_tr (tr_map fn tl))
      | Tbinop (op, f1, f2) ->
        (@@) (fun f1' ->
-         (@@) (fun f2' -> (fun x -> x) (t_binary op f1' f2')) (fn f2)) 
+         (@@) (fun f2' -> (fun x -> x) (t_binary1 op f1' f2')) (fn f2))
          (fn f1)
-     | Tnot f1 -> (@@) (fun f1' -> (fun x -> x) (t_not f1')) (fn f1)
+     | Tnot f1 -> (@@) (fun f1' -> (fun x -> x) (t_not1 f1')) (fn f1)
      | _ -> (fun x -> x) t0)
 
 (** val bound_fold :
@@ -1721,30 +1724,30 @@ let t_map_fold_unsafe fn acc t0 =
   | Tif (f, t1, t2) ->
     let (acc0, g) = fn acc f in
     let (acc1, s1) = fn acc0 t1 in
-    let (acc2, s2) = fn acc1 t2 in (acc2, (t_attr_copy t0 (t_if g s1 s2)))
+    let (acc2, s2) = fn acc1 t2 in (acc2, (t_attr_copy t0 (t_if1 g s1 s2)))
   | Tlet (e, b) ->
     let (acc0, e0) = fn acc e in
     let (acc1, b0) = bound_map_fold fn acc0 b in
-    (acc1, (t_attr_copy t0 (t_let e0 b0 (t_ty t0))))
+    (acc1, (t_attr_copy t0 (t_let1 e0 b0 (t_ty t0))))
   | Tcase (e, bl) ->
     let (acc0, e0) = fn acc e in
     let (acc1, bl0) = map_fold_left (bound_map_fold fn) acc0 bl in
-    (acc1, (t_attr_copy t0 (t_case e0 bl0 (t_ty t0))))
+    (acc1, (t_attr_copy t0 (t_case1 e0 bl0 (t_ty t0))))
   | Teps b ->
     let (acc0, b0) = bound_map_fold fn acc b in
-    (acc0, (t_attr_copy t0 (t_eps b0 (t_ty t0))))
+    (acc0, (t_attr_copy t0 (t_eps1 b0 (t_ty t0))))
   | Tquant (q, p) ->
     let (p0, f1) = p in
     let (p1, tl) = p0 in
     let (acc0, tl0) = tr_map_fold fn acc tl in
     let (acc1, f2) = fn acc0 f1 in
-    (acc1, (t_attr_copy t0 (t_quant q ((p1, tl0), f2))))
+    (acc1, (t_attr_copy t0 (t_quant1 q ((p1, tl0), f2))))
   | Tbinop (op, f1, f2) ->
     let (acc0, g1) = fn acc f1 in
     let (acc1, g2) = fn acc0 f2 in
-    (acc1, (t_attr_copy t0 (t_binary op g1 g2)))
+    (acc1, (t_attr_copy t0 (t_binary1 op g1 g2)))
   | Tnot f1 ->
-    let (acc0, g1) = fn acc f1 in (acc0, (t_attr_copy t0 (t_not g1)))
+    let (acc0, g1) = fn acc f1 in (acc0, (t_attr_copy t0 (t_not1 g1)))
   | _ -> (acc, t0)
 
 (** val fresh_vsymbol : vsymbol -> (BigInt.t, vsymbol) st **)
@@ -1887,18 +1890,19 @@ let rec t_subst_unsafe_aux m t0 =
    | Tvar u -> (fun x -> x) (t_attr_copy t0 (Mvs.find_def t0 u m))
    | Tlet (e, bt) ->
      (@@) (fun t1 ->
-       (@@) (fun b1 -> (fun x -> x) (t_attr_copy t0 (t_let t1 b1 (t_ty t0))))
-         (b_subst1 bt)) (t_subst e)
+       (@@) (fun b1 ->
+         (fun x -> x) (t_attr_copy t0 (t_let1 t1 b1 (t_ty t0)))) (b_subst1 bt))
+       (t_subst e)
    | Tcase (e, bl) ->
      (@@) (fun d ->
        (@@) (fun bl0 ->
-         (fun x -> x) (t_attr_copy t0 (t_case d bl0 (t_ty t0))))
+         (fun x -> x) (t_attr_copy t0 (t_case1 d bl0 (t_ty t0))))
          (st_list (map b_subst2 bl))) (t_subst e)
    | Teps bf ->
-     (@@) (fun bf1 -> (fun x -> x) (t_attr_copy t0 (t_eps bf1 (t_ty t0))))
+     (@@) (fun bf1 -> (fun x -> x) (t_attr_copy t0 (t_eps1 bf1 (t_ty t0))))
        (b_subst1 bf)
    | Tquant (q, bq) ->
-     (@@) (fun bq1 -> (fun x -> x) (t_attr_copy t0 (t_quant q bq1)))
+     (@@) (fun bq1 -> (fun x -> x) (t_attr_copy t0 (t_quant1 q bq1)))
        (b_subst3 bq)
    | _ -> t_map_ctr_unsafe t_subst t0)
 
@@ -2154,6 +2158,115 @@ let check_literal c t0 =
 
 let t_const c t0 =
   (@@) (fun _ ->  (t_const1 c t0)) (check_literal c t0)
+
+(** val t_if :
+    (term_node term_o) -> (term_node term_o) -> (term_node term_o) ->
+    (term_node term_o) errorM **)
+
+let t_if f t1 t2 =
+  (@@) (fun _ -> (@@) (fun p ->  (t_if1 p t1 t2)) (t_prop f))
+    (t_ty_check t1 (t_ty t1))
+
+(** val t_let :
+    (term_node term_o) -> term_bound -> (term_node term_o) errorM **)
+
+let t_let t1 bt = match bt with
+| (p, t2) ->
+  let (v, _) = p in (@@) (fun _ ->  (t_let1 t1 bt (t_ty t2))) (vs_check v t1)
+
+(** val t_case :
+    (term_node term_o) -> term_branch list -> (term_node term_o) errorM **)
+
+let t_case t0 bl =
+  (@@) (fun tty ->
+    (@@) (fun bty ->
+      let t_check_branch = fun tb ->
+        let (p0, tbr) = tb in
+        let (p, _) = p0 in
+        (@@) (fun _ -> t_ty_check tbr bty) (ty_equal_check tty (pat_ty p))
+      in
+      (@@) (fun _ ->  (t_case1 t0 bl bty))
+        (errorM_list (map t_check_branch bl)))
+      (match bl with
+       | [] -> raise EmptyCase
+       | t1 :: _ -> let (_, tbr) = t1 in  (t_ty tbr))) (t_type t0)
+
+(** val t_eps : term_bound -> (term_node term_o) errorM **)
+
+let t_eps bf = match bf with
+| (p, f) ->
+  let (v, _) = p in (@@) (fun _ ->  (t_eps1 bf (Some v.vs_ty))) (t_prop f)
+
+(** val t_quant : quant -> term_quant -> (term_node term_o) **)
+
+let t_quant q qf = match qf with
+| (p, f) ->
+  let (p0, _) = p in let (vl, _) = p0 in if null vl then f else t_quant1 q qf
+
+(** val t_binary :
+    binop -> (term_node term_o) -> (term_node term_o) -> (term_node term_o)
+    errorM **)
+
+let t_binary op f1 f2 =
+  (@@) (fun p1 -> (@@) (fun p2 ->  (t_binary1 op p1 p2)) (t_prop f2))
+    (t_prop f1)
+
+(** val t_not : (term_node term_o) -> (term_node term_o) errorM **)
+
+let t_not f =
+  (@@) (fun p ->  (t_not1 p)) (t_prop f)
+
+(** val t_forall : term_quant -> (term_node term_o) **)
+
+let t_forall =
+  t_quant Tforall
+
+(** val t_exists : term_quant -> (term_node term_o) **)
+
+let t_exists =
+  t_quant Texists
+
+(** val t_and :
+    (term_node term_o) -> (term_node term_o) -> (term_node term_o) errorM **)
+
+let t_and =
+  t_binary Tand
+
+(** val t_or :
+    (term_node term_o) -> (term_node term_o) -> (term_node term_o) errorM **)
+
+let t_or =
+  t_binary Tor
+
+(** val t_implies :
+    (term_node term_o) -> (term_node term_o) -> (term_node term_o) errorM **)
+
+let t_implies =
+  t_binary Timplies
+
+(** val t_iff :
+    (term_node term_o) -> (term_node term_o) -> (term_node term_o) errorM **)
+
+let t_iff =
+  t_binary Tiff
+
+(** val t_and_l : (term_node term_o) list -> (term_node term_o) errorM **)
+
+let rec t_and_l = function
+| [] ->  t_true
+| f :: fl ->
+  (match fl with
+   | [] ->  f
+   | _ :: _ -> (@@) (fun f1 -> t_and f f1) (t_and_l fl))
+
+(** val t_or_l : (term_node term_o) list -> (term_node term_o) errorM **)
+
+let rec t_or_l = function
+| [] ->  t_false
+| f :: fl ->
+  (match fl with
+   | [] ->  f
+   | _ :: _ -> (@@) (fun f1 -> t_or f f1) (t_or_l fl))
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -3184,7 +3297,7 @@ let check_literal c ty =
 
 (* let t_const c ty = check_literal c ty; t_const c ty *)
 
-let t_if f t1 t2 =
+(* let t_if f t1 t2 =
   t_ty_check t2 t1.t_ty;
   t_if (t_prop f) t1 t2
 
@@ -3232,7 +3345,7 @@ let rec t_and_l = function
 let rec t_or_l = function
   | [] -> t_false
   | [f] -> f
-  | f::fl -> t_or f (t_or_l fl)
+  | f::fl -> t_or f (t_or_l fl) *)
 
 let asym_split = create_attribute "asym_split"
 let stop_split = create_attribute "stop_split"
