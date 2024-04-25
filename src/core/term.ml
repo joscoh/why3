@@ -2267,6 +2267,49 @@ let rec t_or_l = function
   (match fl with
    | [] ->  f
    | _ :: _ -> (@@) (fun f1 -> t_or f f1) (t_or_l fl))
+
+(** val t_quant_close :
+    quant -> vsymbol list -> (term_node term_o) list list ->
+    (term_node term_o) -> (term_node term_o) errorM **)
+
+let t_quant_close q vl tl f =
+  if null vl
+  then t_prop f
+  else (@@) (fun tq ->  (t_quant q tq)) (t_close_quant vl tl f)
+
+(** val t_forall_close :
+    vsymbol list -> (term_node term_o) list list -> (term_node term_o) ->
+    (term_node term_o) errorM **)
+
+let t_forall_close =
+  t_quant_close Tforall
+
+(** val t_exists_close :
+    vsymbol list -> (term_node term_o) list list -> (term_node term_o) ->
+    (term_node term_o) errorM **)
+
+let t_exists_close =
+  t_quant_close Texists
+
+(** val t_let_close :
+    vsymbol -> (term_node term_o) -> (term_node term_o) -> (term_node term_o)
+    errorM **)
+
+let t_let_close v t1 t2 =
+  t_let t1 (t_close_bound v t2)
+
+(** val t_case_close :
+    (term_node term_o) -> ((pattern_node pattern_o) * (term_node term_o))
+    list -> (term_node term_o) errorM **)
+
+let t_case_close t0 l =
+  t_case t0 (map (fun x -> t_close_branch (fst x) (snd x)) l)
+
+(** val t_eps_close :
+    vsymbol -> (term_node term_o) -> (term_node term_o) errorM **)
+
+let t_eps_close v f =
+  t_eps (t_close_bound v f)
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
