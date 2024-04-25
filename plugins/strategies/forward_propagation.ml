@@ -41,11 +41,12 @@ type symbols = {
   add : lsymbol;
   sub : lsymbol;
   mul : lsymbol;
-  div : lsymbol;
+  _div : lsymbol;
   minus : lsymbol;
   add_infix : lsymbol;
   sub_infix : lsymbol;
   mul_infix : lsymbol;
+  div_infix : lsymbol;
   minus_infix : lsymbol;
   lt : lsymbol;
   lt_infix : lsymbol;
@@ -72,13 +73,13 @@ let ( !! ) s = Option.get !s
 (* This type corresponds to the numeric info we have on a real/float term *)
 type term_info = {
   (*
-   * Forward error associated to a real term "exact_t"
+   * Forward error associated to a float term "t"
    * "Some (exact_t, rel_err, t', cst_err)" stands for
    * "|t - exact_t| <= rel_err * t' + cst_err", where |exact_t| <= t'
    *)
   error : (term * term * term * term) option;
   (*
-   * "Some (op, [x; y])" means that the term is the result of the FP operation
+   * "Some (op, [x; y])" means that the term "t" is the result of the FP operation
    * "op" on "x" and "y"
    *)
   ieee_op : (lsymbol * term list) option;
@@ -173,14 +174,14 @@ let is_uop ls =
   is_uadd_ls ls || is_usub_ls ls || is_umul_ls ls || is_udiv_ls ls
   || is_uminus_ls ls
 
-let minus t = fs_app !!symbols.minus [ t ] ty_real
+let minus t = fs_app !!symbols.minus_infix [ t ] ty_real
 
 let minus_simp t =
   match t.t_node with
   | Tapp (ls, [ t' ]) when is_minus_ls ls -> t'
   | _ -> minus t
 
-let add t1 t2 = fs_app !!symbols.add [ t1; t2 ] ty_real
+let add t1 t2 = fs_app !!symbols.add_infix [ t1; t2 ] ty_real
 
 let add_simp t1 t2 =
   if is_zero t1 then
@@ -190,7 +191,7 @@ let add_simp t1 t2 =
   else
     add t1 t2
 
-let sub t1 t2 = fs_app !!symbols.sub [ t1; t2 ] ty_real
+let sub t1 t2 = fs_app !!symbols.sub_infix [ t1; t2 ] ty_real
 
 let sub_simp t1 t2 =
   if is_zero t1 then
@@ -200,8 +201,8 @@ let sub_simp t1 t2 =
   else
     sub t1 t2
 
-let mul t1 t2 = fs_app !!symbols.mul [ t1; t2 ] ty_real
-let div t1 t2 = fs_app !!symbols.div [ t1; t2 ] ty_real
+let mul t1 t2 = fs_app !!symbols.mul_infix [ t1; t2 ] ty_real
+let div t1 t2 = fs_app !!symbols.div_infix [ t1; t2 ] ty_real
 
 let mul_simp t1 t2 =
   if is_zero t1 || is_zero t2 then
@@ -233,7 +234,7 @@ let ( ++. ) x y = add_simp x y
 let ( --. ) x y = sub_simp x y
 let ( **. ) x y = mul_simp x y
 let ( //. ) x y = div_simp x y
-let ( <=. ) x y = ps_app !!symbols.le [ x; y ]
+let ( <=. ) x y = ps_app !!symbols.le_infix [ x; y ]
 
 let is_ty_float ty =
   match ty.ty_node with
@@ -417,10 +418,15 @@ let combine_uop_errors info uop t1 exact_t1 t1_rel_err t1' t1_cst_err t2
   let strat =
     Sapply_trans
       ( "apply",
-        [ str ^ "_error_propagation" ],
+        [
+          str ^ "_error_propagation";
+          "with";
+          sprintf "%s,%s" (term_to_str t1) (term_to_str t2);
+        ],
         [
           strat_for_t1;
           strat_for_t2;
+          default_strat ();
           default_strat ();
           default_strat ();
           default_strat ();
@@ -436,12 +442,13 @@ let combine_uop_errors info uop t1 exact_t1 t1_rel_err t1' t1_cst_err t2
      able to resolve the equality. We prefer to not manage these cases and let
      the provers resolve these kind of trivial equalities, therefore we don't
      apply the lemma on r but on `t1 uop t2`. *)
-  let r' = t_app_infer uop [ t1; t2 ] in
-  let f = abs (to_real r' -. exact) <=. total_err in
+  (* let r' = t_app_infer uop [ t1; t2 ] in *)
+  (* let f = abs (to_real r' -. exact) <=. total_err in *)
+  let f = abs (to_real r -. exact) <=. total_err in
   if t_equal total_err total_err_simp then
     (info, f, strat)
   else
-    let f_simp = abs (to_real r' -. exact) <=. total_err_simp in
+    let f_simp = abs (to_real r -. exact) <=. total_err_simp in
     ( info,
       f_simp,
       Sapply_trans ("assert", [ term_to_str f ], [ strat; default_strat () ]) )
@@ -863,6 +870,7 @@ let parse_error is_match exact t =
           if is_zero factor then
             (abs_err, false)
           else
+            (* FIXME: we should combine the factor of t1 and factor of t2 *)
             ((a, factor, a', cst ++. t1), false)
         else
           ((a, factor, a', cst ++. t2), false)
@@ -1024,7 +1032,11 @@ let rec collect info f =
   | Tbinop (Tand, f1, f2) ->
     let info = collect info f1 in
     collect info f2
-  | Tapp (ls, [ _; _ ]) when is_ineq_ls ls -> (
+  | Tapp (ls, [ _; _ ]) when is_ineq_ls ls ->
+      (* term of the form x op y where op is an inequality "<" or "<=" over reals
+         FIXME: we should handle ">" and ">=" as well
+      *)
+      (
     match parse_ineq f with
     | Some (x, exact_x, c) ->
       let error_fmla = parse_error exact_x c in
@@ -1086,11 +1098,12 @@ let init_symbols env printer =
   let add = ns_find_ls real.th_export [ Ident.op_infix "+" ] in
   let sub = ns_find_ls real.th_export [ Ident.op_infix "-" ] in
   let mul = ns_find_ls real.th_export [ Ident.op_infix "*" ] in
-  let div = ns_find_ls real.th_export [ Ident.op_infix "/" ] in
+  let _div = ns_find_ls real.th_export [ Ident.op_infix "/" ] in
   let minus = ns_find_ls real.th_export [ Ident.op_prefix "-" ] in
   let add_infix = ns_find_ls real_infix.th_export [ Ident.op_infix "+." ] in
   let sub_infix = ns_find_ls real_infix.th_export [ Ident.op_infix "-." ] in
   let mul_infix = ns_find_ls real_infix.th_export [ Ident.op_infix "*." ] in
+  let div_infix = ns_find_ls real_infix.th_export [ Ident.op_infix "/." ] in
   let minus_infix = ns_find_ls real_infix.th_export [ Ident.op_prefix "-." ] in
   let real_abs = Env.read_theory env [ "real" ] "Abs" in
   let abs = ns_find_ls real_abs.th_export [ "abs" ] in
@@ -1141,12 +1154,13 @@ let init_symbols env printer =
         add;
         sub;
         mul;
-        div;
+        _div;
         minus;
         sum;
         add_infix;
         sub_infix;
         mul_infix;
+        div_infix;
         minus_infix;
         lt;
         lt_infix;
@@ -1166,7 +1180,9 @@ let init_symbols env printer =
         tv_printer = printer.Trans.aprinter;
       }
 
-let numeric _ task =
+let numeric env task =
+  let naming_table = Args_wrapper.build_naming_tables task in
+  init_symbols env naming_table;
   let printer = Args_wrapper.build_naming_tables task in
   (* Update the printer at each call, but not the symbols *)
   symbols :=
@@ -1176,8 +1192,7 @@ let numeric _ task =
         ident_printer = printer.Trans.printer;
         tv_printer = printer.Trans.aprinter;
       };
-  let goal = task_goal_fmla task in
-  let floats = get_floats goal in
+  (* We start by collecting infos from the hypotheses of the task *)
   let info =
     List.fold_left collect_info
       { terms_info = Mterm.empty; fns_info = Mls.empty; ls_defs = Mls.empty }
@@ -1189,6 +1204,8 @@ let numeric _ task =
      error propagation is performed using propagation lemmas of the ufloat
      stdlib with the data contained in `info`. For each new formula created, a
      proof tree is generated with the necessary steps to prove it. *)
+  let goal = task_goal_fmla task in
+  let floats = get_floats goal in
   let f, strats =
     List.fold_left
       (fun (f, l) t ->
@@ -1210,13 +1227,6 @@ let numeric _ task =
     let s = Sapply_trans ("split_vc", [], List.rev strats) in
     Sapply_trans ("assert", [ term_to_str f ], [ s; default_strat () ])
 
-let numeric_init env task =
-  let naming_table = Args_wrapper.build_naming_tables task in
-  init_symbols env naming_table;
-  (* `inline_trivial` simplifies the process of finding relevant information in
-     the task *)
-  Scont ("inline_trivial", [], numeric)
-
 let () =
-  register_strat "forward_propagation" numeric_init
+  register_strat "forward_propagation" numeric
     ~desc:"Compute@ forward@ error@ of@ float@ computations."
