@@ -260,6 +260,17 @@ let real_value_hash r =
 
 let real_constant_hash r =
   combine_big (real_literal_kind_hash r.rl_kind) (real_value_hash r.rl_real)
+exception OutOfRange of int_constant
+open Monads
+
+
+(** val check_range : int_constant -> int_range -> unit errorM **)
+
+let check_range c r =
+  let cval = c.il_int in
+  if (||) (BigInt.lt cval r.ir_lower) (BigInt.lt r.ir_upper cval)
+  then raise (OutOfRange c)
+  else  ()
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -749,11 +760,11 @@ let print_real_constant support fmt r =
 
 (** Range checks *)
 
-exception OutOfRange of int_constant
+(* exception OutOfRange of int_constant
 
 let check_range c {ir_lower = lo; ir_upper = hi} =
   let cval = c.il_int in
-  if BigInt.lt cval lo || BigInt.gt cval hi then raise (OutOfRange c)
+  if BigInt.lt cval lo || BigInt.gt cval hi then raise (OutOfRange c) *)
 
 let int_range_equal ir1 ir2 =
   BigInt.eq ir1.ir_lower ir2.ir_lower && BigInt.eq ir1.ir_upper ir2.ir_upper

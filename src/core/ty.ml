@@ -1,7 +1,6 @@
 open BinNums
 open Exthtbl2
 open CoqHashtbl
-open Number
 open CoqUtil
 open Weakhtbl
 open Wstdlib
@@ -10,6 +9,7 @@ open Ident
 open IntFuncs
 open List0
 open Monads
+open Number
 open Specif
 open StateMonad
 open Hashcons
@@ -324,7 +324,6 @@ exception UnexpectedProp
 exception TypeMismatch of ty * ty
 open Exthtbl2
 open CoqHashtbl
-open Number
 open CoqUtil
 open Weakhtbl
 open Wstdlib
@@ -333,6 +332,7 @@ open Ident
 open IntFuncs
 open List0
 open Monads
+open Number
 
 
 (** val mk_ty : ty_node_c -> ty_node_c ty_o **)

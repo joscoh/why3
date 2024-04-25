@@ -544,9 +544,12 @@ exception FmlaExpected of term
 
 (*TODO: move*)
 exception AssertFail of string
+
+exception InvalidIntegerLiteralType of ty
+exception InvalidRealLiteralType of ty
+exception InvalidStringLiteralType of ty
 open Constant
 open CoqHashtbl
-open Number
 open CoqUtil
 open Datatypes
 open Ident
@@ -554,6 +557,8 @@ open IntFuncs
 open List0
 open Loc
 open Monads
+open Number
+
 
 open Ty
 
@@ -1496,9 +1501,9 @@ let mk_term n t0 =
 let t_var v =
   mk_term (Tvar v) (Some v.vs_ty)
 
-(** val t_const : constant -> ty_node_c ty_o -> (term_node term_o) **)
+(** val t_const1 : constant -> ty_node_c ty_o -> (term_node term_o) **)
 
-let t_const c t0 =
+let t_const1 c t0 =
   mk_term (Tconst c) (Some t0)
 
 (** val t_app1 :
@@ -2089,7 +2094,7 @@ let coq_assert b msg =
 
 let t_nat_const n =
   (@@) (fun _ ->
-    (@@) (fun t0 ->  (t_const (int_const_of_int n) t0)) ( ty_int))
+    (@@) (fun t0 ->  (t_const1 (int_const_of_int n) t0)) ( ty_int))
     (
       (coq_assert
         ((fun x y -> Stdlib.Int.compare x y >= 0) n Stdlib.Int.zero)
@@ -2099,13 +2104,56 @@ let t_nat_const n =
     BigInt.t -> (BigInt.t * ty_node_c ty_o hashset, (term_node term_o)) st **)
 
 let t_int_const n =
-  (@@) (fun t0 -> (fun x -> x) (t_const (int_const1 ILitUnk n) t0)) ty_int
+  (@@) (fun t0 -> (fun x -> x) (t_const1 (int_const1 ILitUnk n) t0)) ty_int
 
 (** val t_string_const :
     string -> (BigInt.t * ty_node_c ty_o hashset, (term_node term_o)) st **)
 
 let t_string_const s =
-  (@@) (fun t0 -> (fun x -> x) (t_const (string_const s) t0)) ty_str
+  (@@) (fun t0 -> (fun x -> x) (t_const1 (string_const s) t0)) ty_str
+
+(** val check_literal : constant -> ty_node_c ty_o -> unit errorM **)
+
+let check_literal c t0 =
+  (@@) (fun ts ->
+    match c with
+    | ConstInt n ->
+      (match ts_def ts with
+       | NoDef ->
+         if ts_equal ts ts_int
+         then  ()
+         else raise (InvalidIntegerLiteralType t0)
+       | Range ir -> check_range n ir
+       | _ -> raise (InvalidIntegerLiteralType t0))
+    | ConstReal x ->
+      (match ts_def ts with
+       | NoDef ->
+         if ts_equal ts ts_real
+         then  ()
+         else raise (InvalidRealLiteralType t0)
+       | Float fp -> Number.check_float x fp
+       | _ -> raise (InvalidRealLiteralType t0))
+    | ConstStr _ ->
+      if ts_equal ts ts_str then  () else raise (InvalidStringLiteralType t0))
+    (match ty_node t0 with
+     | Tyvar _ ->
+       (match c with
+        | ConstInt _ -> raise (InvalidIntegerLiteralType t0)
+        | ConstReal _ -> raise (InvalidRealLiteralType t0)
+        | ConstStr _ -> raise (InvalidStringLiteralType t0))
+     | Tyapp (ts, l) ->
+       (match l with
+        | [] ->  ts
+        | _ :: _ ->
+          (match c with
+           | ConstInt _ -> raise (InvalidIntegerLiteralType t0)
+           | ConstReal _ -> raise (InvalidRealLiteralType t0)
+           | ConstStr _ -> raise (InvalidStringLiteralType t0))))
+
+(** val t_const : constant -> ty_node_c ty_o -> (term_node term_o) errorM **)
+
+let t_const c t0 =
+  (@@) (fun _ ->  (t_const1 c t0)) (check_literal c t0)
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -3113,7 +3161,7 @@ let t_real_const ?pow2 ?pow5 s =
 (* let t_string_const s =
   t_const (Constant.string_const s) Ty.ty_str *)
 
-exception InvalidIntegerLiteralType of ty
+(* exception InvalidIntegerLiteralType of ty
 exception InvalidRealLiteralType of ty
 exception InvalidStringLiteralType of ty
 
@@ -3132,9 +3180,9 @@ let check_literal c ty =
   | ConstReal x, Float fp -> Number.check_float x fp
   | ConstReal _, _ -> raise (InvalidRealLiteralType ty)
   | ConstStr _, _ when ts_equal ts ts_str -> ()
-  | ConstStr _, _ -> raise (InvalidStringLiteralType ty)
+  | ConstStr _, _ -> raise (InvalidStringLiteralType ty) *)
 
-let t_const c ty = check_literal c ty; t_const c ty
+(* let t_const c ty = check_literal c ty; t_const c ty *)
 
 let t_if f t1 t2 =
   t_ty_check t2 t1.t_ty;
