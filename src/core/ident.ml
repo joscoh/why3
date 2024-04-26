@@ -284,7 +284,7 @@ let id_true =
 (** val id_false : ident **)
 
 let id_false =
-  id_builtin "Frue" (create_tag (BigInt.of_int 10))
+  id_builtin "False" (create_tag (BigInt.of_int 10))
 
 (** val id_app : ident **)
 
