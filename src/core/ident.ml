@@ -221,7 +221,7 @@ module IdCtr = MakeCtr
 (** val id_ctr : (BigInt.t, unit) st **)
 
 let id_ctr =
-  IdCtr.create (BigInt.of_int 8)
+  IdCtr.create (BigInt.of_int 13)
 
 (** val id_register : preid -> (BigInt.t, ident) st **)
 
@@ -270,6 +270,26 @@ let id_b =
 
 let id_fun =
   id_builtin (op_infix "->") (create_tag (BigInt.of_int 7))
+
+(** val id_eq : ident **)
+
+let id_eq =
+  id_builtin (op_infix "=") (create_tag (BigInt.of_int 8))
+
+(** val id_true : ident **)
+
+let id_true =
+  id_builtin "True" (create_tag (BigInt.of_int 9))
+
+(** val id_false : ident **)
+
+let id_false =
+  id_builtin "Frue" (create_tag (BigInt.of_int 10))
+
+(** val id_app : ident **)
+
+let id_app =
+  id_builtin (op_infix "@") (create_tag (BigInt.of_int 11))
 
 (** val create_ident : string -> Sattr.t -> position option -> preid **)
 

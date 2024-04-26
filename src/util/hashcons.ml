@@ -17,6 +17,8 @@ module type S =
  sig
   type t
 
+  val add_builtins : t list -> BigInt.t -> (BigInt.t * t hashset, unit) st
+
   val hashcons : t -> (BigInt.t * t hashset, t) st
 
   val unique : t -> (BigInt.t * t hashset, t) st
@@ -38,6 +40,15 @@ module Make =
 
   let hash_st =
     ref (BigInt.one, CoqHashtbl.create_hashset)
+
+  (** val add_builtins :
+      t list -> BigInt.t -> (BigInt.t * t hashset, unit) st **)
+
+  let add_builtins l next =
+    (@@) (fun x ->
+      let (_, h) = x in
+      let h' = fold_right (fun x0 acc -> add_hashset H.hash acc x0) h l in
+      (fun x -> hash_st := x) (next, h')) !hash_st
 
   (** val unique : t -> (BigInt.t * H.t hashset, t) st **)
 

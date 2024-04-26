@@ -190,6 +190,26 @@ let create_fsymbol1 nm al vl =
 let create_psymbol nm al =
   create_lsymbol1 nm al None
 
+(** val create_lsymbol_builtin :
+    BigInt.t -> bool -> ident -> ty_node_c ty_o list -> ty_node_c ty_o option
+    -> lsymbol **)
+
+let create_lsymbol_builtin constr proj i args value =
+  { ls_name = i; ls_args = args; ls_value = value; ls_constr = constr;
+    ls_proj = proj }
+
+(** val create_fsymbol_builtin :
+    BigInt.t -> bool -> ident -> ty_node_c ty_o list -> ty_node_c ty_o ->
+    lsymbol **)
+
+let create_fsymbol_builtin constr proj nm al vl =
+  create_lsymbol_builtin constr proj nm al (Some vl)
+
+(** val create_psymbol_builtin : ident -> ty_node_c ty_o list -> lsymbol **)
+
+let create_psymbol_builtin nm al =
+  create_lsymbol_builtin BigInt.zero false nm al None
+
 (** val ls_ty_freevars : lsymbol -> Stv.t **)
 
 let ls_ty_freevars ls =
@@ -2092,29 +2112,22 @@ let ps_app ps tl =
 let coq_assert b msg =
   if b then  () else raise (AssertFail msg)
 
-(** val t_nat_const :
-    Stdlib.Int.t -> (BigInt.t * ty_node_c ty_o hashset, (term_node term_o))
-    errState **)
+(** val t_nat_const : Stdlib.Int.t -> (term_node term_o) errorM **)
 
 let t_nat_const n =
-  (@@) (fun _ ->
-    (@@) (fun t0 ->  (t_const1 (int_const_of_int n) t0)) ( ty_int))
-    (
-      (coq_assert
-        ((fun x y -> Stdlib.Int.compare x y >= 0) n Stdlib.Int.zero)
-        "t_nat_const negative"))
+  (@@) (fun _ ->  (t_const1 (int_const_of_int n) ty_int))
+    (coq_assert ((fun x y -> Stdlib.Int.compare x y >= 0) n Stdlib.Int.zero)
+      "t_nat_const negative")
 
-(** val t_int_const :
-    BigInt.t -> (BigInt.t * ty_node_c ty_o hashset, (term_node term_o)) st **)
+(** val t_int_const : BigInt.t -> (term_node term_o) **)
 
 let t_int_const n =
-  (@@) (fun t0 -> (fun x -> x) (t_const1 (int_const1 ILitUnk n) t0)) ty_int
+  t_const1 (int_const1 ILitUnk n) ty_int
 
-(** val t_string_const :
-    string -> (BigInt.t * ty_node_c ty_o hashset, (term_node term_o)) st **)
+(** val t_string_const : string -> (term_node term_o) **)
 
 let t_string_const s =
-  (@@) (fun t0 -> (fun x -> x) (t_const1 (string_const s) t0)) ty_str
+  t_const1 (string_const s) ty_str
 
 (** val check_literal : constant -> ty_node_c ty_o -> unit errorM **)
 
@@ -2310,6 +2323,102 @@ let t_case_close t0 l =
 
 let t_eps_close v f =
   t_eps (t_close_bound v f)
+
+(** val ps_equ : lsymbol **)
+
+let ps_equ =
+  create_psymbol_builtin id_eq (ty_a :: (ty_a :: []))
+
+(** val t_equ :
+    (term_node term_o) -> (term_node term_o) -> (BigInt.t * ty_node_c ty_o
+    hashset, (term_node term_o)) errState **)
+
+let t_equ t1 t2 =
+  ps_app ps_equ (t1 :: (t2 :: []))
+
+(** val t_neq :
+    (term_node term_o) -> (term_node term_o) -> (BigInt.t * ty_node_c ty_o
+    hashset, (term_node term_o)) errState **)
+
+let t_neq t1 t2 =
+  (@@) (fun a ->  (t_not a)) (ps_app ps_equ (t1 :: (t2 :: [])))
+
+(** val fs_bool_true : lsymbol **)
+
+let fs_bool_true =
+  create_fsymbol_builtin (BigInt.of_int 2) false id_true [] ty_bool
+
+(** val fs_bool_false : lsymbol **)
+
+let fs_bool_false =
+  create_fsymbol_builtin (BigInt.of_int 2) false id_false [] ty_bool
+
+(** val t_bool_true : (term_node term_o) **)
+
+let t_bool_true =
+  t_app1 fs_bool_true [] (Some ty_bool)
+
+(** val t_bool_false : (term_node term_o) **)
+
+let t_bool_false =
+  t_app1 fs_bool_false [] (Some ty_bool)
+
+(** val to_prop :
+    (term_node term_o) -> (BigInt.t * ty_node_c ty_o hashset,
+    (term_node term_o)) errState **)
+
+let to_prop t0 =
+  match t_ty t0 with
+  | Some _ ->
+    if t_equal t0 t_bool_true
+    then  t_true
+    else if t_equal t0 t_bool_false
+         then  t_false
+         else (@@) (fun t1 ->  (t_attr_copy t0 t1)) (t_equ t0 t_bool_true)
+  | None ->  t0
+
+(** val fs_func_app : lsymbol **)
+
+let fs_func_app =
+  create_fsymbol_builtin BigInt.zero false id_app
+    (ty_func_ab :: (ty_a :: [])) ty_b
+
+(** val t_func_app :
+    (term_node term_o) -> (term_node term_o) -> (BigInt.t * ty_node_c ty_o
+    hashset, (term_node term_o)) errState **)
+
+let t_func_app fn t0 =
+  t_app_infer fs_func_app (fn :: (t0 :: []))
+
+(** val t_pred_app :
+    (term_node term_o) -> (term_node term_o) -> (BigInt.t * ty_node_c ty_o
+    hashset, (term_node term_o)) errState **)
+
+let t_pred_app pr t0 =
+  (@@) (fun t1 -> t_equ t1 t_bool_true) (t_func_app pr t0)
+
+(** val fold_left_errst :
+    ('a2 -> 'a3 -> ('a1, 'a2) errState) -> 'a3 list -> 'a2 -> ('a1, 'a2)
+    errState **)
+
+let rec fold_left_errst f l x =
+  match l with
+  | [] ->  x
+  | h :: t0 -> (@@) (fun j -> fold_left_errst f t0 j) (f x h)
+
+(** val t_func_app_l :
+    (term_node term_o) list -> (term_node term_o) ->
+    (BigInt.t * ty_node_c ty_o hashset, (term_node term_o)) errState **)
+
+let t_func_app_l fn tl =
+  fold_left_errst t_func_app fn tl
+
+(** val t_pred_app_l :
+    (term_node term_o) list -> (term_node term_o) ->
+    (BigInt.t * ty_node_c ty_o hashset, (term_node term_o)) errState **)
+
+let t_pred_app_l pr tl =
+  (@@) (fun ta -> t_equ ta t_bool_true) (t_func_app_l pr tl)
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)

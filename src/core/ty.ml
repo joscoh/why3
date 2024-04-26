@@ -69,6 +69,11 @@ let tv_compare tv1 tv2 =
 let create_tvsymbol n =
   (@@) (fun i -> (fun x -> x) { tv_name = i }) (id_register n)
 
+(** val create_tvsymbol_builtin : ident -> tvsymbol **)
+
+let create_tvsymbol_builtin i =
+  { tv_name = i }
+
 module Tvsym_t =
  struct
   type t = tvsymbol
@@ -334,6 +339,110 @@ open List0
 open Monads
 open Number
 
+
+(** val ty_var_builtin : tvsymbol -> tag -> ty_node_c ty_o **)
+
+let ty_var_builtin n tag0 =
+  (fun (a, b) -> build_ty_o a b) ((Tyvar n), tag0)
+
+(** val ty_app_builtin :
+    (ty_node_c ty_o) tysymbol_o -> ty_node_c ty_o list -> tag ->
+    ty_node_c ty_o **)
+
+let ty_app_builtin s tl tag0 =
+  (fun (a, b) -> build_ty_o a b) ((Tyapp (s, tl)), tag0)
+
+(** val mk_ts_builtin :
+    ident -> tvsymbol list -> ty_node_c ty_o type_def ->
+    (ty_node_c ty_o) tysymbol_o **)
+
+let mk_ts_builtin name args d =
+  (fun (a,b,c) -> build_tysym_o a b c) (name, args, d)
+
+(** val ts_int : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_int =
+  mk_ts_builtin id_int [] NoDef
+
+(** val ts_real : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_real =
+  mk_ts_builtin id_real [] NoDef
+
+(** val ts_bool : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_bool =
+  mk_ts_builtin id_bool [] NoDef
+
+(** val ts_str : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_str =
+  mk_ts_builtin id_str [] NoDef
+
+(** val ty_int : ty_node_c ty_o **)
+
+let ty_int =
+  ty_app_builtin ts_int [] (create_tag BigInt.one)
+
+(** val ty_real : ty_node_c ty_o **)
+
+let ty_real =
+  ty_app_builtin ts_real [] (create_tag (BigInt.of_int 2))
+
+(** val ty_bool : ty_node_c ty_o **)
+
+let ty_bool =
+  ty_app_builtin ts_bool [] (create_tag (BigInt.of_int 3))
+
+(** val ty_str : ty_node_c ty_o **)
+
+let ty_str =
+  ty_app_builtin ts_str [] (create_tag (BigInt.of_int 4))
+
+(** val create_builtin_tvsymbol : ident -> tvsymbol **)
+
+let create_builtin_tvsymbol i =
+  { tv_name = i }
+
+(** val ts_func : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_func =
+  let tv_a = create_builtin_tvsymbol id_a in
+  let tv_b = create_builtin_tvsymbol id_b in
+  mk_ts_builtin id_fun (tv_a :: (tv_b :: [])) NoDef
+
+(** val vs_a : tvsymbol **)
+
+let vs_a =
+  create_tvsymbol_builtin id_a
+
+(** val vs_b : tvsymbol **)
+
+let vs_b =
+  create_tvsymbol_builtin id_b
+
+(** val ty_a : ty_node_c ty_o **)
+
+let ty_a =
+  ty_var_builtin vs_a (create_tag (BigInt.of_int 5))
+
+(** val ty_b : ty_node_c ty_o **)
+
+let ty_b =
+  ty_var_builtin vs_b (create_tag (BigInt.of_int 6))
+
+(** val ty_func_ab : ty_node_c ty_o **)
+
+let ty_func_ab =
+  ty_app_builtin ts_func (ty_a :: (ty_b :: [])) (create_tag (BigInt.of_int 7))
+
+(** val ty_hashcons_builtins :
+    (BigInt.t * ty_node_c ty_o hashset, unit) st **)
+
+let ty_hashcons_builtins =
+  Hsty.add_builtins
+    (ty_int :: (ty_real :: (ty_bool :: (ty_str :: (ty_a :: (ty_b :: (ty_func_ab :: [])))))))
+    (BigInt.of_int 8)
 
 (** val mk_ty : ty_node_c -> ty_node_c ty_o **)
 
@@ -638,77 +747,18 @@ let ty_match s ty1 ty2 =
         (fun _ -> ty_match_aux s ty1 ty2) Exit (fun _ ->
         raise (TypeMismatch (t1, ty2))))) ( (ty_inst s ty1))
 
-(** val mk_ts_builtin :
-    ident -> tvsymbol list -> ty_node_c ty_o type_def ->
-    (ty_node_c ty_o) tysymbol_o **)
-
-let mk_ts_builtin name args d =
-  (fun (a,b,c) -> build_tysym_o a b c) (name, args, d)
-
-(** val ts_int : (ty_node_c ty_o) tysymbol_o **)
-
-let ts_int =
-  mk_ts_builtin id_int [] NoDef
-
-(** val ts_real : (ty_node_c ty_o) tysymbol_o **)
-
-let ts_real =
-  mk_ts_builtin id_real [] NoDef
-
-(** val ts_bool : (ty_node_c ty_o) tysymbol_o **)
-
-let ts_bool =
-  mk_ts_builtin id_bool [] NoDef
-
-(** val ts_str : (ty_node_c ty_o) tysymbol_o **)
-
-let ts_str =
-  mk_ts_builtin id_str [] NoDef
-
-(** val ty_int : (BigInt.t * TyHash.t hashset, ty_node_c ty_o) st **)
-
-let ty_int =
-  ty_app1 ts_int []
-
-(** val ty_real : (BigInt.t * TyHash.t hashset, ty_node_c ty_o) st **)
-
-let ty_real =
-  ty_app1 ts_real []
-
-(** val ty_bool : (BigInt.t * TyHash.t hashset, ty_node_c ty_o) st **)
-
-let ty_bool =
-  ty_app1 ts_bool []
-
-(** val ty_str : (BigInt.t * TyHash.t hashset, ty_node_c ty_o) st **)
-
-let ty_str =
-  ty_app1 ts_str []
-
-(** val create_builtin_tvsymbol : ident -> tvsymbol **)
-
-let create_builtin_tvsymbol i =
-  { tv_name = i }
-
-(** val ts_func : (ty_node_c ty_o) tysymbol_o **)
-
-let ts_func =
-  let tv_a = create_builtin_tvsymbol id_a in
-  let tv_b = create_builtin_tvsymbol id_b in
-  mk_ts_builtin id_fun (tv_a :: (tv_b :: [])) NoDef
-
 (** val ty_func :
     ty_node_c ty_o -> ty_node_c ty_o -> (BigInt.t * TyHash.t hashset,
     ty_node_c ty_o) st **)
 
-let ty_func ty_a ty_b =
-  ty_app1 ts_func (ty_a :: (ty_b :: []))
+let ty_func ty_a0 ty_b0 =
+  ty_app1 ts_func (ty_a0 :: (ty_b0 :: []))
 
 (** val ty_pred :
     ty_node_c ty_o -> (BigInt.t * TyHash.t hashset, ty_node_c ty_o) st **)
 
-let ty_pred ty_a =
-  (@@) (fun t0 -> ty_app1 ts_func (ty_a :: (t0 :: []))) ty_bool
+let ty_pred ty_a0 =
+  ty_app1 ts_func (ty_a0 :: (ty_bool :: []))
 
 module TysymbolT =
  struct

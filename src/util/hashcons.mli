@@ -17,6 +17,8 @@ module type S =
  sig
   type t
 
+  val add_builtins : t list -> BigInt.t -> (BigInt.t * t hashset, unit) st
+
   val hashcons : t -> (BigInt.t * t hashset, t) st
 
   val unique : t -> (BigInt.t * t hashset, t) st
@@ -35,6 +37,8 @@ module Make :
   type t = H.t
 
   val hash_st : H.t hashcons_unit
+
+  val add_builtins : t list -> BigInt.t -> (BigInt.t * t hashset, unit) st
 
   val unique : t -> (BigInt.t * H.t hashset, t) st
 
