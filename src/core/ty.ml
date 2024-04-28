@@ -11,6 +11,7 @@ open List0
 open Monads
 open Number
 open Specif
+open State
 open StateMonad
 open Hashcons
 open Pmap
@@ -338,6 +339,7 @@ open IntFuncs
 open List0
 open Monads
 open Number
+open State
 
 
 (** val ty_var_builtin : tvsymbol -> tag -> ty_node_c ty_o **)

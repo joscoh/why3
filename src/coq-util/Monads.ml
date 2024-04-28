@@ -32,6 +32,4 @@ let errst_list l =
   fold_right (fun x acc -> (@@) (fun h -> (@@) (fun t ->  (h :: t)) acc) x)
     ( []) l
 
-type ('k, 'v) hash_unit = (('k, 'v) CoqHashtbl.hashtbl) ref
 
-type 'k hashcons_unit = (BigInt.t * 'k CoqHashtbl.hashset) ref

@@ -1,6 +1,7 @@
 open CoqHashtbl
 open List0
 open Monads
+open State
 
 module type HashedType =
  sig
@@ -36,9 +37,27 @@ module Make :
  sig
   type t = H.t
 
-  val hash_st : H.t hashcons_unit
+  module HashconsTy :
+   sig
+    type t = BigInt.t * H.t hashset
+
+    val default : BigInt.t * H.t hashset
+   end
+
+  module HashconsSt :
+   sig
+    val st_ref : HashconsTy.t st_ty
+
+    val create : HashconsTy.t -> (HashconsTy.t, unit) st
+
+    val get : unit -> (HashconsTy.t, HashconsTy.t) st
+
+    val set : HashconsTy.t -> (HashconsTy.t, unit) st
+   end
 
   val add_builtins : t list -> BigInt.t -> (BigInt.t * t hashset, unit) st
+
+  val incr : unit -> (BigInt.t * H.t hashset, unit) st
 
   val unique : t -> (BigInt.t * H.t hashset, t) st
 

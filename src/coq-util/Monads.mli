@@ -16,6 +16,4 @@ type ('a, 'b) errState = 'b
 
 val errst_list : ('a1, 'a2) errState list -> ('a1, 'a2 list) errState
 
-type ('k, 'v) hash_unit = (('k, 'v) CoqHashtbl.hashtbl) ref
 
-type 'k hashcons_unit = (BigInt.t * 'k CoqHashtbl.hashset) ref

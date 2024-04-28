@@ -7,6 +7,7 @@ open Datatypes
 open Loc
 open Monads
 open Specif
+open State
 open Pmap
 open Zmap
 

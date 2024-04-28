@@ -1,6 +1,7 @@
 open CoqHashtbl
 open Datatypes
 open Monads
+open State
 open Extmap
 
 module type S =
@@ -8,8 +9,6 @@ module type S =
   type key
 
   type value
-
-  type t
 
   val create : Stdlib.Int.t -> ((key, value) hashtbl, unit) st
 
@@ -20,43 +19,47 @@ module type S =
   val memo : (key -> value) -> key -> ((key, value) hashtbl, value) st
  end
 
-module type TyMod =
+module type ModTySimpl =
  sig
   type t
  end
 
 module MakeExthtbl =
  functor (X:TaggedType) ->
- functor (Y:TyMod) ->
+ functor (Y:ModTySimpl) ->
  struct
   type key = X.t
 
   type value = Y.t
 
-  type t = (key, value) hashtbl
+  module HashtblTy =
+   struct
+    type t = (key, value) hashtbl
 
-  (** val hash_ref : (key, value) hash_unit **)
+    (** val default : (key, value) hashtbl **)
 
-  let hash_ref : t ref =
-    ref CoqHashtbl.create_hashtbl
+    let default =
+      create_hashtbl
+   end
+
+  module HashSt = MakeState(HashtblTy)
 
   (** val create : Stdlib.Int.t -> ((key, value) hashtbl, unit) st **)
 
   let create _ =
-    (fun x -> hash_ref := x) create_hashtbl
+    HashSt.create create_hashtbl
 
   (** val add : key -> value -> ((key, value) hashtbl, unit) st **)
 
   let add k v =
-    (@@) (fun h -> (fun x -> hash_ref := x) (add_hashtbl X.tag h k v))
-      !hash_ref
+    (@@) (fun h -> HashSt.set (add_hashtbl X.tag h k v)) (HashSt.get ())
 
   (** val find_opt : key -> ((key, value) hashtbl, value option) st **)
 
   let find_opt k =
     (@@) (fun h ->
       (fun x -> x) (option_map snd (find_opt_hashtbl X.tag X.equal h k)))
-      !hash_ref
+      (HashSt.get ())
 
   (** val memo : (key -> value) -> key -> ((key, value) hashtbl, value) st **)
 
@@ -66,6 +69,6 @@ module MakeExthtbl =
       | Some v -> (fun x -> x) (snd v)
       | None ->
         let y = f k in
-        (@@) (fun _ -> (fun x -> x) y)
-          ((fun x -> hash_ref := x) (add_hashtbl X.tag h k y))) !hash_ref
+        (@@) (fun _ -> (fun x -> x) y) (HashSt.set (add_hashtbl X.tag h k y)))
+      (HashSt.get ())
  end

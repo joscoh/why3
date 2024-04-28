@@ -253,7 +253,7 @@ LIB_BIGINT = bigInt
 
 LIB_COQUTIL = ZCompat Datatypes base fin_maps option0 numbers BinNums \
 		Specif pmap Basics zmap BinPos BinInt List0 Bool0 Byte Common \
-		CoqUtil CoqHashtbl StateMonad Monads path ssrbool Ctr IntFuncs \
+		CoqUtil CoqHashtbl StateMonad Monads path ssrbool State Ctr IntFuncs \
 		Exthtbl2
 
 LIB_CORE = \

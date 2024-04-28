@@ -1,6 +1,7 @@
 open CoqHashtbl
 open List0
 open Monads
+open State
 
 module type HashedType =
  sig
@@ -36,10 +37,17 @@ module Make =
  struct
   type t = H.t
 
-  (** val hash_st : H.t hashcons_unit **)
+  module HashconsTy =
+   struct
+    type t = BigInt.t * H.t hashset
 
-  let hash_st =
-    ref (BigInt.one, CoqHashtbl.create_hashset)
+    (** val default : BigInt.t * H.t hashset **)
+
+    let default =
+      (BigInt.zero, create_hashset)
+   end
+
+  module HashconsSt = MakeState(HashconsTy)
 
   (** val add_builtins :
       t list -> BigInt.t -> (BigInt.t * t hashset, unit) st **)
@@ -48,41 +56,41 @@ module Make =
     (@@) (fun x ->
       let (_, h) = x in
       let h' = fold_right (fun x0 acc -> add_hashset H.hash acc x0) h l in
-      (fun x -> hash_st := x) (next, h')) !hash_st
+      HashconsSt.set (next, h')) (HashconsSt.get ())
+
+  (** val incr : unit -> (BigInt.t * H.t hashset, unit) st **)
+
+  let incr _ =
+    (@@) (fun x -> let (i, h) = x in HashconsSt.set ((BigInt.succ i), h))
+      (HashconsSt.get ())
 
   (** val unique : t -> (BigInt.t * H.t hashset, t) st **)
 
   let unique d =
-    (@@) (fun i ->
-      let d0 = H.tag i d in
-      (@@) (fun _ -> (fun x -> x) d0)
-        (let old = !hash_st in
-    hash_st := (BigInt.succ (fst old), (snd old))))
-      (fst !hash_st)
+    (@@) (fun x ->
+      let (i, _) = x in
+      let d0 = H.tag i d in (@@) (fun _ -> (fun x -> x) d0) (incr ()))
+      (HashconsSt.get ())
 
   (** val hashcons : t -> (BigInt.t * H.t hashset, t) st **)
 
   let hashcons d =
-    (@@) (fun o ->
-      match o with
-      | Some k -> (fun x -> x) k
-      | None ->
-        (@@) (fun i ->
-          let d1 = H.tag i d in
-          (@@) (fun _ ->
-            (@@) (fun _ -> (fun x -> x) d1)
-              (let old = !hash_st in
-    hash_st := (BigInt.succ (fst old), (snd old))))
-            ((fun _ k -> let old = !hash_st in
-              hash_st := (fst old, CoqHashtbl.add_hashset H.hash (snd old) k))
-              H.hash d1)) (fst !hash_st))
-      ((fun _ _ k -> CoqHashtbl.find_opt_hashset H.hash H.equal (snd !hash_st) k)
-        H.hash H.equal d)
+    (@@) (fun x ->
+      let (i, h) = x in
+      let o = find_opt_hashset H.hash H.equal h d in
+      (match o with
+       | Some k -> (fun x -> x) k
+       | None ->
+         let d1 = H.tag i d in
+         (@@) (fun _ -> (@@) (fun _ -> (fun x -> x) d1) (incr ()))
+           (HashconsSt.set (i, (add_hashset H.hash h d1)))))
+      (HashconsSt.get ())
 
   (** val iter : (t -> unit) -> (BigInt.t * H.t hashset, unit) st **)
 
   let iter f =
-    (@@) (fun h -> (fun x -> x) (iter_hashset_unsafe f h)) (snd !hash_st)
+    (@@) (fun x -> let (_, h) = x in (fun x -> x) (iter_hashset_unsafe f h))
+      (HashconsSt.get ())
 
   (** val stats :
       unit -> (BigInt.t * H.t hashset,
