@@ -36,9 +36,9 @@ module MakeExthtbl =
    struct
     type t = (key, value) hashtbl
 
-    (** val default : (key, value) hashtbl **)
+    (** val initial : (key, value) hashtbl **)
 
-    let default =
+    let initial =
       create_hashtbl
    end
 
@@ -47,7 +47,7 @@ module MakeExthtbl =
   (** val create : Stdlib.Int.t -> ((key, value) hashtbl, unit) st **)
 
   let create _ =
-    HashSt.create create_hashtbl
+    HashSt.create
 
   (** val add : key -> value -> ((key, value) hashtbl, unit) st **)
 

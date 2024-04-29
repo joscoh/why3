@@ -12,7 +12,6 @@ open Monads
 open Number
 open Specif
 open State
-open StateMonad
 open Hashcons
 open Pmap
 open Zmap
@@ -88,7 +87,7 @@ let tv_hashtbl =
   Hstr_tv.create Stdlib.Int.one
 
 (** val tv_of_string :
-    string -> (BigInt.t * (string, tvsymbol) hashtbl, tvsymbol) state **)
+    string -> (BigInt.t * (string, tvsymbol) hashtbl, tvsymbol) st **)
 
 let tv_of_string s =
   (@@) (fun o ->

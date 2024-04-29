@@ -1,13 +1,12 @@
 open BinNums
+open Ctr
 open CoqUtil
 open Weakhtbl
 open Wstdlib
-open Ctr
 open Datatypes
 open Loc
 open Monads
 open Specif
-open State
 open Pmap
 open Zmap
 
@@ -217,12 +216,20 @@ let id_hash i =
 let id_compare id1 id2 =
   BigInt.compare (id_hash id1) (id_hash id2)
 
-module IdCtr = MakeCtr
+module CtrStart =
+ struct
+  (** val coq_val : BigInt.t **)
+
+  let coq_val =
+    (BigInt.of_int 13)
+ end
+
+module IdCtr = MakeCtr(CtrStart)
 
 (** val id_ctr : (BigInt.t, unit) st **)
 
 let id_ctr =
-  IdCtr.create (BigInt.of_int 13)
+  IdCtr.create
 
 (** val id_register : preid -> (BigInt.t, ident) st **)
 

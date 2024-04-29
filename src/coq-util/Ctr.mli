@@ -1,29 +1,20 @@
 open Monads
 open State
 
-module BigIntTy :
+module type Ctr =
  sig
-  type t = BigInt.t
+  val create : unit
 
-  val default : BigInt.t
+  val incr : unit -> unit
+
+  val get : unit -> BigInt.t
  end
 
-module MakeCtr :
+module type BigIntVal =
  sig
-  module St :
-   sig
-    val st_ref : BigIntTy.t st_ty
-
-    val create : BigIntTy.t -> (BigIntTy.t, unit) st
-
-    val get : unit -> (BigIntTy.t, BigIntTy.t) st
-
-    val set : BigIntTy.t -> (BigIntTy.t, unit) st
-   end
-
-  val create : BigInt.t -> (BigInt.t, unit) st
-
-  val incr : unit -> (BigInt.t, unit) st
-
-  val get : unit -> (BigInt.t, BigInt.t) st
+  val coq_val : BigInt.t
  end
+
+module BigIntTy (_: BigIntVal) : State.ModTy with type t = BigInt.t 
+
+module MakeCtr (_: BigIntVal) : Ctr

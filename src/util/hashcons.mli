@@ -41,18 +41,20 @@ module Make :
    sig
     type t = BigInt.t * H.t hashset
 
-    val default : BigInt.t * H.t hashset
+    val initial : BigInt.t * H.t hashset
    end
 
   module HashconsSt :
    sig
     val st_ref : HashconsTy.t st_ty
 
-    val create : HashconsTy.t -> (HashconsTy.t, unit) st
+    val create : (HashconsTy.t, unit) st
 
     val get : unit -> (HashconsTy.t, HashconsTy.t) st
 
     val set : HashconsTy.t -> (HashconsTy.t, unit) st
+
+    val runState : (HashconsTy.t, 'a1) st -> 'a1
    end
 
   val add_builtins : t list -> BigInt.t -> (BigInt.t * t hashset, unit) st

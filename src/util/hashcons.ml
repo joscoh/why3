@@ -41,9 +41,9 @@ module Make =
    struct
     type t = BigInt.t * H.t hashset
 
-    (** val default : BigInt.t * H.t hashset **)
+    (** val initial : BigInt.t * H.t hashset **)
 
-    let default =
+    let initial =
       (BigInt.zero, create_hashset)
    end
 
