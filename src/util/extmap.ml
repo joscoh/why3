@@ -83,6 +83,8 @@ module type S =
       (key -> 'a option -> 'b option -> 'c -> 'c) -> 'a t -> 'b t -> 'c -> 'c
     (* val translate : (key -> key) -> 'a t -> 'a t *)
     val add_new : exn -> key -> 'a -> 'a t -> 'a t
+    (*JOSH*)
+    val add_new_opt : key -> 'a -> 'a t -> ('a t) option
     val replace : exn -> key -> 'a -> 'a t -> 'a t
     val keys: 'a t -> key list
     val values: 'a t -> 'a list
@@ -602,6 +604,10 @@ module Make(Ord: TaggedType) = struct
     let add_new e x v m = change (function
       | Some _ -> raise e
       | None -> Some v) x m
+
+    (*JOSH - TODO not great*)
+    let add_new_opt x v m = 
+      try Some (add_new Not_found x v m) with | Not_found -> None
 
     let replace e x v m = change (function
       | Some _ -> Some v

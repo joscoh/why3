@@ -1,3 +1,93 @@
+open Term
+open Ty
+
+type constructor = lsymbol * lsymbol option list
+
+type data_decl = tysymbol * constructor list
+
+type ls_defn = (lsymbol * (term_node term_o)) * Stdlib.Int.t list
+
+type logic_decl = lsymbol * ls_defn
+exception UnboundVar of vsymbol
+exception UnexpectedProjOrConstr of lsymbol
+open CoqHashtbl
+open Datatypes
+
+open List0
+open Monads
+open Term
+
+
+
+(** val check_fvs : (term_node term_o) -> (term_node term_o) errorM **)
+
+let check_fvs f =
+  (@@) (fun _ -> t_prop f)
+    (match t_v_fold (fun _ vs -> Some vs) None f with
+     | Some v -> raise (UnboundVar v)
+     | None ->  ())
+
+(** val check_vl : ty_node_c ty_o -> vsymbol -> unit errorM **)
+
+let check_vl t v =
+  ty_equal_check t v.vs_ty
+
+(** val map2_opt :
+    ('a1 -> 'a2 -> 'a3) -> 'a1 list -> 'a2 list -> 'a3 list option **)
+
+let rec map2_opt f l1 l2 =
+  match l1 with
+  | [] -> (match l2 with
+           | [] -> Some []
+           | _ :: _ -> None)
+  | x1 :: t1 ->
+    (match l2 with
+     | [] -> None
+     | x2 :: t2 ->
+       (match map2_opt f t1 t2 with
+        | Some l3 -> Some ((f x1 x2) :: l3)
+        | None -> None))
+
+(** val list_iter2 :
+    ('a1 -> 'a2 -> unit errorM) -> 'a1 list -> 'a2 list -> unit errorM **)
+
+let rec list_iter2 f l1 l2 =
+  match l1 with
+  | [] ->
+    (match l2 with
+     | [] ->  ()
+     | _ :: _ -> raise (Invalid_argument "iter2"))
+  | x1 :: t1 ->
+    (match l2 with
+     | [] -> raise (Invalid_argument "iter2")
+     | x2 :: t2 -> (@@) (fun _ -> list_iter2 f t1 t2) (f x1 x2))
+
+(** val make_ls_defn :
+    lsymbol -> vsymbol list -> (term_node term_o) ->
+    (BigInt.t * ty_node_c ty_o hashset, lsymbol * ls_defn) errState **)
+
+let make_ls_defn ls vl t =
+  if (||) (negb (BigInt.is_zero ls.ls_constr)) ls.ls_proj
+  then  (raise (UnexpectedProjOrConstr ls))
+  else let add_v = fun s v -> Svs.add_new_opt v s in
+       (@@) (fun _ ->
+         (@@) (fun hd ->
+           (@@) (fun bd ->
+             (@@) (fun tforall ->
+               (@@) (fun fd ->
+                 (@@) (fun _ ->
+                   (@@) (fun _ ->  (ls, ((ls, fd), [])))
+                     ( (t_ty_check t ls.ls_value)))
+                   ( (list_iter2 check_vl ls.ls_args vl)))
+                 ( (check_fvs tforall))) ( (t_forall_close vl [] bd)))
+             (TermTFAlt.t_selecti t_equ (fun x y ->  (t_iff x y)) hd t))
+           (t_app ls (map t_var vl) (t_ty t)))
+         (
+           (fold_left (fun acc x ->
+             (@@) (fun s ->
+               match add_v s x with
+               | Some s' ->  s'
+               | None -> raise (DuplicateVar x)) acc) vl ( Svs.empty)))
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -14,7 +104,7 @@ open Ident
 open Ty
 open Term
 
-(** Type declaration *)
+(*  (*Type declaration*)
 
 type constructor = lsymbol * lsymbol option list
 (** constructor symbol with the list of projections *)
@@ -34,10 +124,10 @@ let check_fvs f =
   t_v_fold (fun _ vs -> raise (UnboundVar vs)) () f;
   t_prop f
 
-let check_vl ty v = ty_equal_check ty v.vs_ty
+let check_vl ty v = ty_equal_check ty v.vs_ty*)
 let check_tl ty t = ty_equal_check ty (t_type t)
 
-let make_ls_defn ls vl t =
+(*let make_ls_defn ls vl t =
   (* check ls *)
   if not (BigInt.is_zero ls.ls_constr) || ls.ls_proj then raise (UnexpectedProjOrConstr ls);
   (* check for duplicate arguments *)
@@ -56,9 +146,14 @@ let make_ls_defn ls vl t =
   List.iter2 check_vl ls.ls_args vl;
   t_ty_check t ls.ls_value;
   (* return the definition *)
-  ls, (ls, fd, [])
+  ls, (ls, fd, []) *)
 
-let open_ls_defn (_,f,_) =
+(*JOSH - TODO hack*)
+(* let make_ls_defn ls vl t =
+  let l, ((l1, t), l2) = make_ls_defn ls vl t in
+  l, (l1, t, l2) *)
+
+let open_ls_defn ((_,f),_) =
   let vl,_,f = match f.t_node with
     | Tquant (Tforall,b) -> t_open_quant b
     | _ -> [],[],f in
@@ -68,7 +163,7 @@ let open_ls_defn (_,f,_) =
     | _ -> assert false
 
 let open_ls_defn_cb ld =
-  let ls,_,_ = ld in
+  let (ls,_),_ = ld in
   let vl,t = open_ls_defn ld in
   let close ls' vl' t' =
     if t_equal_strict t t' && Lists.equal vs_equal vl vl' && ls_equal ls ls'
@@ -76,9 +171,9 @@ let open_ls_defn_cb ld =
   in
   vl,t,close
 
-let ls_defn_decrease (_,_,l) = l
+let ls_defn_decrease ((_,_),l) = l
 
-let ls_defn_axiom (_,f,_) = f
+let ls_defn_axiom ((_,f),_) = f
 
 let ls_defn_of_axiom f =
   let _,_,f = match f.t_node with
@@ -279,7 +374,7 @@ let check_termination ldl =
   let check ls _ =
     find_variant (NoTerminationProof ls) cgr ls.ls_name in
   let res = Mls.mapi check syms in
-  List.map (fun (ls,(_,f,_)) -> (ls,(ls,f,Mls.find ls res))) ldl
+  List.map (fun (ls,((_,f),_)) -> (ls,((ls,f),Mls.find ls res))) ldl
 
 (** Inductive predicate declaration *)
 
@@ -349,7 +444,7 @@ module Hsdecl = Hashcons.Make (struct
   let eq_td (ts1,td1) (ts2,td2) =
     ts_equal ts1 ts2 && Lists.equal cs_equal td1 td2
 
-  let eq_ld (ls1,(_,f1,_)) (ls2,(_,f2,_)) =
+  let eq_ld (ls1,((_,f1),_)) (ls2,((_,f2),_)) =
     ls_equal ls1 ls2 && t_equal_strict f1 f2
 
   let eq_iax (pr1,fr1) (pr2,fr2) =
@@ -373,7 +468,7 @@ module Hsdecl = Hashcons.Make (struct
 
   let hs_td (ts,td) = Hashcons.combine_big_list cs_hash (ts_hash ts) td
 
-  let hs_ld (ls,(_,f,_)) = Hashcons.combine_big (ls_hash ls) (t_hash_strict f)
+  let hs_ld (ls,((_,f),_)) = Hashcons.combine_big (ls_hash ls) (t_hash_strict f)
 
   let hs_prop (pr,f) = Hashcons.combine_big (pr_hash pr)(t_hash_strict f)
 
@@ -528,15 +623,21 @@ let syms_logic_decl ldl =
   in
   List.fold_left syms_decl Sid.empty ldl
 
+(*JOSH: TODO hack*)
+let lsym_ocaml_to_coq (x, (y, z, w)) =
+  (x, ((y, z), w))
+
 let create_logic_decl ldl =
   if ldl = [] then raise EmptyDecl;
-  let check_decl news (ls,(s,_,_)) =
+  let check_decl news (ls,((s,_),_)) =
     if not (ls_equal s ls) then raise (BadLogicDecl (ls, s));
     if not (BigInt.is_zero ls.ls_constr) || ls.ls_proj then raise (UnexpectedProjOrConstr ls);
     news_id news ls.ls_name
   in
   let news = List.fold_left check_decl Sid.empty ldl in
   let ldl = check_termination ldl in
+  (*JOSH: TODO hack*)
+  (* let ldl = List.map lsym_ocaml_to_coq ldl in *)
   mk_decl (Dlogic ldl) news
 
 exception InvalidIndDecl of lsymbol * prsymbol

@@ -2419,6 +2419,48 @@ let t_func_app_l fn tl =
 
 let t_pred_app_l pr tl =
   (@@) (fun ta -> t_equ ta t_bool_true) (t_func_app_l pr tl)
+
+(** val bnd_v_fold : ('a1 -> vsymbol -> 'a1) -> 'a1 -> bind_info -> 'a1 **)
+
+let bnd_v_fold fn acc b =
+  Mvs.fold (fun v _ acc0 -> fn acc0 v) b.bv_vars acc
+
+(** val bound_v_fold :
+    ('a1 -> vsymbol -> 'a1) -> 'a1 -> (('a2 * bind_info) * 'a3) -> 'a1 **)
+
+let bound_v_fold fn acc = function
+| (p, _) -> let (_, b) = p in bnd_v_fold fn acc b
+
+(** val t_v_fold :
+    ('a1 -> vsymbol -> 'a1) -> 'a1 -> (term_node term_o) -> 'a1 **)
+
+let rec t_v_fold fn acc t0 =
+  match t_node t0 with
+  | Tvar v -> fn acc v
+  | Tlet (e, b) -> bound_v_fold fn (t_v_fold fn acc e) b
+  | Tcase (e, bl) -> fold_left (bound_v_fold fn) bl (t_v_fold fn acc e)
+  | Teps b -> bound_v_fold fn acc b
+  | Tquant (_, p) ->
+    let (p0, _) = p in
+    let (p1, _) = p0 in let (_, b) = p1 in bnd_v_fold fn acc b
+  | _ -> t_fold_unsafe (t_v_fold fn) acc t0
+
+module TermTFAlt =
+ struct
+  (** val t_select :
+      ((term_node term_o) -> 'a1) -> ((term_node term_o) -> 'a1) ->
+      (term_node term_o) -> 'a1 **)
+
+  let t_select fnT fnF e =
+    if isNone (t_ty e) then fnF e else fnT e
+
+  (** val t_selecti :
+      ('a1 -> (term_node term_o) -> 'a2) -> ('a1 -> (term_node term_o) ->
+      'a2) -> 'a1 -> (term_node term_o) -> 'a2 **)
+
+  let t_selecti fnT fnF acc e =
+    if isNone (t_ty e) then fnF acc e else fnT acc e
+ end
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -3942,7 +3984,7 @@ let t_v_map fn t =
   let fn v _ = let res = fn v in vs_check v res; res in
   t_subst_unsafe (Mvs.mapi fn (t_vars t)) t
 
-let bnd_v_fold fn acc b = Mvs.fold (fun v _ acc -> fn acc v) b.bv_vars acc
+(* let bnd_v_fold fn acc b = Mvs.fold (fun v _ acc -> fn acc v) b.bv_vars acc
 
 let bound_v_fold fn acc ((_,b),_) = bnd_v_fold fn acc b
 
@@ -3952,7 +3994,7 @@ let rec t_v_fold fn acc t = match t.t_node with
   | Tcase (e,bl) -> List.fold_left (bound_v_fold fn) (t_v_fold fn acc e) bl
   | Teps b -> bound_v_fold fn acc b
   | Tquant (_,(((_,b),_),_)) -> bnd_v_fold fn acc b
-  | _ -> t_fold_unsafe (t_v_fold fn) acc t
+  | _ -> t_fold_unsafe (t_v_fold fn) acc t *)
 
 let t_v_all pr t = Util.all t_v_fold pr t
 let t_v_any pr t = Util.any t_v_fold pr t

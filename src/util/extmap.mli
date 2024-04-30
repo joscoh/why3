@@ -259,6 +259,8 @@ module type S =
     (** [add_new e x v m] binds [x] to [v] in [m] if [x] is not bound,
         and raises [e] otherwise. *)
 
+    val add_new_opt : key -> 'a -> 'a t -> ('a t) option
+
     val replace : exn -> key -> 'a -> 'a t -> 'a t
     (** [replace e x v m] binds [x] to [v] in [m] if [x] is already bound,
         and raises [e] otherwise. *)

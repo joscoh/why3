@@ -45,6 +45,7 @@ module type S = sig
   val fold2_union : (elt -> 'a -> 'a) -> t -> t -> 'a -> 'a
   (* val translate : (elt -> elt) -> t -> t *)
   val add_new : exn -> elt -> t -> t
+  val add_new_opt : elt -> t -> t option
   val is_num_elt : BigInt.t -> t -> bool
   val of_list : elt list -> t
   val contains: t -> elt -> bool
@@ -93,6 +94,7 @@ module MakeOfMap (M: Extmap.S) = struct
   let fold2_union f s t acc = M.fold2_union (fun k _ _ acc -> f k acc) s t acc
   (* let translate = M.translate *)
   let add_new e x s = M.add_new e x () s
+  let add_new_opt x s = M.add_new_opt x () s
   let is_num_elt n m = M.is_num_elt n m
   let of_list l = List.fold_left (fun acc a -> add a acc) empty l
   let contains = M.contains

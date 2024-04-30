@@ -156,6 +156,8 @@ module type S =
     (** [add_new e x s] adds [x] to [s] if [s] does not contain [x],
         and raises [e] otherwise. *)
 
+    val add_new_opt : elt -> t -> t option
+
     val is_num_elt : BigInt.t -> t -> bool
     (** check if the map has the given number of elements *)
 
