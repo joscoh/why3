@@ -403,9 +403,12 @@ exception ProvedWfConflict of lsymbol
 exception IllFormedWf of prsymbol * lsymbol
 
 let add_tdecl uc td = match td.td_node with
-  | Decl d -> { uc with
-      uc_decls = td :: uc.uc_decls;
-      uc_known = known_add_decl uc.uc_known d;
+  | Decl d -> 
+    let (d1, kn) = known_add_decl uc.uc_known d in
+    let td1 = mk_tdecl (Decl d1) in
+    { uc with
+      uc_decls = td1 :: uc.uc_decls;
+      uc_known = kn;
       uc_local = Sid.union uc.uc_local d.d_news }
   | Use th when Sid.mem th.th_name uc.uc_used -> uc
   | Use th -> { uc with

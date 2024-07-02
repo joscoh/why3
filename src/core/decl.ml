@@ -938,7 +938,8 @@ let known_add_decl kn d =
   check_positivity kn d;
   check_foundness kn d;
   check_match kn d;
-  kn
+  let d1 = (match d.d_node with | Dlogic l -> let ldl = check_termination l in mk_decl (Dlogic ldl) d.d_news | _ -> d) in
+  (d1, kn)
 
 (** Records *)
 
