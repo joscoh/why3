@@ -34,11 +34,17 @@ module BinomialHeap
         rank: int;
   }
 
-  function size (l: list tree) : int =
+  (*JOSH - axiomatize size *)
+  function size (l: list tree) : int
+
+  axiom size_nil: size Nil = 0
+  axiom size_cons: forall t r. size (Cons t r) = 1 + size (t.children) + size r
+
+  (*function size (l: list tree) : int =
     match l with
     | Nil                     -> 0
     | Cons { children = c } r -> 1 + size c + size r
-    end
+    end*)
 
   let lemma size_nonnneg (l: list tree)
     ensures { size l >= 0 }
@@ -60,11 +66,16 @@ module BinomialHeap
   lemma le_roots_trans:
     forall x y l. le x y -> le_roots y l -> le_roots x l
 
-  predicate heaps (l: list tree) =
+  (*JOSH: AXIOM *)
+  predicate heaps (l: list tree)
+  axiom heaps_nil : heaps Nil = true
+  axiom heaps_cons: forall t r. heaps (Cons t r) = le_roots t.elem t.children && heaps t.children && heaps r
+
+  (*predicate heaps (l: list tree) =
     match l with
     | Nil                               -> true
     | Cons { elem = e; children = c } r -> le_roots e c && heaps c && heaps r
-    end
+    end*)
 
   lemma heaps_append:
     forall h1 [@induction] h2. heaps h1 -> heaps h2 -> heaps (h1 ++ h2)
@@ -73,12 +84,18 @@ module BinomialHeap
 
   (** Number of occurrences of a given element in a list of trees. *)
 
-  function occ (x: elt) (l: list tree) : int =
+  (*JOSH AXIOM *)
+  function occ (x: elt) (l: list tree) : int
+  axiom occ_nil : forall x. occ x Nil = 0
+  axiom occ_cons: forall x t r. occ x (Cons t r) =
+    (if x = t.elem then 1 else 0) + occ x t.children + occ x r
+
+  (*function occ (x: elt) (l: list tree) : int =
     match l with
     | Nil      -> 0
     | Cons { elem = y; children = c } r ->
        (if x = y then 1 else 0) + occ x c + occ x r
-    end
+    end*)
 
   let rec lemma occ_nonneg (x: elt) (l: list tree)
     variant { size l }
@@ -108,13 +125,19 @@ module BinomialHeap
 
   (** Binomial tree of rank `k`. *)
 
-  predicate has_order (k: int) (l: list tree) =
+  (*JOSH AXIOM *)
+  predicate has_order (k: int) (l: list tree)
+  axiom has_order_nil: forall k. has_order k Nil = (k = 0)
+  axiom has_order_cons: forall k t r. has_order k (Cons t r) = 
+    (t.rank = k - 1) && has_order (k-1) t.children && has_order (k-1) r
+
+  (*predicate has_order (k: int) (l: list tree) =
     match l with
     | Nil ->
         k = 0
     | Cons { rank = k'; children = c } r ->
         k' = k - 1 && has_order (k-1) c && has_order (k-1) r
-    end
+    end*)
 
   predicate binomial_tree (t: tree) =
     t.rank = length t.children &&

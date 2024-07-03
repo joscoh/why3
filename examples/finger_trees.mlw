@@ -42,11 +42,17 @@ module FingerTrees
     | Single (digit 'a)
     | Deep (digit 'a) (t (node 'a)) (digit 'a)
 
-  function t_m (t:t 'a) : list 'a = match t with
+  (*JOSH AXIOM*)
+  function t_m (t:t 'a) : list 'a 
+  axiom t_m_empty: forall tr: t 'a. tr = Empty -> t_m tr = Nil (*for poly*) 
+  axiom t_m_single: forall x : digit 'a. t_m (Single x) = d_m x
+  axiom t_m_deep: forall l: digit 'a, m, r. t_m (Deep l m r) = d_m l ++ flatten (t_m m) ++ d_m r
+
+  (*function t_m (t:t 'a) : list 'a = match t with
     | Empty -> Nil
     | Single x -> d_m x
     | Deep l m r -> d_m l ++ flatten (t_m m) ++ d_m r
-    end
+    end*)
 
   let d_cons (x:'a) (d:digit 'a) : (b: digit 'a, o: list (node 'a))
     ensures { Cons x (d_m d) = d_m b ++ flatten o /\ length o <= 1 }

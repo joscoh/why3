@@ -15,18 +15,15 @@ Require Import BuiltIn.
 Require BuiltIn.
 Require list.List.
 
-(* Why3 comment *)
-(* combine is replaced with (Lists.List.combine x x1) by the coq driver *)
-
 (* Why3 goal *)
 Lemma combine'def {a:Type} {a_WT:WhyType a} {b:Type} {b_WT:WhyType b} :
   forall (x:Init.Datatypes.list a) (y:Init.Datatypes.list b),
-  match (x, y) with
-  | (Init.Datatypes.cons x0 x1, Init.Datatypes.cons y0 y1) =>
-      ((Lists.List.combine x y) =
-       (Init.Datatypes.cons (x0, y0) (Lists.List.combine x1 y1)))
-  | _ => ((Lists.List.combine x y) = Init.Datatypes.nil)
-  end.
+  ((Lists.List.combine x y) =
+   match (x, y) with
+   | (Init.Datatypes.cons x0 x1, Init.Datatypes.cons y0 y1) =>
+       Init.Datatypes.cons (x0, y0) (Lists.List.combine x1 y1)
+   | _ => Init.Datatypes.nil
+   end).
 Proof.
 now intros [|xh xt] [|yh yt].
 Qed.

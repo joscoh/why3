@@ -5,7 +5,7 @@ theory TreeForest
 
   use int.Int
 
-  function count_forest (f : forest int) : int =
+  (*function count_forest (f : forest int) : int =
     match f, 10 with
     | Nil, i -> i
     | Cons t' f', _ -> count_tree t' + count_forest f'
@@ -15,11 +15,11 @@ theory TreeForest
     match t with
     | Leaf i -> i
     | Node t' f' -> count_tree t' + count_forest f'
-    end
+    end*)
 
   type nat = Zero | Succ nat
 
-  function ack (m n : nat) : nat = match m, n with
+  (*function ack (m n : nat) : nat = match m, n with
     | Zero, _ -> Succ n
     | Succ m', Zero -> ack' m' (Succ Zero)
     | Succ m', Succ n' -> ack' m' (ack' m n')
@@ -29,6 +29,6 @@ theory TreeForest
     | Zero, _ -> Succ n
     | Succ m', Zero -> ack m' (Succ Zero)
     | Succ m', Succ n' -> ack m' (ack m n')
-    end
+    end*)
 
 end

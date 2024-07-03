@@ -1,0 +1,121 @@
+<h1>Why3 Proof Results for Project "defunctionalization"</h1>
+<h2><span style="color:#008000">Theory "defunctionalization.DirectSem": fully verified</span></h2>
+<table border="1" style="border-collapse:collapse"><tr><td colspan="1">Obligations</td><td text-rotation="90">Alt-Ergo 2.3.3</td><td text-rotation="90">CVC4 1.5</td><td text-rotation="90">CVC5 1.0.5</td><td text-rotation="90">Z3 4.12.2</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="1">eval_p3</td><td style="background-color:#C0FFC0">0.02</td><td style="background-color:#C0FFC0">0.01</td><td style="background-color:#C0FFC0">0.01</td><td style="background-color:#C0FFC0">0.01</td></tr>
+</table>
+
+<h2><span style="color:#008000">Theory "defunctionalization.CPS": fully verified</span></h2>
+<table border="1" style="border-collapse:collapse"><tr><td colspan="1">Obligations</td><td text-rotation="90">Alt-Ergo 2.3.3</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="1">VC for eval_1</td><td style="background-color:#C0FFC0">0.01</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="1">VC for interpret_1</td><td style="background-color:#C0FFC0">0.00</td></tr>
+</table>
+
+<h2><span style="color:#008000">Theory "defunctionalization.Defunctionalization": fully verified</span></h2>
+<table border="1" style="border-collapse:collapse"><tr><td colspan="2">Obligations</td><td text-rotation="90">Alt-Ergo 2.3.3</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">size_e_pos</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">induction_ty_lex</td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="1" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="1">size_e_pos.0</td><td style="background-color:#C0FFC0">0.04</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">size_c_pos</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">induction_ty_lex</td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="1" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="1">size_c_pos.0</td><td style="background-color:#C0FFC0">0.02</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for continue_2</td><td style="background-color:#C0FFC0">0.01</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for eval_2</td><td style="background-color:#C0FFC0">0.02</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for interpret_2</td><td style="background-color:#C0FFC0">0.01</td></tr>
+</table>
+
+<h2><span style="color:#008000">Theory "defunctionalization.Defunctionalization2": fully verified</span></h2>
+<table border="1" style="border-collapse:collapse"><tr><td colspan="2">Obligations</td><td text-rotation="90">Alt-Ergo 2.3.3</td><td text-rotation="90">CVC4 1.5</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for continue_2</td><td style="background-color:#C0FFC0">0.01</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for eval_2</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">split_goal_right</td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="3" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="1">variant decrease</td><td style="background-color:#C0FFC0">0.00</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="1">variant decrease</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#C0FFC0">0.02</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="1">postcondition</td><td style="background-color:#C0FFC0">0.00</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for interpret_2</td><td style="background-color:#C0FFC0">0.00</td><td style="background-color:#E0E0E0">---</td></tr>
+</table>
+
+<h2><span style="color:#008000">Theory "defunctionalization.SemWithError": fully verified</span></h2>
+<table border="1" style="border-collapse:collapse"><tr><td colspan="8">Obligations</td><td text-rotation="90">Alt-Ergo 2.3.3</td><td text-rotation="90">CVC4 1.5</td><td text-rotation="90">CVC5 1.0.5</td><td text-rotation="90">Z3 4.12.2</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="8">cps_correct_expr</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="8">induction_ty_lex</td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="14" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="7">cps_correct_expr.0</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="7">split_all_full</td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="12" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="6">cps_correct_expr.0.0</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#C0FFC0">0.01</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="6">cps_correct_expr.0.1</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="6">introduce_premises</td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="9" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="5">cps_correct_expr.0.1.0</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="5">subst e</td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="7" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="4">cps_correct_expr.0.1.0.0</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="4">unfold eval_1</td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="5" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="3">cps_correct_expr.0.1.0.0.0</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="3">step</td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="3" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="2">cps_correct_expr.0.1.0.0.0.0</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">rewrite H</td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="1" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="1">cps_correct_expr.0.1.0.0.0.0.0</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#C0FFC0">0.01</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="8">cps_correct</td><td style="background-color:#C0FFC0">0.02</td><td style="background-color:#C0FFC0">0.01</td><td style="background-color:#C0FFC0">0.01</td><td style="background-color:#C0FFC0">0.01</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="8">cps2_correct_expr_aux</td><td style="background-color:#C0FFC0">0.02</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="8">cps2_correct_expr</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="8">induction_ty_lex</td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="4" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="7">cps2_correct_expr.0</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="7">split_goal_right</td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="2" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="6">cps2_correct_expr.0.0</td><td style="background-color:#C0FFC0">0.01</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="6">cps2_correct_expr.0.1</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#C0FFC0">0.01</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="8">cps2_correct</td><td style="background-color:#C0FFC0">0.02</td><td style="background-color:#C0FFC0">0.03</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#C0FFC0">0.01</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="8">VC for cps3_correct_expr</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="8">split_goal_right</td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="7" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="7">variant decrease</td><td style="background-color:#C0FFC0">0.00</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="7">variant decrease</td><td style="background-color:#C0FFC0">0.00</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="7">assertion</td><td style="background-color:#C0FFC0">0.00</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="7">postcondition</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="7">split_goal_right</td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="2" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="6">postcondition</td><td style="background-color:#C0FFC0">0.01</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="6">postcondition</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#C0FFC0">0.01</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="8">cps3_correct</td><td style="background-color:#C0FFC0">0.03</td><td style="background-color:#C0FFC0">0.03</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#C0FFC0">0.01</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="8">size_e_pos</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="8">induction_ty_lex</td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="1" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="7">size_e_pos.0</td><td style="background-color:#C0FFC0">0.02</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="8">size_c_pos</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="8">induction_ty_lex</td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="1" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="7">size_c_pos.0</td><td style="background-color:#C0FFC0">0.03</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="8">VC for continue_4</td><td style="background-color:#C0FFC0">0.02</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="8">VC for eval_4</td><td style="background-color:#C0FFC0">0.26</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="8">VC for interpret_4</td><td style="background-color:#C0FFC0">0.01</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+</table>
+
+<h2><span style="color:#008000">Theory "defunctionalization.ReductionSemantics": fully verified</span></h2>
+<table border="1" style="border-collapse:collapse"><tr><td colspan="2">Obligations</td><td text-rotation="90">Alt-Ergo 2.3.3</td><td text-rotation="90">Spass 3.9</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for contract</td><td style="background-color:#C0FFC0">0.01</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for recompose_values</td><td style="background-color:#C0FFC0">0.04</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">size_c_pos</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">induction_ty_lex</td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="1" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="1">size_c_pos.0</td><td style="background-color:#C0FFC0">0.02</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for decompose_term</td><td style="background-color:#C0FFC0">0.03</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for decompose_cont</td><td style="background-color:#C0FFC0">0.03</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for decompose</td><td style="background-color:#C0FFC0">0.00</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for reduce</td><td style="background-color:#C0FFC0">0.01</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for itere</td><td style="background-color:#C0FFC0">0.00</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for refocus</td><td style="background-color:#C0FFC0">0.00</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for itere_opt</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">split_goal_right</td><td style="background-color:#E0E0E0"></td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="5" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="1">precondition</td><td style="background-color:#C0FFC0">0.00</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="1">postcondition</td><td style="background-color:#C0FFC0">0.00</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="1">assertion</td><td style="background-color:#C0FFC0">0.00</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="1">unreachable point</td><td style="background-color:#C0FFC0">0.00</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="1">postcondition</td><td style="background-color:#E0E0E0">---</td><td style="background-color:#C0FFC0">0.74</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for normalize</td><td style="background-color:#C0FFC0">0.00</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for eval_1</td><td style="background-color:#C0FFC0">0.05</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for eval_2</td><td style="background-color:#C0FFC0">0.04</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for interpret</td><td style="background-color:#C0FFC0">0.00</td><td style="background-color:#E0E0E0">---</td></tr>
+</table>
+
+<h2><span style="color:#008000">Theory "defunctionalization.RWithError": fully verified</span></h2>
+<table border="1" style="border-collapse:collapse"><tr><td colspan="2">Obligations</td><td text-rotation="90">Alt-Ergo 2.3.3</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">size_c_pos</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">induction_ty_lex</td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="1" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="1">size_c_pos.0</td><td style="background-color:#C0FFC0">0.02</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for recompose_values</td><td style="background-color:#C0FFC0">0.07</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for recompose_underflow</td><td style="background-color:#C0FFC0">0.11</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for eval_1</td><td style="background-color:#C0FFC0">0.04</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for eval_2</td><td style="background-color:#C0FFC0">0.17</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for interpret</td><td style="background-color:#C0FFC0">0.01</td></tr>
+</table>
