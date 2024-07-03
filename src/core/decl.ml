@@ -996,7 +996,7 @@ let get_adts_present (ctx: mut_info) (l: vsymbol list) : (mut_adt * ty list) lis
 
 (*TEMP - change to bigint*)
 (*NOTE: from 0 to n-1, NOT 1 to n - NEEDS to be increasing order*)
-let rec iota (n: int) : int list =
+let iota (n: int) : int list =
   let rec iota_aux n = 
   if n < 0
     then []
