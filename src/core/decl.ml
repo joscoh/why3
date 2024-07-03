@@ -1,3 +1,6 @@
+open CoqUtil
+open Weakhtbl
+open Ident
 open Term
 open Ty
 
@@ -8,6 +11,53 @@ type data_decl = tysymbol * constructor list
 type ls_defn = (lsymbol * (term_node term_o)) * Stdlib.Int.t list
 
 type logic_decl = lsymbol * ls_defn
+
+type prsymbol = { pr_name : ident }
+
+(** val pr_name : prsymbol -> ident **)
+
+let pr_name p =
+  p.pr_name
+
+type ind_decl = lsymbol * (prsymbol * term) list
+
+type ind_sign =
+| Ind
+| Coind
+
+type ind_list = ind_sign * ind_decl list
+
+type prop_kind =
+| Plemma
+| Paxiom
+| Pgoal
+
+type prop_decl = (prop_kind, prsymbol, term) ocaml_tup3
+
+type decl_node =
+| Dtype of tysymbol
+| Ddata of data_decl list
+| Dparam of lsymbol
+| Dlogic of logic_decl list
+| Dind of ind_list
+| Dprop of prop_decl
+
+type decl = { d_node : decl_node; d_news : Sid.t; d_tag : tag }
+
+(** val d_node : decl -> decl_node **)
+
+let d_node d =
+  d.d_node
+
+(** val d_news : decl -> Sid.t **)
+
+let d_news d =
+  d.d_news
+
+(** val d_tag : decl -> tag **)
+
+let d_tag d =
+  d.d_tag
 exception UnboundVar of vsymbol
 exception UnexpectedProjOrConstr of lsymbol
 open CoqHashtbl
@@ -103,6 +153,27 @@ open Wstdlib
 open Ident
 open Ty
 open Term
+
+let sexp_of_ind_sign (x: ind_sign) : Sexplib0.Sexp.t =
+  match x with Ind -> Sexplib0.Sexp.Atom "Ind" | Coind -> Sexplib0.Sexp.Atom "Coind"
+
+let ind_sign_of_sexp (x: Sexplib0.Sexp.t) : ind_sign =
+  match x with
+  | Sexplib0.Sexp.Atom "Ind" -> Ind
+  | Sexplib0.Sexp.Atom "Coind"  -> Coind 
+  | _ -> Sexplib0.Sexp_conv.of_sexp_error "ind_sign_of_sexp" x 
+
+
+let sexp_of_prop_kind (x: prop_kind) : Sexplib0.Sexp.t =
+   match x with Plemma -> Sexplib0.Sexp.Atom "Plemma" | Paxiom -> Sexplib0.Sexp.Atom "Paxiom" | Pgoal -> Sexplib0.Sexp.Atom "Pgoal"
+
+
+let prop_kind_of_sexp (x: Sexplib0.Sexp.t) : prop_kind =
+  match x with
+  | Sexplib0.Sexp.Atom "Plemma" -> Plemma
+  | Sexplib0.Sexp.Atom "Paxiom"  -> Paxiom 
+  | Sexplib0.Sexp.Atom "Pgoal"  -> Pgoal 
+  | _ -> Sexplib0.Sexp_conv.of_sexp_error "prop_kind_of_sexp" x 
 
 (*  (*Type declaration*)
 
@@ -378,9 +449,9 @@ let check_termination ldl =
 
 (** Inductive predicate declaration *)
 
-type prsymbol = {
+(* type prsymbol = {
   pr_name : ident;
-}
+} *)
 
 module Prop = MakeMSHW (struct
   type t = prsymbol
@@ -399,26 +470,26 @@ let pr_hash pr = id_hash pr.pr_name
 
 let create_prsymbol n = { pr_name = id_register n }
 
-type ind_decl = lsymbol * (prsymbol * term) list
+(* type ind_decl = lsymbol * (prsymbol * term) list *)
 
-type ind_sign = Ind | Coind
+(* type ind_sign = Ind | Coind
 [@@deriving sexp]
 
-type ind_list = ind_sign * ind_decl list
+type ind_list = ind_sign * ind_decl list *)
 
 (** Proposition declaration *)
 
-type prop_kind =
+(* type prop_kind =
   | Plemma    (* prove, use as a premise *)
   | Paxiom    (* do not prove, use as a premise *)
   | Pgoal     (* prove, do not use as a premise *)
 [@@deriving sexp]
 
-type prop_decl = prop_kind * prsymbol * term
+type prop_decl = prop_kind * prsymbol * term *)
 
 (** Declaration type *)
 
-type decl = {
+(*type decl = {
   d_node : decl_node;
   d_news : Sid.t;         (* idents introduced in declaration *)
   d_tag  : Weakhtbl.tag;  (* unique magical tag *)
@@ -431,7 +502,7 @@ and decl_node =
   | Dlogic of logic_decl list   (* recursive functions and predicates *)
   | Dind   of ind_list          (* (co)inductive predicates *)
   | Dprop  of prop_decl         (* axiom / lemma / goal *)
-
+*)
 (** Declarations *)
 
 module Hsdecl = Hashcons.Make (struct

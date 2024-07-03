@@ -115,3 +115,5 @@ let map_fold_left f acc l =
       let y = f (fst x) e in ((fst y), ((snd y) :: (snd x)))) l (acc, [])
   in
   ((fst res), (rev' (snd res)))
+
+type ('a, 'b, 'c) ocaml_tup3 = 'a * 'b * 'c
