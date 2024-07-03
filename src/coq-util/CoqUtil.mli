@@ -33,4 +33,8 @@ val option_fold : 'a1 -> ('a2 -> 'a1) -> 'a2 option -> 'a1
 val map_fold_left :
   ('a1 -> 'a2 -> 'a1 * 'a3) -> 'a1 -> 'a2 list -> 'a1 * 'a3 list
 
+val option_bind : 'a1 option -> ('a1 -> 'a2 option) -> 'a2 option
+
+val list_find_opt : ('a1 -> bool) -> 'a1 list -> 'a1 option
+
 type ('a, 'b, 'c) ocaml_tup3 = 'a * 'b * 'c

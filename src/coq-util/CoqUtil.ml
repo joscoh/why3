@@ -84,15 +84,15 @@ let rec map2 f l1 l2 =
 (** val fold_right2 :
     ('a1 -> 'a2 -> 'a3 -> 'a3) -> 'a1 list -> 'a2 list -> 'a3 -> 'a3 option **)
 
-let rec fold_right2 f l1 l2 accu =
+let rec fold_right2 f l1 l2 base =
   match l1 with
   | [] -> (match l2 with
-           | [] -> Some accu
+           | [] -> Some base
            | _ :: _ -> None)
-  | a1 :: l3 ->
+  | x1 :: t1 ->
     (match l2 with
      | [] -> None
-     | a2 :: l4 -> option_map (f a1 a2) (fold_right2 f l3 l4 accu))
+     | x2 :: t2 -> option_map (f x1 x2) (fold_right2 f t1 t2 base))
 
 (** val null : 'a1 list -> bool **)
 
@@ -115,5 +115,17 @@ let map_fold_left f acc l =
       let y = f (fst x) e in ((fst y), ((snd y) :: (snd x)))) l (acc, [])
   in
   ((fst res), (rev' (snd res)))
+
+(** val option_bind : 'a1 option -> ('a1 -> 'a2 option) -> 'a2 option **)
+
+let option_bind x f =
+  match x with
+  | Some y -> f y
+  | None -> None
+
+(** val list_find_opt : ('a1 -> bool) -> 'a1 list -> 'a1 option **)
+
+let list_find_opt p l =
+  fold_right (fun x acc -> if p x then Some x else acc) None l
 
 type ('a, 'b, 'c) ocaml_tup3 = 'a * 'b * 'c

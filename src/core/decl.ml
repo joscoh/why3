@@ -4,9 +4,11 @@ open Ident
 open Term
 open Ty
 
+type hack = tysymbol
+
 type constructor = lsymbol * lsymbol option list
 
-type data_decl = tysymbol * constructor list
+type data_decl = (ty_node_c ty_o) tysymbol_o * constructor list
 
 type ls_defn = (lsymbol * (term_node term_o)) * Stdlib.Int.t list
 
@@ -35,7 +37,7 @@ type prop_kind =
 type prop_decl = (prop_kind, prsymbol, term) ocaml_tup3
 
 type decl_node =
-| Dtype of tysymbol
+| Dtype of (ty_node_c ty_o) tysymbol_o
 | Ddata of data_decl list
 | Dparam of lsymbol
 | Dlogic of logic_decl list
@@ -61,12 +63,15 @@ let d_tag d =
 exception UnboundVar of vsymbol
 exception UnexpectedProjOrConstr of lsymbol
 open CoqHashtbl
+open CoqUtil
 open Datatypes
 
+open Ident
 open List0
 open Monads
 open Term
 
+open Ty
 
 
 (** val check_fvs : (term_node term_o) -> (term_node term_o) errorM **)
@@ -79,8 +84,8 @@ let check_fvs f =
 
 (** val check_vl : ty_node_c ty_o -> vsymbol -> unit errorM **)
 
-let check_vl t v =
-  ty_equal_check t v.vs_ty
+let check_vl t0 v =
+  ty_equal_check t0 v.vs_ty
 
 (** val map2_opt :
     ('a1 -> 'a2 -> 'a3) -> 'a1 list -> 'a2 list -> 'a3 list option **)
@@ -116,7 +121,7 @@ let rec list_iter2 f l1 l2 =
     lsymbol -> vsymbol list -> (term_node term_o) ->
     (BigInt.t * ty_node_c ty_o hashset, lsymbol * ls_defn) errState **)
 
-let make_ls_defn ls vl t =
+let make_ls_defn ls vl t0 =
   if (||) (negb (BigInt.is_zero ls.ls_constr)) ls.ls_proj
   then  (raise (UnexpectedProjOrConstr ls))
   else let add_v = fun s v -> Svs.add_new_opt v s in
@@ -127,17 +132,61 @@ let make_ls_defn ls vl t =
                (@@) (fun fd ->
                  (@@) (fun _ ->
                    (@@) (fun _ ->  (ls, ((ls, fd), [])))
-                     ( (t_ty_check t ls.ls_value)))
+                     ( (t_ty_check t0 ls.ls_value)))
                    ( (list_iter2 check_vl ls.ls_args vl)))
                  ( (check_fvs tforall))) ( (t_forall_close vl [] bd)))
-             (TermTFAlt.t_selecti t_equ (fun x y ->  (t_iff x y)) hd t))
-           (t_app ls (map t_var vl) (t_ty t)))
+             (TermTFAlt.t_selecti t_equ (fun x y ->  (t_iff x y)) hd t0))
+           (t_app ls (map t_var vl) (t_ty t0)))
          (
            (fold_left (fun acc x ->
              (@@) (fun s ->
                match add_v s x with
                | Some s' ->  s'
                | None -> raise (DuplicateVar x)) acc) vl ( Svs.empty)))
+
+type mut_adt = data_decl list
+
+type mut_info = mut_adt list * mut_adt Mts.t
+
+(** val get_ctx_tys : decl Mid.t -> mut_info **)
+
+let get_ctx_tys kn =
+  Mid.fold (fun _ d acc ->
+    match d.d_node with
+    | Ddata m ->
+      let (ms, mp) = acc in
+      ((m :: ms), (fold_right (fun t0 ts -> Mts.add t0 m ts) mp (map fst m)))
+    | _ -> acc) kn ([], Mts.empty)
+
+(** val is_vty_adt :
+    mut_info -> ty_node_c ty_o ->
+    ((mut_adt * (ty_node_c ty_o) tysymbol_o) * ty_node_c ty_o list) option **)
+
+let is_vty_adt ctx t0 =
+  match ty_node t0 with
+  | Tyvar _ -> None
+  | Tyapp (ts, tys) ->
+    option_bind (Mts.find_opt ts (snd ctx)) (fun m -> Some ((m, ts), tys))
+
+(** val ts_in_mut : (ty_node_c ty_o) tysymbol_o -> mut_adt -> bool **)
+
+let ts_in_mut ts m =
+  isSome (list_find_opt (fun a -> ts_equal (fst a) ts) m)
+
+(** val vty_in_m :
+    mut_adt -> ty_node_c ty_o list -> ty_node_c ty_o -> bool **)
+
+let vty_in_m m vs v =
+  match ty_node v with
+  | Tyvar _ -> false
+  | Tyapp (ts, vs') -> (&&) (ts_in_mut ts m) (list_eqb ty_equal vs vs')
+
+(** val vty_in_m' : mut_adt -> ty_node_c ty_o -> bool **)
+
+let vty_in_m' m v =
+  match ty_node v with
+  | Tyvar _ -> false
+  | Tyapp (ts, _) -> ts_in_mut ts m
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -1014,22 +1063,22 @@ let null (l: 'a list) : bool =
   | _ -> false
 
 (*TODO?*)
-type mut_adt = data_decl list
-type mut_info = mut_adt list *  mut_adt Mts.t
+(* type mut_adt = data_decl list
+type mut_info = mut_adt list *  mut_adt Mts.t *)
 
 (*TODO: move*)
 (*Get all mutual ADT definitions:
 gives set of mutual adts and map adt name -> mut_adt*)
-let get_ctx_tys (kn: decl Mid.t) : mut_info  =
+(* let get_ctx_tys (kn: decl Mid.t) : mut_info  =
   Mid.fold (fun _ d acc ->
     match d.d_node with
     | Ddata m ->
       let (ms, mp) = acc in
       (m :: ms, List.fold_right (fun t ts -> Mts.add t m ts) (List.map fst m) mp )
-    | _ -> acc) kn ([], Mts.empty)
+    | _ -> acc) kn ([], Mts.empty) *)
 
 (*TODO: move I think*)
-let is_vty_adt (ctx: mut_info) (t: ty) : (mut_adt * tysymbol * ty list) option =
+(*let is_vty_adt (ctx: mut_info) (t: ty) : (mut_adt * tysymbol * ty list) option =
   match t.ty_node with
   | Tyapp (ts, tys) -> Option.bind (Mts.find_opt ts (snd ctx)) (fun m -> Some (m, ts, tys))
   | Tyvar _ -> None
@@ -1045,7 +1094,7 @@ let vty_in_m (m: mut_adt) (vs: ty list) (v: ty) : bool =
 let vty_in_m' (m: mut_adt) (v: ty) : bool =
   match v.ty_node with
   | Tyapp(ts, vs') -> ts_in_mut ts m
-  | _ -> false
+  | _ -> false*)
 
 (*Create map of [mut_adt * ty list]*)
 
@@ -1061,7 +1110,7 @@ let add_union (eq: 'a -> 'a -> bool) (x: 'a) (l: 'a list) =
 let get_adts_present (ctx: mut_info) (l: vsymbol list) : (mut_adt * ty list) list =
   List.fold_right (fun v acc -> 
     match (is_vty_adt ctx v.vs_ty) with
-    | Some (m, a, vs) -> add_union (=) (m, vs) acc
+    | Some ((m, a), vs) -> add_union (=) (m, vs) acc
     | None -> acc
     ) l []
 

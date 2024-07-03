@@ -362,36 +362,6 @@ let build_term_o t0 o a l =
 let trd = function
 | (_, y) -> y
 
-(** val fold_right2 :
-    ('a1 -> 'a2 -> 'a3 -> 'a3) -> 'a1 list -> 'a2 list -> 'a3 -> 'a3 option **)
-
-let rec fold_right2 f l1 l2 base =
-  match l1 with
-  | [] -> (match l2 with
-           | [] -> Some base
-           | _ :: _ -> None)
-  | x1 :: t1 ->
-    (match l2 with
-     | [] -> None
-     | x2 :: t2 -> option_map (f x1 x2) (fold_right2 f t1 t2 base))
-
-(** val lists_equal_aux :
-    ('a1 -> 'a2 -> bool) -> 'a1 list -> 'a2 list -> bool option **)
-
-let lists_equal_aux cmp l1 l2 =
-  fold_right2 (fun x1 x2 acc -> (&&) (cmp x1 x2) acc) l1 l2 true
-
-(** val true_opt : bool option -> bool **)
-
-let true_opt = function
-| Some y -> y
-| None -> false
-
-(** val lists_equal : ('a1 -> 'a2 -> bool) -> 'a1 list -> 'a2 list -> bool **)
-
-let lists_equal cmp l1 l2 =
-  true_opt (lists_equal_aux cmp l1 l2)
-
 (** val bind_info_eqb : bind_info -> bind_info -> bool **)
 
 let bind_info_eqb b1 b2 =
@@ -447,8 +417,7 @@ and term_node_eqb t1 t2 =
                   | _ -> false)
   | Tapp (l1, ts1) ->
     (match t2 with
-     | Tapp (l2, ts2) ->
-       (&&) (lsymbol_eqb l1 l2) (lists_equal term_eqb ts1 ts2)
+     | Tapp (l2, ts2) -> (&&) (lsymbol_eqb l1 l2) (list_eqb term_eqb ts1 ts2)
      | _ -> false)
   | Tif (t3, t4, t5) ->
     (match t2 with
@@ -470,11 +439,11 @@ and term_node_eqb t1 t2 =
     (match t2 with
      | Tcase (t4, tbs2) ->
        (&&) (term_eqb t3 t4)
-         (lists_equal (fun x1 x2 ->
+         (list_eqb (fun x1 x2 ->
            let (y, t5) = x1 in
            let (p1, b1) = y in
-           let (y0, t6) = x2 in
-           let (p2, b2) = y0 in
+           let (p, t6) = x2 in
+           let (p2, b2) = p in
            (&&) ((&&) (pattern_eqb p1 p2) (bind_info_eqb b1 b2))
              (term_eqb t5 t6)) tbs1 tbs2)
      | _ -> false)
@@ -498,9 +467,9 @@ and term_node_eqb t1 t2 =
        let (l2, b2) = p4 in
        (&&)
          ((&&)
-           ((&&) ((&&) (quant_eqb q1 q2) (lists_equal vsymbol_eqb l1 l2))
-             (bind_info_eqb b1 b2))
-           (lists_equal (lists_equal term_eqb) tr1 tr2)) (term_eqb t3 t4)
+           ((&&) ((&&) (quant_eqb q1 q2) (list_eqb vsymbol_eqb l1 l2))
+             (bind_info_eqb b1 b2)) (list_eqb (list_eqb term_eqb) tr1 tr2))
+         (term_eqb t3 t4)
      | _ -> false)
   | Tbinop (b1, t3, t4) ->
     (match t2 with
@@ -1204,7 +1173,7 @@ let t_similar t1 t2 =
        (match t_node t2 with
         | Tapp (s2, l2) ->
           (&&) (ls_equal s1 s2)
-            (lists_equal (fun x y -> x == y || term_eqb x y) l1 l2)
+            (list_eqb (fun x y -> x == y || term_eqb x y) l1 l2)
         | _ -> false)
      | Tif (f1, t3, e1) ->
        (match t_node t2 with
@@ -1224,7 +1193,7 @@ let t_similar t1 t2 =
        (match t_node t2 with
         | Tcase (t4, bl2) ->
           (&&) ((fun x y -> x == y || term_eqb x y) t3 t4)
-            (lists_equal (fun x y -> x == y || term_branch_eqb x y) bl1 bl2)
+            (list_eqb (fun x y -> x == y || term_branch_eqb x y) bl1 bl2)
         | _ -> false)
      | Teps bv1 ->
        (match t_node t2 with
@@ -1460,7 +1429,7 @@ let vs_check v t0 =
     (term_node term_o) list list -> (term_node term_o) list list -> bool **)
 
 let tr_equal =
-  lists_equal (lists_equal t_equal)
+  list_eqb (list_eqb t_equal)
 
 (** val tr_map : ('a1 -> 'a2) -> 'a1 list list -> 'a2 list list **)
 
@@ -2022,8 +1991,8 @@ let t_open_quant_cb1 fq =
     let close = fun vl' tl' f' ->
       if (&&)
            ((&&) ((fun x y -> x == y || term_eqb x y) f f')
-             (lists_equal (lists_equal (fun x y -> x == y || term_eqb x y))
-               tl tl')) (lists_equal vs_equal vl vl')
+             (list_eqb (list_eqb (fun x y -> x == y || term_eqb x y)) tl tl'))
+           (list_eqb vs_equal vl vl')
       then  fq
       else t_close_quant vl' tl' f'
     in
