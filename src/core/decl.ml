@@ -1116,22 +1116,26 @@ let get_adts_present (ctx: mut_info) (l: vsymbol list) : (mut_adt * ty list) lis
 
 (*TEMP - change to bigint*)
 (*NOTE: from 0 to n-1, NOT 1 to n - NEEDS to be increasing order*)
-let iota (n: int) : int list =
+(*TODO: include in IntFuncs*)
+(*iota is from 1 to n, we want 0 to n-1*)
+let iota2 (n: BigInt.t) : BigInt.t list =
+  List.rev(List.map BigInt.pred (IntFuncs.iota n))
+(* let iota (n: BigInt.t) : BigInt.t list =
   let rec iota_aux n = 
-  if n < 0
+  if BigInt.lt n BigInt.zero
     then []
-    else if n = 0 then [] else (n - 1) :: (iota_aux (n-1)) in
-  List.rev (iota_aux n)
+    else if BigInt.is_zero n then [] else BigInt.pred n :: (iota_aux (BigInt.pred n)) in
+  List.rev (iota_aux n) *)
 
 (*TODO: combine probably*)
-let get_idx_lists_aux kn (funs: (vsymbol list * term) Mls.t) :  (data_decl list * ty list * (int list) list) list =
+let get_idx_lists_aux kn (funs: (vsymbol list * term) Mls.t) :  (data_decl list * ty list * (BigInt.t list) list) list =
     let syms : vsymbol list list = Mls.fold (fun _ x y -> (fst x) :: y) funs [] in
     List.map (fun (m, vs) -> 
     
-      let l : int list list =
+      let l : BigInt.t list list =
         List.map (fun args ->
           List.map fst (List.filter (fun it -> vty_in_m m vs (snd it)) 
-            (List.combine (iota (List.length args)) (List.map (fun v -> v.vs_ty) args)))
+            (List.combine (iota2 (IntFuncs.int_length args)) (List.map (fun v -> v.vs_ty) args)))
 
         ) syms
         in
@@ -1142,10 +1146,10 @@ let get_idx_lists_aux kn (funs: (vsymbol list * term) Mls.t) :  (data_decl list 
     (get_adts_present (get_ctx_tys kn) (List.concat syms))
 
 
-let get_idx_lists kn (funs: (vsymbol list * term) Mls.t) : (data_decl list * ty list * (int list) list) list =
+let get_idx_lists kn (funs: (vsymbol list * term) Mls.t) : (data_decl list * ty list * (BigInt.t list) list) list =
   List.filter (fun (_, _, x) -> not (null x)) (get_idx_lists_aux kn funs)
 
-let rec get_possible_index_lists (l: int list list) : int list list =
+let rec get_possible_index_lists (l: BigInt.t list list) : BigInt.t list list =
   match l with
   | l1 :: rest -> let r = get_possible_index_lists rest in
     List.concat (List.map (fun x -> List.map (fun y -> x :: y) r) l1)
@@ -1229,14 +1233,23 @@ else Svs.empty
 let svs_remove_all (l: vsymbol list) (s: Svs.t) : Svs.t =
   List.fold_right Svs.remove l s
 
-let rec check_decrease_fun (funs: (lsymbol * int) list)
+(*TODO: move/implement*)
+let big_nth l n =
+  if BigInt.lt n BigInt.zero then invalid_arg "big_nth" else
+  let rec nth_aux l n =
+    match l with
+    | [] -> failwith "nth"
+    | a::l -> if BigInt.is_zero n then a else nth_aux l (BigInt.pred n)
+  in nth_aux l n
+
+let rec check_decrease_fun (funs: (lsymbol * BigInt.t) list)
   (small: Svs.t) (hd: vsymbol option) (m: mut_adt) (vs: ty list) (t: term) : bool =
 match t.t_node with
 | Tapp(f, ts) ->
   begin match List.find_opt (fun y -> f = (fst y)) funs with
   | Some (_, i) ->
       (*Needs to be called on smaller variable at ith index*)
-      begin match (List.nth ts i).t_node with
+      begin match (big_nth ts i).t_node with
       | Tvar x -> Svs.contains small x && (*Check that map is uniform*)
       check_unif_map (ls_arg_inst f ts) &&
       List.for_all (check_decrease_fun funs small hd m vs) ts
@@ -1310,10 +1323,10 @@ match t.t_node with
 | Ttrue -> true
 | Tfalse -> true
 
-let find_idx_list (l: (lsymbol * (vsymbol list * term)) list) m vs (candidates : int list list) : int list option =
+let find_idx_list (l: (lsymbol * (vsymbol list * term)) list) m vs (candidates : BigInt.t list list) : BigInt.t list option =
   List.find_opt (fun il -> 
     List.for_all (fun ((f, (vars, t)), i) ->
-      check_decrease_fun (List.combine (List.map fst l) il) Svs.empty (Some (List.nth vars i)) m vs t
+      check_decrease_fun (List.combine (List.map fst l) il) Svs.empty (Some (big_nth vars i)) m vs t
       ) (List.combine l il)) candidates
 
 (*START*)
@@ -1327,7 +1340,7 @@ let find_elt (f: 'a -> 'b option) (l: 'a list) : ('a * 'b) option =
 
  (*TODO: do we need mutual ADT?*)
 let check_termination_aux kn (funs: (vsymbol list * term) Mls.t) :
-      (int Mls.t) option =
+      (BigInt.t Mls.t) option =
   if Mls.is_empty funs then None
   else 
     let l = Mls.bindings funs in
@@ -1378,7 +1391,7 @@ let check_termination_strict kn d : decl =
     begin match (check_termination_aux kn syms) with
     | Some idxs -> (*TODO: do we actually need index info?*)
       (*TODO: change from int list to int maybe?*)
-      let ldl =  List.map (fun (ls,((_,f),_)) -> (ls,((ls,f),[Mls.find ls idxs]))) ld in
+      let ldl =  List.map (fun (ls,((_,f),_)) -> (ls,((ls,f),[BigInt.to_int (Mls.find ls idxs)]))) ld in (*JOSH TODO delete to_int*)
       (*TODO: do we need to hashcons?*)
       { d_node = Dlogic ldl;
         d_news = d.d_news;
