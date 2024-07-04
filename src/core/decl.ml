@@ -1,3 +1,4 @@
+open Common
 open CoqUtil
 open Weakhtbl
 open Ident
@@ -60,13 +61,25 @@ let d_news d =
 
 let d_tag d =
   d.d_tag
+
+(** val constructor_eqb : constructor -> constructor -> bool **)
+
+let constructor_eqb =
+  tuple_eqb ls_equal (list_eqb (option_eqb ls_equal))
+
+(** val data_decl_eqb : data_decl -> data_decl -> bool **)
+
+let data_decl_eqb =
+  tuple_eqb ts_equal (list_eqb constructor_eqb)
 exception UnboundVar of vsymbol
 exception UnexpectedProjOrConstr of lsymbol
+open Common
 open CoqHashtbl
 open CoqUtil
 open Datatypes
 
 open Ident
+open IntFuncs
 open List0
 open Monads
 open Term
@@ -148,6 +161,11 @@ type mut_adt = data_decl list
 
 type mut_info = mut_adt list * mut_adt Mts.t
 
+(** val mut_adt_eqb : mut_adt -> mut_adt -> bool **)
+
+let mut_adt_eqb =
+  list_eqb data_decl_eqb
+
 (** val get_ctx_tys : decl Mid.t -> mut_info **)
 
 let get_ctx_tys kn =
@@ -187,6 +205,75 @@ let vty_in_m' m v =
   match ty_node v with
   | Tyvar _ -> false
   | Tyapp (ts, _) -> ts_in_mut ts m
+
+(** val add_union : ('a1 -> 'a1 -> bool) -> 'a1 -> 'a1 list -> 'a1 list **)
+
+let add_union eq x l =
+  if existsb (fun y -> eq x y) l then l else x :: l
+
+(** val get_adts_present :
+    mut_info -> vsymbol list -> (mut_adt * ty_node_c ty_o list) list **)
+
+let get_adts_present ctx l =
+  fold_right (fun v acc ->
+    match is_vty_adt ctx v.vs_ty with
+    | Some p ->
+      let (p0, vs) = p in
+      let (m, _) = p0 in
+      add_union (tuple_eqb mut_adt_eqb (list_eqb ty_eqb)) (m, vs) acc
+    | None -> acc) [] l
+
+(** val get_idx_lists_aux :
+    decl Mid.t -> (vsymbol list * (term_node term_o)) Mls.t ->
+    ((mut_adt * ty_node_c ty_o list) * BigInt.t list list) list **)
+
+let get_idx_lists_aux kn funs =
+  let syms = Mls.fold (fun _ x y -> (fst x) :: y) funs [] in
+  map (fun pat ->
+    let (m, vs) = pat in
+    let l =
+      map (fun args ->
+        map fst
+          (filter (fun it -> vty_in_m m vs (snd it))
+            (combine (iota2 (int_length args)) (map (fun v -> v.vs_ty) args))))
+        syms
+    in
+    ((m, vs), (if existsb null l then [] else l)))
+    (get_adts_present (get_ctx_tys kn) (concat syms))
+
+(** val get_idx_lists :
+    decl Mid.t -> (vsymbol list * (term_node term_o)) Mls.t ->
+    ((mut_adt * ty_node_c ty_o list) * BigInt.t list list) list **)
+
+let get_idx_lists kn funs =
+  filter (fun pat -> let (_, x) = pat in negb (null x))
+    (get_idx_lists_aux kn funs)
+
+(** val get_possible_index_lists : 'a1 list list -> 'a1 list list **)
+
+let rec get_possible_index_lists = function
+| [] -> [] :: []
+| l1 :: rest ->
+  let r = get_possible_index_lists rest in
+  concat (map (fun x -> map (fun y -> x :: y) r) l1)
+
+(** val check_unif_map : ty_node_c ty_o Mtv.t -> bool **)
+
+let check_unif_map m =
+  Mtv.for_all (fun v t0 ->
+    match ty_node t0 with
+    | Tyvar v1 -> tv_equal v v1
+    | Tyapp (_, _) -> false) m
+
+(** val vsym_in_m : mut_adt -> ty_node_c ty_o list -> vsymbol -> bool **)
+
+let vsym_in_m m vs x =
+  vty_in_m m vs x.vs_ty
+
+(** val constr_in_m : lsymbol -> mut_adt -> bool **)
+
+let constr_in_m l m =
+  existsb (fun d -> existsb (fun c -> ls_equal (fst c) l) (snd d)) m
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -1103,7 +1190,7 @@ let vty_in_m' (m: mut_adt) (v: ty) : bool =
 (*A hack - should really use maps but it is complicated with
   tuples and lists - are BSTs the way to go?*)
 (*Inefficient of course*)
-let add_union (eq: 'a -> 'a -> bool) (x: 'a) (l: 'a list) =
+(* let add_union (eq: 'a -> 'a -> bool) (x: 'a) (l: 'a list) =
   if List.exists (fun y -> eq x y) l then l else x :: l
 
 
@@ -1112,14 +1199,13 @@ let get_adts_present (ctx: mut_info) (l: vsymbol list) : (mut_adt * ty list) lis
     match (is_vty_adt ctx v.vs_ty) with
     | Some ((m, a), vs) -> add_union (=) (m, vs) acc
     | None -> acc
-    ) l []
-
+    ) l [] *)
 (*TEMP - change to bigint*)
 (*NOTE: from 0 to n-1, NOT 1 to n - NEEDS to be increasing order*)
 (*TODO: include in IntFuncs*)
 (*iota is from 1 to n, we want 0 to n-1*)
-let iota2 (n: BigInt.t) : BigInt.t list =
-  List.rev(List.map BigInt.pred (IntFuncs.iota n))
+(*let iota2 (n: BigInt.t) : BigInt.t list =
+  List.rev(List.map BigInt.pred (IntFuncs.iota n))*)
 (* let iota (n: BigInt.t) : BigInt.t list =
   let rec iota_aux n = 
   if BigInt.lt n BigInt.zero
@@ -1128,7 +1214,7 @@ let iota2 (n: BigInt.t) : BigInt.t list =
   List.rev (iota_aux n) *)
 
 (*TODO: combine probably*)
-let get_idx_lists_aux kn (funs: (vsymbol list * term) Mls.t) :  (data_decl list * ty list * (BigInt.t list) list) list =
+(* let get_idx_lists_aux kn (funs: (vsymbol list * term) Mls.t) :  (data_decl list * ty list * (BigInt.t list) list) list =
     let syms : vsymbol list list = Mls.fold (fun _ x y -> (fst x) :: y) funs [] in
     List.map (fun (m, vs) -> 
     
@@ -1147,32 +1233,32 @@ let get_idx_lists_aux kn (funs: (vsymbol list * term) Mls.t) :  (data_decl list 
 
 
 let get_idx_lists kn (funs: (vsymbol list * term) Mls.t) : (data_decl list * ty list * (BigInt.t list) list) list =
-  List.filter (fun (_, _, x) -> not (null x)) (get_idx_lists_aux kn funs)
+  List.filter (fun (_, _, x) -> not (null x)) (get_idx_lists_aux kn funs) *)
 
-let rec get_possible_index_lists (l: BigInt.t list list) : BigInt.t list list =
+(* let rec get_possible_index_lists (l: BigInt.t list list) : BigInt.t list list =
   match l with
   | l1 :: rest -> let r = get_possible_index_lists rest in
     List.concat (List.map (fun x -> List.map (fun y -> x :: y) r) l1)
-  | [] -> [[]]
+  | [] -> [[]] *)
 
 (*The core of the termination checking (TODO move?)*)
 
-let check_unif_map (m: ty Mtv.t) : bool =
+(* let check_unif_map (m: ty Mtv.t) : bool =
   Mtv.for_all (fun (v: tvsymbol) (t : ty) -> 
     match t.ty_node with 
       | Tyvar v1 -> tv_equal v v1 
       | _ -> false
-      ) m
+      ) m *)
 
-let check_inst_eq (m: ty Mtv.t) (syms: tvsymbol list) (tys: ty list) : bool =
+(* let check_inst_eq (m: ty Mtv.t) (syms: tvsymbol list) (tys: ty list) : bool =
   List.for_all (fun (v, t) -> match Mtv.find_opt v m with | Some t1 -> ty_equal t t1 | None -> false) 
-    (List.combine syms tys)
+    (List.combine syms tys) *)
 
-let vsym_in_m (m: mut_adt) (vs: ty list) (x: vsymbol) : bool =
+(* let vsym_in_m (m: mut_adt) (vs: ty list) (x: vsymbol) : bool =
   vty_in_m m vs (x.vs_ty)
 
 let constr_in_m (l: lsymbol) (m: mut_adt) : bool =
-  List.exists (fun (d: data_decl) -> List.exists (fun c -> fst c = l) (snd d)) m
+  List.exists (fun (d: data_decl) -> List.exists (fun c -> fst c = l) (snd d)) m *)
 
 (*TODO: do we need this?*)
 
@@ -1348,7 +1434,7 @@ let check_termination_aux kn (funs: (vsymbol list * term) Mls.t) :
     Option.bind
   (*TODO: skipping params for now - do we need?*)
 
-  (find_elt (fun (m, vs, cands) -> 
+  (find_elt (fun ((m, vs), cands) -> 
     (*Skip params, implied by typing*)
     if mut_in_ctx m kn then 
       find_idx_list l m vs (get_possible_index_lists cands)

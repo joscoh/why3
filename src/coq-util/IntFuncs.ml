@@ -1,3 +1,4 @@
+open List0
 
 (** val int_length : 'a1 list -> BigInt.t **)
 
@@ -29,6 +30,11 @@ let rec iota_aux z =
 
 let iota =
   iota_aux
+
+(** val iota2 : BigInt.t -> BigInt.t list **)
+
+let iota2 z =
+  rev (map BigInt.pred (iota z))
 
 (** val lex_comp : Stdlib.Int.t -> Stdlib.Int.t -> Stdlib.Int.t **)
 
