@@ -100,6 +100,17 @@ let null = function
 | [] -> true
 | _ :: _ -> false
 
+(** val combineWith :
+    ('a1 -> 'a2 -> 'a3) -> 'a1 list -> 'a2 list -> 'a3 list **)
+
+let rec combineWith f l1 l2 =
+  match l1 with
+  | [] -> []
+  | x1 :: xs ->
+    (match l2 with
+     | [] -> []
+     | y1 :: ys -> (f x1 y1) :: (combineWith f xs ys))
+
 (** val option_fold : 'a1 -> ('a2 -> 'a1) -> 'a2 option -> 'a1 **)
 
 let option_fold none some = function

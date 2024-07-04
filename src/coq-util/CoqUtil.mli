@@ -28,6 +28,8 @@ val fold_right2 :
 
 val null : 'a1 list -> bool
 
+val combineWith : ('a1 -> 'a2 -> 'a3) -> 'a1 list -> 'a2 list -> 'a3 list
+
 val option_fold : 'a1 -> ('a2 -> 'a1) -> 'a2 option -> 'a1
 
 val map_fold_left :

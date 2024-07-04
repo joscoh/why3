@@ -274,6 +274,38 @@ let vsym_in_m m vs x =
 
 let constr_in_m l m =
   existsb (fun d -> existsb (fun c -> ls_equal (fst c) l) (snd d)) m
+
+(** val pat_constr_vars_inner :
+    mut_adt -> ty_node_c ty_o list -> (pattern_node pattern_o) -> Svs.t **)
+
+let rec pat_constr_vars_inner m vs p =
+  match pat_node p with
+  | Pwild -> Svs.empty
+  | Pvar x -> if vsym_in_m m vs x then Svs.singleton x else Svs.empty
+  | Papp (f, ps) ->
+    if constr_in_m f m
+    then fold_right Svs.union Svs.empty
+           (combineWith (fun p0 x ->
+             if vty_in_m' m x
+             then pat_constr_vars_inner m vs p0
+             else Svs.empty) ps f.ls_args)
+    else Svs.empty
+  | Por (p1, p2) ->
+    Svs.inter (pat_constr_vars_inner m vs p1) (pat_constr_vars_inner m vs p2)
+  | Pas (p', y) ->
+    Svs.union (if vsym_in_m m vs y then Svs.singleton y else Svs.empty)
+      (pat_constr_vars_inner m vs p')
+
+(** val pat_constr_vars :
+    mut_adt -> ty_node_c ty_o list -> (pattern_node pattern_o) -> Svs.t **)
+
+let rec pat_constr_vars m vs p =
+  match pat_node p with
+  | Papp (_, _) -> pat_constr_vars_inner m vs p
+  | Por (p1, p2) ->
+    Svs.inter (pat_constr_vars m vs p1) (pat_constr_vars m vs p2)
+  | Pas (p0, _) -> pat_constr_vars m vs p0
+  | _ -> Svs.empty
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -1264,7 +1296,7 @@ let constr_in_m (l: lsymbol) (m: mut_adt) : bool =
 
 
 (*TODO: do we need vs?*)
-let rec pat_constr_vars_inner (m: mut_adt) (vs: ty list) (p: pattern) : Svs.t =
+(*let rec pat_constr_vars_inner (m: mut_adt) (vs: ty list) (p: pattern) : Svs.t =
   match p.pat_node with
 | Pwild -> Svs.empty
 | Pvar x -> if vsym_in_m m vs x then Svs.singleton x else Svs.empty
@@ -1288,7 +1320,7 @@ match p.pat_node with
 | Papp (_, _) -> pat_constr_vars_inner m vs p
 | Por (p1, p2) -> Svs.inter (pat_constr_vars m vs p1) (pat_constr_vars m vs p2)
 | Pas (p, y) -> pat_constr_vars m vs p
-| _ -> Svs.empty
+| _ -> Svs.empty*)
 
 let upd_option (hd: vsymbol option) (x: vsymbol) : vsymbol option =
   match hd with
