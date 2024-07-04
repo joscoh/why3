@@ -41,4 +41,20 @@ let iota2 z =
 let lex_comp x1 x2 =
   if (fun x -> Stdlib.Int.equal x Stdlib.Int.zero) x1 then x2 else x1
 
+(** val big_nth_aux : 'a1 list -> BigInt.t -> 'a1 option **)
 
+let rec big_nth_aux l z =
+  if BigInt.lt z BigInt.zero
+  then None
+  else if BigInt.eq z BigInt.zero
+       then (match l with
+             | [] -> None
+             | x :: _ -> Some x)
+       else (match l with
+             | [] -> None
+             | _ :: t -> big_nth_aux t (BigInt.pred z))
+
+(** val big_nth : 'a1 list -> BigInt.t -> 'a1 option **)
+
+let big_nth =
+  big_nth_aux

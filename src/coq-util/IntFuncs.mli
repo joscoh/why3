@@ -13,4 +13,6 @@ val iota2 : BigInt.t -> BigInt.t list
 
 val lex_comp : Stdlib.Int.t -> Stdlib.Int.t -> Stdlib.Int.t
 
+val big_nth_aux : 'a1 list -> BigInt.t -> 'a1 option
 
+val big_nth : 'a1 list -> BigInt.t -> 'a1 option

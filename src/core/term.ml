@@ -540,7 +540,6 @@ exception InvalidStringLiteralType of ty
 
 exception EmptyCase
 open Constant
-open CoqHashtbl
 open CoqUtil
 open Datatypes
 open Ident
@@ -660,8 +659,8 @@ let pat_any pr pat =
   pat_fold (fun x y -> (||) x (pr y)) false pat
 
 (** val fold_left2_errorHashcons :
-    ('a3 -> 'a1 -> 'a2 -> (BigInt.t * 'a4 hashset, 'a3) errState) -> 'a3 ->
-    'a1 list -> 'a2 list -> (BigInt.t * 'a4 hashset, 'a3 option) errState **)
+    ('a3 -> 'a1 -> 'a2 -> ('a4 hashcons_ty, 'a3) errState) -> 'a3 -> 'a1 list
+    -> 'a2 list -> ('a4 hashcons_ty, 'a3 option) errState **)
 
 let rec fold_left2_errorHashcons f accu l1 l2 =
   match l1 with
@@ -675,8 +674,8 @@ let rec fold_left2_errorHashcons f accu l1 l2 =
        (@@) (fun x -> fold_left2_errorHashcons f x l3 l4) (f accu a1 a2))
 
 (** val pat_app :
-    lsymbol -> (pattern_node pattern_o) list -> ty_node_c ty_o ->
-    (BigInt.t * TyHash.t hashset, (pattern_node pattern_o)) errState **)
+    lsymbol -> (pattern_node pattern_o) list -> ty_node_c ty_o -> (TyHash.t
+    hashcons_ty, (pattern_node pattern_o)) errState **)
 
 let pat_app fs pl t0 =
   (@@) (fun s ->
@@ -2016,7 +2015,7 @@ let t_peek_quant = function
 | (p, _) -> let (p0, _) = p in let (vl, _) = p0 in map (fun v -> v.vs_name) vl
 
 (** val ls_arg_inst :
-    lsymbol -> (term_node term_o) list -> (BigInt.t * ty_node_c ty_o hashset,
+    lsymbol -> (term_node term_o) list -> (ty_node_c ty_o hashcons_ty,
     ty_node_c ty_o Mtv.t) errState **)
 
 let ls_arg_inst ls tl =
@@ -2030,7 +2029,7 @@ let ls_arg_inst ls tl =
 
 (** val ls_app_inst :
     lsymbol -> (term_node term_o) list -> ty_node_c ty_o option ->
-    (BigInt.t * ty_node_c ty_o hashset, ty_node_c ty_o Mtv.t) errState **)
+    (ty_node_c ty_o hashcons_ty, ty_node_c ty_o Mtv.t) errState **)
 
 let ls_app_inst ls tl typ =
   (@@) (fun s ->
@@ -2045,7 +2044,7 @@ let ls_app_inst ls tl typ =
        | None ->  s)) (ls_arg_inst ls tl)
 
 (** val t_app_infer :
-    lsymbol -> (term_node term_o) list -> (BigInt.t * ty_node_c ty_o hashset,
+    lsymbol -> (term_node term_o) list -> (ty_node_c ty_o hashcons_ty,
     (term_node term_o)) errState **)
 
 let t_app_infer ls tl =
@@ -2057,20 +2056,20 @@ let t_app_infer ls tl =
 
 (** val t_app :
     lsymbol -> (term_node term_o) list -> ty_node_c ty_o option ->
-    (BigInt.t * ty_node_c ty_o hashset, (term_node term_o)) errState **)
+    (ty_node_c ty_o hashcons_ty, (term_node term_o)) errState **)
 
 let t_app ls tl typ =
   (@@) (fun _ ->  (t_app1 ls tl typ)) (ls_app_inst ls tl typ)
 
 (** val fs_app :
-    lsymbol -> (term_node term_o) list -> ty_node_c ty_o ->
-    (BigInt.t * ty_node_c ty_o hashset, (term_node term_o)) errState **)
+    lsymbol -> (term_node term_o) list -> ty_node_c ty_o -> (ty_node_c ty_o
+    hashcons_ty, (term_node term_o)) errState **)
 
 let fs_app fs tl ty =
   t_app fs tl (Some ty)
 
 (** val ps_app :
-    lsymbol -> (term_node term_o) list -> (BigInt.t * ty_node_c ty_o hashset,
+    lsymbol -> (term_node term_o) list -> (ty_node_c ty_o hashcons_ty,
     (term_node term_o)) errState **)
 
 let ps_app ps tl =
@@ -2299,15 +2298,15 @@ let ps_equ =
   create_psymbol_builtin id_eq (ty_a :: (ty_a :: []))
 
 (** val t_equ :
-    (term_node term_o) -> (term_node term_o) -> (BigInt.t * ty_node_c ty_o
-    hashset, (term_node term_o)) errState **)
+    (term_node term_o) -> (term_node term_o) -> (ty_node_c ty_o hashcons_ty,
+    (term_node term_o)) errState **)
 
 let t_equ t1 t2 =
   ps_app ps_equ (t1 :: (t2 :: []))
 
 (** val t_neq :
-    (term_node term_o) -> (term_node term_o) -> (BigInt.t * ty_node_c ty_o
-    hashset, (term_node term_o)) errState **)
+    (term_node term_o) -> (term_node term_o) -> (ty_node_c ty_o hashcons_ty,
+    (term_node term_o)) errState **)
 
 let t_neq t1 t2 =
   (@@) (fun a ->  (t_not a)) (ps_app ps_equ (t1 :: (t2 :: [])))
@@ -2333,8 +2332,8 @@ let t_bool_false =
   t_app1 fs_bool_false [] (Some ty_bool)
 
 (** val to_prop :
-    (term_node term_o) -> (BigInt.t * ty_node_c ty_o hashset,
-    (term_node term_o)) errState **)
+    (term_node term_o) -> (ty_node_c ty_o hashcons_ty, (term_node term_o))
+    errState **)
 
 let to_prop t0 =
   match t_ty t0 with
@@ -2353,15 +2352,15 @@ let fs_func_app =
     (ty_func_ab :: (ty_a :: [])) ty_b
 
 (** val t_func_app :
-    (term_node term_o) -> (term_node term_o) -> (BigInt.t * ty_node_c ty_o
-    hashset, (term_node term_o)) errState **)
+    (term_node term_o) -> (term_node term_o) -> (ty_node_c ty_o hashcons_ty,
+    (term_node term_o)) errState **)
 
 let t_func_app fn t0 =
   t_app_infer fs_func_app (fn :: (t0 :: []))
 
 (** val t_pred_app :
-    (term_node term_o) -> (term_node term_o) -> (BigInt.t * ty_node_c ty_o
-    hashset, (term_node term_o)) errState **)
+    (term_node term_o) -> (term_node term_o) -> (ty_node_c ty_o hashcons_ty,
+    (term_node term_o)) errState **)
 
 let t_pred_app pr t0 =
   (@@) (fun t1 -> t_equ t1 t_bool_true) (t_func_app pr t0)
@@ -2376,15 +2375,15 @@ let rec fold_left_errst f l x =
   | h :: t0 -> (@@) (fun j -> fold_left_errst f t0 j) (f x h)
 
 (** val t_func_app_l :
-    (term_node term_o) -> (term_node term_o) list ->
-    (BigInt.t * ty_node_c ty_o hashset, (term_node term_o)) errState **)
+    (term_node term_o) -> (term_node term_o) list -> (ty_node_c ty_o
+    hashcons_ty, (term_node term_o)) errState **)
 
 let t_func_app_l fn tl =
   fold_left_errst t_func_app tl fn
 
 (** val t_pred_app_l :
-    (term_node term_o) -> (term_node term_o) list ->
-    (BigInt.t * ty_node_c ty_o hashset, (term_node term_o)) errState **)
+    (term_node term_o) -> (term_node term_o) list -> (ty_node_c ty_o
+    hashcons_ty, (term_node term_o)) errState **)
 
 let t_pred_app_l pr tl =
   (@@) (fun ta -> t_equ ta t_bool_true) (t_func_app_l pr tl)
@@ -2430,6 +2429,77 @@ module TermTFAlt =
   let t_selecti fnT fnF acc e =
     if isNone (t_ty e) then fnF acc e else fnT acc e
  end
+
+(** val term_rec :
+    (vsymbol -> 'a1) -> (constant -> 'a1) -> (lsymbol -> (term_node term_o)
+    list -> 'a1 list -> 'a1) -> ((term_node term_o) -> 'a1 ->
+    (term_node term_o) -> 'a1 -> (term_node term_o) -> 'a1 -> 'a1) ->
+    ((term_node term_o) -> 'a1 -> vsymbol -> (term_node term_o) -> 'a1 ->
+    'a1) -> ((term_node term_o) -> 'a1 ->
+    (((pattern_node pattern_o) * (term_node term_o)) * 'a1) list -> 'a1) ->
+    (vsymbol -> (term_node term_o) -> 'a1 -> 'a1) -> (quant -> vsymbol list
+    -> (term_node term_o) -> 'a1 -> 'a1) -> (binop -> (term_node term_o) ->
+    'a1 -> (term_node term_o) -> 'a1 -> 'a1) -> ((term_node term_o) -> 'a1 ->
+    'a1) -> 'a1 -> 'a1 -> (term_node term_o) -> 'a1 **)
+
+let rec term_rec var_case const_case app_case if_case let_case match_case eps_case quant_case binop_case not_case true_case false_case t0 =
+  match t_node t0 with
+  | Tvar v -> var_case v
+  | Tconst c -> const_case c
+  | Tapp (l, ts) ->
+    app_case l ts
+      (map
+        (term_rec var_case const_case app_case if_case let_case match_case
+          eps_case quant_case binop_case not_case true_case false_case) ts)
+  | Tif (t1, t2, t3) ->
+    if_case t1
+      (term_rec var_case const_case app_case if_case let_case match_case
+        eps_case quant_case binop_case not_case true_case false_case t1) t2
+      (term_rec var_case const_case app_case if_case let_case match_case
+        eps_case quant_case binop_case not_case true_case false_case t2) t3
+      (term_rec var_case const_case app_case if_case let_case match_case
+        eps_case quant_case binop_case not_case true_case false_case t3)
+  | Tlet (t1, p) ->
+    let (p0, t2) = p in
+    let (v, _) = p0 in
+    let_case t1
+      (term_rec var_case const_case app_case if_case let_case match_case
+        eps_case quant_case binop_case not_case true_case false_case t1) v t2
+      (term_rec var_case const_case app_case if_case let_case match_case
+        eps_case quant_case binop_case not_case true_case false_case t2)
+  | Tcase (t1, ps) ->
+    match_case t1
+      (term_rec var_case const_case app_case if_case let_case match_case
+        eps_case quant_case binop_case not_case true_case false_case t1)
+      (map (fun x -> (((fst (fst x)), (snd x)),
+        (term_rec var_case const_case app_case if_case let_case match_case
+          eps_case quant_case binop_case not_case true_case false_case
+          (snd x)))) ps)
+  | Teps p ->
+    let (p0, f) = p in
+    let (v, _) = p0 in
+    eps_case v f
+      (term_rec var_case const_case app_case if_case let_case match_case
+        eps_case quant_case binop_case not_case true_case false_case f)
+  | Tquant (q, p) ->
+    let (p0, f) = p in
+    let (p1, _) = p0 in
+    let (vs, _) = p1 in
+    quant_case q vs f
+      (term_rec var_case const_case app_case if_case let_case match_case
+        eps_case quant_case binop_case not_case true_case false_case f)
+  | Tbinop (b, t1, t2) ->
+    binop_case b t1
+      (term_rec var_case const_case app_case if_case let_case match_case
+        eps_case quant_case binop_case not_case true_case false_case t1) t2
+      (term_rec var_case const_case app_case if_case let_case match_case
+        eps_case quant_case binop_case not_case true_case false_case t2)
+  | Tnot f ->
+    not_case f
+      (term_rec var_case const_case app_case if_case let_case match_case
+        eps_case quant_case binop_case not_case true_case false_case f)
+  | Ttrue -> true_case
+  | Tfalse -> false_case
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)

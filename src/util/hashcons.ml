@@ -18,16 +18,16 @@ module type S =
  sig
   type t
 
-  val add_builtins : t list -> BigInt.t -> (BigInt.t * t hashset, unit) st
+  val add_builtins : t list -> BigInt.t -> (t hashcons_ty, unit) st
 
-  val hashcons : t -> (BigInt.t * t hashset, t) st
+  val hashcons : t -> (t hashcons_ty, t) st
 
-  val unique : t -> (BigInt.t * t hashset, t) st
+  val unique : t -> (t hashcons_ty, t) st
 
-  val iter : (t -> unit) -> (BigInt.t * t hashset, unit) st
+  val iter : (t -> unit) -> (t hashcons_ty, unit) st
 
   val stats :
-    unit -> (BigInt.t * t hashset,
+    unit -> (t hashcons_ty,
     ((((Stdlib.Int.t * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t)
     st
  end
@@ -49,8 +49,7 @@ module Make =
 
   module HashconsSt = MakeState(HashconsTy)
 
-  (** val add_builtins :
-      t list -> BigInt.t -> (BigInt.t * t hashset, unit) st **)
+  (** val add_builtins : t list -> BigInt.t -> (t hashcons_ty, unit) st **)
 
   let add_builtins l next =
     (@@) (fun x ->
@@ -58,13 +57,13 @@ module Make =
       let h' = fold_right (fun x0 acc -> add_hashset H.hash acc x0) h l in
       HashconsSt.set (next, h')) (HashconsSt.get ())
 
-  (** val incr : unit -> (BigInt.t * H.t hashset, unit) st **)
+  (** val incr : unit -> (H.t hashcons_ty, unit) st **)
 
   let incr _ =
     (@@) (fun x -> let (i, h) = x in HashconsSt.set ((BigInt.succ i), h))
       (HashconsSt.get ())
 
-  (** val unique : t -> (BigInt.t * H.t hashset, t) st **)
+  (** val unique : t -> (H.t hashcons_ty, t) st **)
 
   let unique d =
     (@@) (fun x ->
@@ -72,7 +71,7 @@ module Make =
       let d0 = H.tag i d in (@@) (fun _ -> (fun x -> x) d0) (incr ()))
       (HashconsSt.get ())
 
-  (** val hashcons : t -> (BigInt.t * H.t hashset, t) st **)
+  (** val hashcons : t -> (H.t hashcons_ty, t) st **)
 
   let hashcons d =
     (@@) (fun x ->
@@ -86,14 +85,14 @@ module Make =
            (HashconsSt.set (i, (add_hashset H.hash h d1)))))
       (HashconsSt.get ())
 
-  (** val iter : (t -> unit) -> (BigInt.t * H.t hashset, unit) st **)
+  (** val iter : (t -> unit) -> (H.t hashcons_ty, unit) st **)
 
   let iter f =
     (@@) (fun x -> let (_, h) = x in (fun x -> x) (iter_hashset_unsafe f h))
       (HashconsSt.get ())
 
   (** val stats :
-      unit -> (BigInt.t * H.t hashset,
+      unit -> (H.t hashcons_ty,
       ((((Stdlib.Int.t * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t)
       st **)
 

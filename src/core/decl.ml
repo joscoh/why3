@@ -74,7 +74,6 @@ let data_decl_eqb =
 exception UnboundVar of vsymbol
 exception UnexpectedProjOrConstr of lsymbol
 open Common
-open CoqHashtbl
 open CoqUtil
 open Datatypes
 
@@ -131,8 +130,8 @@ let rec list_iter2 f l1 l2 =
      | x2 :: t2 -> (@@) (fun _ -> list_iter2 f t1 t2) (f x1 x2))
 
 (** val make_ls_defn :
-    lsymbol -> vsymbol list -> (term_node term_o) ->
-    (BigInt.t * ty_node_c ty_o hashset, lsymbol * ls_defn) errState **)
+    lsymbol -> vsymbol list -> (term_node term_o) -> (ty_node_c ty_o
+    hashcons_ty, lsymbol * ls_defn) errState **)
 
 let make_ls_defn ls vl t0 =
   if (||) (negb (BigInt.is_zero ls.ls_constr)) ls.ls_proj
@@ -285,7 +284,7 @@ let rec pat_constr_vars_inner m vs p =
   | Papp (f, ps) ->
     if constr_in_m f m
     then fold_right Svs.union Svs.empty
-           (combineWith (fun p0 x ->
+           (map2 (fun p0 x ->
              if vty_in_m' m x
              then pat_constr_vars_inner m vs p0
              else Svs.empty) ps f.ls_args)
@@ -306,6 +305,115 @@ let rec pat_constr_vars m vs p =
     Svs.inter (pat_constr_vars m vs p1) (pat_constr_vars m vs p2)
   | Pas (p0, _) -> pat_constr_vars m vs p0
   | _ -> Svs.empty
+
+(** val upd_option : vsymbol option -> vsymbol -> vsymbol option **)
+
+let upd_option hd x =
+  match hd with
+  | Some y -> if vs_equal x y then None else hd
+  | None -> None
+
+(** val upd_option_iter : vsymbol option -> Svs.t -> vsymbol option **)
+
+let upd_option_iter x xs =
+  Svs.fold (fun v o -> upd_option o v) xs x
+
+(** val check_var_case : unit Svs.M.t -> vsymbol option -> vsymbol -> bool **)
+
+let check_var_case small hd v =
+  (||) (option_eqb vs_equal hd (Some v)) (Svs.mem v small)
+
+(** val tm_var_case :
+    Svs.t -> vsymbol option -> (term_node term_o) -> bool **)
+
+let tm_var_case small hd t0 =
+  match t_node t0 with
+  | Tvar v -> check_var_case small hd v
+  | _ -> false
+
+(** val get_constr_smaller :
+    Svs.t -> vsymbol option -> mut_adt -> ty_node_c ty_o list -> lsymbol ->
+    (term_node term_o) list -> (pattern_node pattern_o) -> Svs.t **)
+
+let get_constr_smaller small hd m vs f tms p =
+  match pat_node p with
+  | Papp (f1, ps) ->
+    if ls_equal f f1
+    then fold_right Svs.union Svs.empty
+           (map2 (fun t0 p0 ->
+             if tm_var_case small hd t0
+             then pat_constr_vars m vs p0
+             else Svs.empty) tms ps)
+    else Svs.empty
+  | _ -> Svs.empty
+
+(** val svs_remove_all : vsymbol list -> Svs.t -> Svs.t **)
+
+let svs_remove_all l s =
+  fold_right Svs.remove s l
+
+(** val check_decrease_fun :
+    (lsymbol * BigInt.t) list -> Svs.t -> vsymbol option -> mut_adt ->
+    ty_node_c ty_o list -> (term_node term_o) -> (ty_node_c ty_o hashcons_ty,
+    bool) errState **)
+
+let check_decrease_fun funs small hd m vs t0 =
+  term_rec (fun _ _ _ ->  true) (fun _ _ _ ->  true)
+    (fun f ts recs small0 hd0 ->
+    match list_find_opt (fun y -> ls_equal f (fst y)) funs with
+    | Some p ->
+      let (_, i) = p in
+      (match big_nth ts i with
+       | Some tm ->
+         (match t_node tm with
+          | Tvar x ->
+            (@@) (fun l ->
+              (@@) (fun a ->
+                
+                  ((&&) ((&&) (Svs.contains small0 x) (check_unif_map l))
+                    (forallb (fun x0 -> x0) a)))
+                (errst_list (map (fun x0 -> x0 small0 hd0) recs)))
+              (ls_arg_inst f ts)
+          | _ ->  false)
+       | None ->  false)
+    | None ->
+      (@@) (fun a ->  (forallb (fun x -> x) a))
+        (errst_list (map (fun x -> x small0 hd0) recs)))
+    (fun _ rec1 _ rec2 _ rec3 small0 hd0 ->
+    (@@) (fun r1 ->
+      (@@) (fun r2 ->
+        (@@) (fun r3 ->  ((&&) ((&&) r1 r2) r3)) (rec3 small0 hd0))
+        (rec2 small0 hd0)) (rec1 small0 hd0))
+    (fun _ rec1 x _ rec2 small0 hd0 ->
+    (@@) (fun r1 ->
+      (@@) (fun r2 ->  ((&&) r1 r2))
+        (rec2 (Svs.remove x small0) (upd_option hd0 x))) (rec1 small0 hd0))
+    (fun t1 rec1 recps small0 hd0 ->
+    (@@) (fun r1 ->
+      (@@) (fun r2 ->  ((&&) r1 (forallb (fun x -> x) r2)))
+        (errst_list
+          (map (fun y ->
+            let (y0, rec0) = y in
+            let (p, _) = y0 in
+            let toadd =
+              match t_node t1 with
+              | Tvar mvar ->
+                if check_var_case small0 hd0 mvar
+                then pat_constr_vars m vs p
+                else Svs.empty
+              | Tapp (c, tms) -> get_constr_smaller small0 hd0 m vs c tms p
+              | _ -> Svs.empty
+            in
+            let newsmall = Svs.union toadd (Svs.diff small0 (pat_vars p)) in
+            rec0 newsmall (upd_option_iter hd0 (pat_vars p))) recps)))
+      (rec1 small0 hd0)) (fun v _ rec0 small0 hd0 ->
+    rec0 (Svs.remove v small0) (upd_option hd0 v))
+    (fun _ vars _ rec0 small0 hd0 ->
+    rec0 (svs_remove_all vars small0) (upd_option_iter hd0 (Svs.of_list vars)))
+    (fun _ _ rec1 _ rec2 small0 hd0 ->
+    (@@) (fun r1 -> (@@) (fun r2 ->  ((&&) r1 r2)) (rec2 small0 hd0))
+      (rec1 small0 hd0)) (fun _ rec0 -> rec0) (fun _ _ ->  true) (fun _ _ ->
+     true) t0 small hd
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -1322,7 +1430,7 @@ match p.pat_node with
 | Pas (p, y) -> pat_constr_vars m vs p
 | _ -> Svs.empty*)
 
-let upd_option (hd: vsymbol option) (x: vsymbol) : vsymbol option =
+(* let upd_option (hd: vsymbol option) (x: vsymbol) : vsymbol option =
   match hd with
   | Some y -> if vs_equal x y then None else hd
   | None -> None
@@ -1336,11 +1444,11 @@ let check_var_case small hd v =
 let tm_var_case (small: Svs.t) (hd: vsymbol option) (t: term) : bool =
   match t.t_node with
 | Tvar v -> check_var_case small hd v
-| _ -> false
+| _ -> false *)
 
 (*If jth element of tms is small variable, all [pat_constr_vars] in
   (nth j ps) should be added*)
-let get_constr_smaller (small: Svs.t) (hd: vsymbol option) (m: mut_adt)
+(* let get_constr_smaller (small: Svs.t) (hd: vsymbol option) (m: mut_adt)
   (vs: ty list) (f: lsymbol) (tms: term list) (p: pattern) : Svs.t =
   match p.pat_node with
 | Papp (f1, ps) -> if ls_equal f f1 then 
@@ -1349,30 +1457,35 @@ else Svs.empty
 | _ -> Svs.empty
 
 let svs_remove_all (l: vsymbol list) (s: Svs.t) : Svs.t =
-  List.fold_right Svs.remove l s
+  List.fold_right Svs.remove l s *)
 
 (*TODO: move/implement*)
-let big_nth l n =
+(*let big_nth l n =
   if BigInt.lt n BigInt.zero then invalid_arg "big_nth" else
   let rec nth_aux l n =
     match l with
     | [] -> failwith "nth"
     | a::l -> if BigInt.is_zero n then a else nth_aux l (BigInt.pred n)
-  in nth_aux l n
+  in nth_aux l n*)
 
-let rec check_decrease_fun (funs: (lsymbol * BigInt.t) list)
+(*let rec check_decrease_fun (funs: (lsymbol * BigInt.t) list)
   (small: Svs.t) (hd: vsymbol option) (m: mut_adt) (vs: ty list) (t: term) : bool =
 match t.t_node with
 | Tapp(f, ts) ->
   begin match List.find_opt (fun y -> f = (fst y)) funs with
   | Some (_, i) ->
       (*Needs to be called on smaller variable at ith index*)
-      begin match (big_nth ts i).t_node with
-      | Tvar x -> Svs.contains small x && (*Check that map is uniform*)
-      check_unif_map (ls_arg_inst f ts) &&
-      List.for_all (check_decrease_fun funs small hd m vs) ts
-      | _ -> false
+      begin match big_nth ts i with
+      | None -> false
+      | Some j -> 
+        begin match j.t_node with
+        | Tvar x -> Svs.contains small x && (*Check that map is uniform*)
+        check_unif_map (ls_arg_inst f ts) &&
+        List.for_all (check_decrease_fun funs small hd m vs) ts
+        | _ -> false
+        end
       end
+      
   | None -> (*not recursive*)
     List.for_all (check_decrease_fun funs small hd m vs) ts
   end
@@ -1439,12 +1552,15 @@ match t.t_node with
 | Tvar _ -> true
 | Tconst _ -> true
 | Ttrue -> true
-| Tfalse -> true
+| Tfalse -> true*)
 
 let find_idx_list (l: (lsymbol * (vsymbol list * term)) list) m vs (candidates : BigInt.t list list) : BigInt.t list option =
   List.find_opt (fun il -> 
     List.for_all (fun ((f, (vars, t)), i) ->
-      check_decrease_fun (List.combine (List.map fst l) il) Svs.empty (Some (big_nth vars i)) m vs t
+      match big_nth vars i with
+      | None -> false
+      | Some x ->
+      check_decrease_fun (List.combine (List.map fst l) il) Svs.empty (Some x) m vs t
       ) (List.combine l il)) candidates
 
 (*START*)

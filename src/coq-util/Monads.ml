@@ -1,3 +1,4 @@
+open CoqHashtbl
 open List0
 
 type __ = Obj.t
@@ -32,4 +33,4 @@ let errst_list l =
   fold_right (fun x acc -> (@@) (fun h -> (@@) (fun t ->  (h :: t)) acc) x)
     ( []) l
 
-
+type 'k hashcons_ty = BigInt.t * 'k hashset

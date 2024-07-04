@@ -437,8 +437,7 @@ let ty_b =
 let ty_func_ab =
   ty_app_builtin ts_func (ty_a :: (ty_b :: [])) (create_tag (BigInt.of_int 7))
 
-(** val ty_hashcons_builtins :
-    (BigInt.t * ty_node_c ty_o hashset, unit) st **)
+(** val ty_hashcons_builtins : (ty_node_c ty_o hashcons_ty, unit) st **)
 
 let ty_hashcons_builtins =
   Hsty.add_builtins
@@ -450,22 +449,21 @@ let ty_hashcons_builtins =
 let mk_ty n =
   (fun (a, b) -> build_ty_o a b) (n, dummy_tag)
 
-(** val ty_var :
-    tvsymbol -> (BigInt.t * TyHash.t hashset, ty_node_c ty_o) st **)
+(** val ty_var : tvsymbol -> (TyHash.t hashcons_ty, ty_node_c ty_o) st **)
 
 let ty_var n =
   Hsty.hashcons (mk_ty (Tyvar n))
 
 (** val ty_app1 :
-    (ty_node_c ty_o) tysymbol_o -> ty_node_c ty_o list ->
-    (BigInt.t * TyHash.t hashset, ty_node_c ty_o) st **)
+    (ty_node_c ty_o) tysymbol_o -> ty_node_c ty_o list -> (TyHash.t
+    hashcons_ty, ty_node_c ty_o) st **)
 
 let ty_app1 s tl =
   Hsty.hashcons (mk_ty (Tyapp (s, tl)))
 
 (** val ty_map :
-    (ty_node_c ty_o -> ty_node_c ty_o) -> ty_node_c ty_o ->
-    (BigInt.t * TyHash.t hashset, ty_node_c ty_o) st **)
+    (ty_node_c ty_o -> ty_node_c ty_o) -> ty_node_c ty_o -> (TyHash.t
+    hashcons_ty, ty_node_c ty_o) st **)
 
 let ty_map fn t0 =
   match ty_node t0 with
@@ -521,8 +519,8 @@ let is_float_type_def = function
 | _ -> false
 
 (** val ty_v_map :
-    (tvsymbol -> ty_node_c ty_o) -> ty_node_c ty_o -> (BigInt.t * TyHash.t
-    hashset, ty_node_c ty_o) st **)
+    (tvsymbol -> ty_node_c ty_o) -> ty_node_c ty_o -> (TyHash.t hashcons_ty,
+    ty_node_c ty_o) st **)
 
 let rec ty_v_map fn t0 =
   match ty_node t0 with
@@ -549,8 +547,8 @@ let ty_v_any pr t0 =
   ty_v_fold (fun acc v -> (||) acc (pr v)) false t0
 
 (** val ty_v_map_err :
-    (tvsymbol -> ty_node_c ty_o errorM) -> ty_node_c ty_o ->
-    (BigInt.t * ty_node_c ty_o hashset, ty_node_c ty_o) errState **)
+    (tvsymbol -> ty_node_c ty_o errorM) -> ty_node_c ty_o -> (ty_node_c ty_o
+    hashcons_ty, ty_node_c ty_o) errState **)
 
 let rec ty_v_map_err fn t0 =
   match ty_node t0 with
@@ -559,8 +557,8 @@ let rec ty_v_map_err fn t0 =
     (@@) (fun l ->  (ty_app1 f l)) (errst_list (map (ty_v_map_err fn) tl))
 
 (** val ty_full_inst :
-    ty_node_c ty_o Mtv.t -> ty_node_c ty_o -> (BigInt.t * ty_node_c ty_o
-    hashset, ty_node_c ty_o) errState **)
+    ty_node_c ty_o Mtv.t -> ty_node_c ty_o -> (ty_node_c ty_o hashcons_ty,
+    ty_node_c ty_o) errState **)
 
 let ty_full_inst m t0 =
   ty_v_map_err (fun v -> Mtv.find v m) t0
@@ -641,8 +639,8 @@ let ty_match_args t0 =
   | Tyapp (s, tl) -> ts_match_args s tl
 
 (** val ty_app :
-    (ty_node_c ty_o) tysymbol_o -> ty_node_c ty_o list ->
-    (BigInt.t * ty_node_c ty_o hashset, ty_node_c ty_o) errState **)
+    (ty_node_c ty_o) tysymbol_o -> ty_node_c ty_o list -> (ty_node_c ty_o
+    hashcons_ty, ty_node_c ty_o) errState **)
 
 let ty_app s tl =
   match ts_def s with
@@ -654,8 +652,7 @@ let ty_app s tl =
 
 (** val ty_s_map :
     ((ty_node_c ty_o) tysymbol_o -> (ty_node_c ty_o) tysymbol_o) ->
-    ty_node_c ty_o -> (BigInt.t * ty_node_c ty_o hashset, ty_node_c ty_o)
-    errState **)
+    ty_node_c ty_o -> (ty_node_c ty_o hashcons_ty, ty_node_c ty_o) errState **)
 
 let rec ty_s_map fn t0 =
   match ty_node t0 with
@@ -685,8 +682,8 @@ let ty_s_any pr t0 =
   ty_s_fold (fun x y -> (||) x (pr y)) false t0
 
 (** val ty_mapM :
-    (ty_node_c ty_o -> (BigInt.t * TyHash.t hashset, ty_node_c ty_o) st) ->
-    ty_node_c ty_o -> (BigInt.t * TyHash.t hashset, ty_node_c ty_o) st **)
+    (ty_node_c ty_o -> (TyHash.t hashcons_ty, ty_node_c ty_o) st) ->
+    ty_node_c ty_o -> (TyHash.t hashcons_ty, ty_node_c ty_o) st **)
 
 let ty_mapM fn t0 =
   match ty_node t0 with
@@ -694,7 +691,7 @@ let ty_mapM fn t0 =
   | Tyapp (f, tl) -> (@@) (fun l -> ty_app1 f l) (st_list (map fn tl))
 
 (** val ty_inst :
-    ty_node_c ty_o Mtv.t -> ty_node_c ty_o -> (BigInt.t * TyHash.t hashset,
+    ty_node_c ty_o Mtv.t -> ty_node_c ty_o -> (TyHash.t hashcons_ty,
     ty_node_c ty_o) st **)
 
 let rec ty_inst s t0 =
@@ -736,8 +733,8 @@ let rec ty_match_aux s ty1 ty2 =
        else raise Exit)
 
 (** val ty_match :
-    ty_node_c ty_o Mtv.t -> ty_node_c ty_o -> ty_node_c ty_o ->
-    (BigInt.t * TyHash.t hashset, ty_node_c ty_o Mtv.t) errState **)
+    ty_node_c ty_o Mtv.t -> ty_node_c ty_o -> ty_node_c ty_o -> (TyHash.t
+    hashcons_ty, ty_node_c ty_o Mtv.t) errState **)
 
 let ty_match s ty1 ty2 =
   (@@) (fun t1 ->
@@ -749,14 +746,14 @@ let ty_match s ty1 ty2 =
         raise (TypeMismatch (t1, ty2))))) ( (ty_inst s ty1))
 
 (** val ty_func :
-    ty_node_c ty_o -> ty_node_c ty_o -> (BigInt.t * TyHash.t hashset,
+    ty_node_c ty_o -> ty_node_c ty_o -> (TyHash.t hashcons_ty,
     ty_node_c ty_o) st **)
 
 let ty_func ty_a0 ty_b0 =
   ty_app1 ts_func (ty_a0 :: (ty_b0 :: []))
 
 (** val ty_pred :
-    ty_node_c ty_o -> (BigInt.t * TyHash.t hashset, ty_node_c ty_o) st **)
+    ty_node_c ty_o -> (TyHash.t hashcons_ty, ty_node_c ty_o) st **)
 
 let ty_pred ty_a0 =
   ty_app1 ts_func (ty_a0 :: (ty_bool :: []))
@@ -821,8 +818,8 @@ let ts_tuple n =
 
 (** val ty_tuple :
     ty_node_c ty_o list -> ((BigInt.t * ((TupNames.key, TupNames.value)
-    hashtbl * (TupIds.key, TupIds.value) hashtbl)) * (BigInt.t * TyHash.t
-    hashset), ty_node_c ty_o) st **)
+    hashtbl * (TupIds.key, TupIds.value) hashtbl)) * TyHash.t hashcons_ty,
+    ty_node_c ty_o) st **)
 
 let ty_tuple l =
   (@@) (fun s ->  (ty_app1 s l)) ( (ts_tuple (int_length l)))
@@ -867,7 +864,7 @@ let oty_compare o1 o2 =
 
 (** val oty_match :
     ty_node_c ty_o Mtv.t -> ty_node_c ty_o option -> ty_node_c ty_o option ->
-    (BigInt.t * TyHash.t hashset, ty_node_c ty_o Mtv.t) errState **)
+    (TyHash.t hashcons_ty, ty_node_c ty_o Mtv.t) errState **)
 
 let oty_match m o1 o2 =
   match o1 with
@@ -880,8 +877,8 @@ let oty_match m o1 o2 =
              | None ->  m)
 
 (** val oty_inst :
-    ty_node_c ty_o Mtv.t -> ty_node_c ty_o option -> (BigInt.t * TyHash.t
-    hashset, ty_node_c ty_o) st option **)
+    ty_node_c ty_o Mtv.t -> ty_node_c ty_o option -> (TyHash.t hashcons_ty,
+    ty_node_c ty_o) st option **)
 
 let oty_inst m o =
   option_map (ty_inst m) o

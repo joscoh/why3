@@ -18,16 +18,16 @@ module type S =
  sig
   type t
 
-  val add_builtins : t list -> BigInt.t -> (BigInt.t * t hashset, unit) st
+  val add_builtins : t list -> BigInt.t -> (t hashcons_ty, unit) st
 
-  val hashcons : t -> (BigInt.t * t hashset, t) st
+  val hashcons : t -> (t hashcons_ty, t) st
 
-  val unique : t -> (BigInt.t * t hashset, t) st
+  val unique : t -> (t hashcons_ty, t) st
 
-  val iter : (t -> unit) -> (BigInt.t * t hashset, unit) st
+  val iter : (t -> unit) -> (t hashcons_ty, unit) st
 
   val stats :
-    unit -> (BigInt.t * t hashset,
+    unit -> (t hashcons_ty,
     ((((Stdlib.Int.t * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t)
     st
  end
@@ -57,18 +57,18 @@ module Make :
     val runState : (HashconsTy.t, 'a1) st -> 'a1
    end
 
-  val add_builtins : t list -> BigInt.t -> (BigInt.t * t hashset, unit) st
+  val add_builtins : t list -> BigInt.t -> (t hashcons_ty, unit) st
 
-  val incr : unit -> (BigInt.t * H.t hashset, unit) st
+  val incr : unit -> (H.t hashcons_ty, unit) st
 
-  val unique : t -> (BigInt.t * H.t hashset, t) st
+  val unique : t -> (H.t hashcons_ty, t) st
 
-  val hashcons : t -> (BigInt.t * H.t hashset, t) st
+  val hashcons : t -> (H.t hashcons_ty, t) st
 
-  val iter : (t -> unit) -> (BigInt.t * H.t hashset, unit) st
+  val iter : (t -> unit) -> (H.t hashcons_ty, unit) st
 
   val stats :
-    unit -> (BigInt.t * H.t hashset,
+    unit -> (H.t hashcons_ty,
     ((((Stdlib.Int.t * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t)
     st
  end
