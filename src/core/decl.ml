@@ -11,7 +11,7 @@ type constructor = lsymbol * lsymbol option list
 
 type data_decl = (ty_node_c ty_o) tysymbol_o * constructor list
 
-type ls_defn = (lsymbol * (term_node term_o)) * Stdlib.Int.t list
+type ls_defn = (lsymbol * (term_node term_o)) * BigInt.t list
 
 type logic_decl = lsymbol * ls_defn
 
@@ -73,8 +73,10 @@ let data_decl_eqb =
   tuple_eqb ts_equal (list_eqb constructor_eqb)
 exception UnboundVar of vsymbol
 exception UnexpectedProjOrConstr of lsymbol
+exception NoTerminationProof of lsymbol
 open Common
 open CoqUtil
+open Weakhtbl
 open Datatypes
 
 open Ident
@@ -155,6 +157,50 @@ let make_ls_defn ls vl t0 =
                match add_v s x with
                | Some s' ->  s'
                | None -> raise (DuplicateVar x)) acc) vl ( Svs.empty)))
+
+(** val open_ls_defn_aux :
+    ls_defn -> (vsymbol list * (term_node term_o)) option **)
+
+let open_ls_defn_aux = function
+| (p, _) ->
+  let (_, f) = p in
+  let s =
+    match t_node f with
+    | Tvar _ -> (([], []), f)
+    | Tconst _ -> (([], []), f)
+    | Tapp (_, _) -> (([], []), f)
+    | Tif (_, _, _) -> (([], []), f)
+    | Tlet (_, _) -> (([], []), f)
+    | Tcase (_, _) -> (([], []), f)
+    | Teps _ -> (([], []), f)
+    | Tquant (q, b) ->
+      (match q with
+       | Tforall -> t_view_quant b
+       | Texists -> (([], []), f))
+    | _ -> (([], []), f)
+  in
+  let (p0, f0) = s in
+  let (vl, _) = p0 in
+  (match t_node f0 with
+   | Tapp (_, l1) ->
+     (match l1 with
+      | [] -> None
+      | _ :: l2 ->
+        (match l2 with
+         | [] -> None
+         | f1 :: l3 -> (match l3 with
+                        | [] -> Some (vl, f1)
+                        | _ :: _ -> None)))
+   | Tbinop (_, _, f1) -> Some (vl, f1)
+   | _ -> None)
+
+(** val open_ls_defn :
+    ls_defn -> (vsymbol list * (term_node term_o)) errorM **)
+
+let open_ls_defn l =
+  match open_ls_defn_aux l with
+  | Some p ->  p
+  | None -> assert_false "open_ls_defn"
 
 type mut_adt = data_decl list
 
@@ -414,6 +460,147 @@ let check_decrease_fun funs small hd m vs t0 =
     (@@) (fun r1 -> (@@) (fun r2 ->  ((&&) r1 r2)) (rec2 small0 hd0))
       (rec1 small0 hd0)) (fun _ rec0 -> rec0) (fun _ _ ->  true) (fun _ _ ->
      true) t0 small hd
+
+(** val fold_errst :
+    ('a2 -> 'a1 -> ('a3, 'a1) errState) -> 'a2 list -> 'a1 -> ('a3, 'a1)
+    errState **)
+
+let rec fold_errst f l x =
+  match l with
+  | [] ->  x
+  | h :: t0 -> (@@) (fun j -> f h j) (fold_errst f t0 x)
+
+(** val find_opt_errst :
+    ('a1 -> ('a2, bool) errState) -> 'a1 list -> ('a2, 'a1 option) errState **)
+
+let find_opt_errst f l =
+  fold_errst (fun x acc ->
+    (@@) (fun y ->  (if y then Some x else acc)) (f x)) l None
+
+(** val find_idx_list :
+    (lsymbol * (vsymbol list * (term_node term_o))) list -> mut_adt ->
+    ty_node_c ty_o list -> BigInt.t list list -> (ty_node_c ty_o hashcons_ty,
+    BigInt.t list option) errState **)
+
+let find_idx_list l m vs candidates =
+  find_opt_errst (fun il ->
+    (@@) (fun l1 ->  (forallb (fun x -> x) l1))
+      (errst_list
+        (map (fun y ->
+          let (y0, i) = y in
+          let (_, y1) = y0 in
+          let (vars, t0) = y1 in
+          (match big_nth vars i with
+           | Some x ->
+             check_decrease_fun (combine (map fst l) il) Svs.empty (Some x) m
+               vs t0
+           | None ->  false)) (combine l il)))) candidates
+
+(** val list_inb : ('a1 -> 'a1 -> bool) -> 'a1 -> 'a1 list -> bool **)
+
+let list_inb eq x l =
+  existsb (fun y -> eq x y) l
+
+(** val mut_in_ctx : mut_adt -> decl Mid.t -> bool **)
+
+let mut_in_ctx m kn =
+  list_inb mut_adt_eqb m (fst (get_ctx_tys kn))
+
+(** val find_elt_errst :
+    ('a2 -> ('a1, 'a3 option) errState) -> 'a2 list -> ('a1, ('a2 * 'a3)
+    option) errState **)
+
+let find_elt_errst f l =
+  fold_errst (fun x acc ->
+    (@@) (fun b ->  (match b with
+                     | Some y -> Some (x, y)
+                     | None -> acc)) (f x)) l None
+
+(** val check_termination_aux :
+    decl Mid.t -> (vsymbol list * (term_node term_o)) Mls.t ->
+    (ty_node_c ty_o hashcons_ty, BigInt.t Mls.t option) errState **)
+
+let check_termination_aux kn funs =
+  if Mls.is_empty funs
+  then  None
+  else let l = Mls.bindings funs in
+       let idxs = get_idx_lists kn funs in
+       (@@) (fun o ->
+         
+           (option_bind o (fun y ->
+             let (_, idxs0) = y in
+             Some
+             (fold_right (fun x acc -> Mls.add (fst x) (snd x) acc) Mls.empty
+               (combine (map fst l) idxs0)))))
+         (find_elt_errst (fun y ->
+           let (y0, cands) = y in
+           let (m, vs) = y0 in
+           if mut_in_ctx m kn
+           then find_idx_list l m vs (get_possible_index_lists cands)
+           else  None) idxs)
+
+(** val ls_in_tm : lsymbol -> (term_node term_o) -> bool **)
+
+let ls_in_tm l t0 =
+  term_rec (fun _ -> false) (fun _ -> false) (fun f _ recs ->
+    (||) (ls_equal f l) (existsb (fun x -> x) recs)) (fun _ r1 _ r2 _ r3 ->
+    (||) ((||) r1 r2) r3) (fun _ r1 _ _ r2 -> (||) r1 r2) (fun _ r1 recs ->
+    (||) r1 (existsb snd recs)) (fun _ _ r -> r) (fun _ _ _ r -> r)
+    (fun _ _ r1 _ r2 -> (||) r1 r2) (fun _ r -> r) false false t0
+
+(** val build_decl : decl_node -> Sid.t -> tag -> decl **)
+
+let build_decl node news tag0 =
+  { d_node = node; d_news = news; d_tag = tag0 }
+
+(** val get_logic_defs :
+    logic_decl list -> (vsymbol list * (term_node term_o)) Mls.t option **)
+
+let get_logic_defs ld =
+  fold_left (fun acc y ->
+    let (ls, ld0) = y in
+    (match acc with
+     | Some m ->
+       (match open_ls_defn_aux ld0 with
+        | Some ld' -> Some (Mls.add ls ld' m)
+        | None -> None)
+     | None -> None)) ld (Some Mls.empty)
+
+(** val check_termination_strict :
+    decl Mid.t -> decl -> (ty_node_c ty_o hashcons_ty, decl) errState **)
+
+let check_termination_strict kn d =
+  match d.d_node with
+  | Dlogic l0 ->
+    (match l0 with
+     | [] ->  d
+     | l :: ls ->
+       let ld = l :: ls in
+       (match get_logic_defs ld with
+        | Some syms ->
+          let binds = Mls.bindings syms in
+          if forallb (fun t0 ->
+               forallb (fun l1 -> negb (ls_in_tm l1 t0)) (map fst binds))
+               (map (fun x -> snd (snd x)) binds)
+          then  d
+          else (@@) (fun o ->
+                 match o with
+                 | Some idxs ->
+                   (@@) (fun ldl ->
+                      (build_decl (Dlogic ldl) d.d_news d.d_tag))
+                     (errst_list
+                       (map (fun y ->
+                         let (ls0, l1) = y in
+                         let (p, _) = l1 in
+                         let (_, f) = p in
+                          (ls0, ((ls0, f),
+                           ((match Mls.find_opt ls0 idxs with
+                             | Some i -> i
+                             | None -> (BigInt.of_int (-1))) :: [])))) ld))
+                 | None ->  (raise (NoTerminationProof (fst l))))
+                 (check_termination_aux kn syms)
+        | None ->  (assert_false "open_ls_defn")))
+  | _ ->  d
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -500,14 +687,14 @@ let check_tl ty t = ty_equal_check ty (t_type t)
   let l, ((l1, t), l2) = make_ls_defn ls vl t in
   l, (l1, t, l2) *)
 
-let open_ls_defn ((_,f),_) =
+(* let open_ls_defn ((_,f),_) =
   let vl,_,f = match f.t_node with
     | Tquant (Tforall,b) -> t_open_quant b
     | _ -> [],[],f in
   match f.t_node with
     | Tapp (_, [_; f])
     | Tbinop (_, _, f) -> vl,f
-    | _ -> assert false
+    | _ -> assert false *)
 
 let open_ls_defn_cb ld =
   let (ls,_),_ = ld in
@@ -518,7 +705,7 @@ let open_ls_defn_cb ld =
   in
   vl,t,close
 
-let ls_defn_decrease ((_,_),l) = l
+  let ls_defn_decrease ((_,_),l) = List.map BigInt.to_int l (*JOSH to_int*)
 
 let ls_defn_axiom ((_,f),_) = f
 
@@ -711,17 +898,17 @@ let find_variant exn cgr id =
   in
   check [] cl
 
-exception NoTerminationProof of lsymbol
+(* exception NoTerminationProof of lsymbol *)
 
 let check_termination ldl =
   let cgr = create_call_set () in
   let add acc (ls,ld) = Mls.add ls (open_ls_defn ld) acc in
-  let syms = List.fold_left add Mls.empty ldl in
+let syms = List.fold_left add Mls.empty ldl in
   Mls.iter (build_call_graph cgr syms) syms;
   let check ls _ =
     find_variant (NoTerminationProof ls) cgr ls.ls_name in
   let res = Mls.mapi check syms in
-  List.map (fun (ls,((_,f),_)) -> (ls,((ls,f),Mls.find ls res))) ldl 
+  List.map (fun (ls,((_,f),_)) -> (ls,((ls,f),(List.map BigInt.of_int (Mls.find ls res))))) ldl 
 
 (** Inductive predicate declaration *)
 
@@ -1279,361 +1466,6 @@ let check_positivity kn d = match d.d_node with
       let check_decl (ts,cl) = List.iter (check_constr ts) cl in
       List.iter check_decl tdl
   | _ -> ()
-
-(*JOSH - HERE, we will add termination check.
- Unlike Why3, our termination check depends on type definitions*)
-
-(*TODO: is this defined?*)
-let null (l: 'a list) : bool = 
-  match l with
-  | [] -> true
-  | _ -> false
-
-(*TODO?*)
-(* type mut_adt = data_decl list
-type mut_info = mut_adt list *  mut_adt Mts.t *)
-
-(*TODO: move*)
-(*Get all mutual ADT definitions:
-gives set of mutual adts and map adt name -> mut_adt*)
-(* let get_ctx_tys (kn: decl Mid.t) : mut_info  =
-  Mid.fold (fun _ d acc ->
-    match d.d_node with
-    | Ddata m ->
-      let (ms, mp) = acc in
-      (m :: ms, List.fold_right (fun t ts -> Mts.add t m ts) (List.map fst m) mp )
-    | _ -> acc) kn ([], Mts.empty) *)
-
-(*TODO: move I think*)
-(*let is_vty_adt (ctx: mut_info) (t: ty) : (mut_adt * tysymbol * ty list) option =
-  match t.ty_node with
-  | Tyapp (ts, tys) -> Option.bind (Mts.find_opt ts (snd ctx)) (fun m -> Some (m, ts, tys))
-  | Tyvar _ -> None
-
-let ts_in_mut (ts: tysymbol) (m: mut_adt) : bool =
-  match List.find_opt (fun a -> (fst a) = ts) m with | Some _ -> true | None -> false
-
-let vty_in_m (m: mut_adt) (vs: ty list) (v: ty) : bool =
-  match v.ty_node with
-  | Tyapp(ts, vs') -> ts_in_mut ts m && List.equal ty_equal vs vs'
-  | _ -> false
-
-let vty_in_m' (m: mut_adt) (v: ty) : bool =
-  match v.ty_node with
-  | Tyapp(ts, vs') -> ts_in_mut ts m
-  | _ -> false*)
-
-(*Create map of [mut_adt * ty list]*)
-
-(*Need way to create tag of tuple*)
-
-(*A hack - should really use maps but it is complicated with
-  tuples and lists - are BSTs the way to go?*)
-(*Inefficient of course*)
-(* let add_union (eq: 'a -> 'a -> bool) (x: 'a) (l: 'a list) =
-  if List.exists (fun y -> eq x y) l then l else x :: l
-
-
-let get_adts_present (ctx: mut_info) (l: vsymbol list) : (mut_adt * ty list) list =
-  List.fold_right (fun v acc -> 
-    match (is_vty_adt ctx v.vs_ty) with
-    | Some ((m, a), vs) -> add_union (=) (m, vs) acc
-    | None -> acc
-    ) l [] *)
-(*TEMP - change to bigint*)
-(*NOTE: from 0 to n-1, NOT 1 to n - NEEDS to be increasing order*)
-(*TODO: include in IntFuncs*)
-(*iota is from 1 to n, we want 0 to n-1*)
-(*let iota2 (n: BigInt.t) : BigInt.t list =
-  List.rev(List.map BigInt.pred (IntFuncs.iota n))*)
-(* let iota (n: BigInt.t) : BigInt.t list =
-  let rec iota_aux n = 
-  if BigInt.lt n BigInt.zero
-    then []
-    else if BigInt.is_zero n then [] else BigInt.pred n :: (iota_aux (BigInt.pred n)) in
-  List.rev (iota_aux n) *)
-
-(*TODO: combine probably*)
-(* let get_idx_lists_aux kn (funs: (vsymbol list * term) Mls.t) :  (data_decl list * ty list * (BigInt.t list) list) list =
-    let syms : vsymbol list list = Mls.fold (fun _ x y -> (fst x) :: y) funs [] in
-    List.map (fun (m, vs) -> 
-    
-      let l : BigInt.t list list =
-        List.map (fun args ->
-          List.map fst (List.filter (fun it -> vty_in_m m vs (snd it)) 
-            (List.combine (iota2 (IntFuncs.int_length args)) (List.map (fun v -> v.vs_ty) args)))
-
-        ) syms
-        in
-        (*If any are null, discard*)
-        (m, vs, if List.exists null l then [] else l)
-      
-    ) 
-    (get_adts_present (get_ctx_tys kn) (List.concat syms))
-
-
-let get_idx_lists kn (funs: (vsymbol list * term) Mls.t) : (data_decl list * ty list * (BigInt.t list) list) list =
-  List.filter (fun (_, _, x) -> not (null x)) (get_idx_lists_aux kn funs) *)
-
-(* let rec get_possible_index_lists (l: BigInt.t list list) : BigInt.t list list =
-  match l with
-  | l1 :: rest -> let r = get_possible_index_lists rest in
-    List.concat (List.map (fun x -> List.map (fun y -> x :: y) r) l1)
-  | [] -> [[]] *)
-
-(*The core of the termination checking (TODO move?)*)
-
-(* let check_unif_map (m: ty Mtv.t) : bool =
-  Mtv.for_all (fun (v: tvsymbol) (t : ty) -> 
-    match t.ty_node with 
-      | Tyvar v1 -> tv_equal v v1 
-      | _ -> false
-      ) m *)
-
-(* let check_inst_eq (m: ty Mtv.t) (syms: tvsymbol list) (tys: ty list) : bool =
-  List.for_all (fun (v, t) -> match Mtv.find_opt v m with | Some t1 -> ty_equal t t1 | None -> false) 
-    (List.combine syms tys) *)
-
-(* let vsym_in_m (m: mut_adt) (vs: ty list) (x: vsymbol) : bool =
-  vty_in_m m vs (x.vs_ty)
-
-let constr_in_m (l: lsymbol) (m: mut_adt) : bool =
-  List.exists (fun (d: data_decl) -> List.exists (fun c -> fst c = l) (snd d)) m *)
-
-(*TODO: do we need this?*)
-
-
-(*TODO: do we need vs?*)
-(*let rec pat_constr_vars_inner (m: mut_adt) (vs: ty list) (p: pattern) : Svs.t =
-  match p.pat_node with
-| Pwild -> Svs.empty
-| Pvar x -> if vsym_in_m m vs x then Svs.singleton x else Svs.empty
-| Papp (f, ps) -> 
-    (*only add variables in constructors of right type*)
-    if constr_in_m f m then (*TODO: how to say tys = vs? For now, don't include - ruled out by uniformity of types
-        although this is currently unsound I think (or maybe sound I just can't prove it)*)
-        (*Also don't use length goals, implied by typing*)
-      List.fold_right (fun x acc -> Svs.union (pat_constr_vars_inner m vs x) acc)
-        (*A horrible way to write this: need to get patterns corresponding only to argument types in m*)
-        (*But how to get m_params? Ugh - need better way to deal with this stuff*) 
-      (*Also do not include params part - rely on uniform ADT restriction*)
-        (List.map fst (List.filter (fun x -> vty_in_m' m (snd x)) (List.combine ps (f.ls_args)))) Svs.empty
-  else Svs.empty
-| Por (p1, p2) -> Svs.inter (pat_constr_vars_inner m vs p1) (pat_constr_vars_inner m vs p2)
-| Pas (p', y) -> Svs.union (if vsym_in_m m vs y then Svs.singleton y else Svs.empty) (pat_constr_vars_inner m vs p')
-
-(*Get strictly smaller (not just <=) vars. Recurse until we hit constructor*)
-let rec pat_constr_vars (m: mut_adt) (vs: ty list) (p: pattern) : Svs.t =
-match p.pat_node with
-| Papp (_, _) -> pat_constr_vars_inner m vs p
-| Por (p1, p2) -> Svs.inter (pat_constr_vars m vs p1) (pat_constr_vars m vs p2)
-| Pas (p, y) -> pat_constr_vars m vs p
-| _ -> Svs.empty*)
-
-(* let upd_option (hd: vsymbol option) (x: vsymbol) : vsymbol option =
-  match hd with
-  | Some y -> if vs_equal x y then None else hd
-  | None -> None
-
-let upd_option_iter (x: vsymbol option) (xs: Svs.t) : vsymbol option =
-  Svs.fold (fun v o -> upd_option o v) xs x
-
-let check_var_case small hd v =
-  hd = Some v || Svs.mem v small
-
-let tm_var_case (small: Svs.t) (hd: vsymbol option) (t: term) : bool =
-  match t.t_node with
-| Tvar v -> check_var_case small hd v
-| _ -> false *)
-
-(*If jth element of tms is small variable, all [pat_constr_vars] in
-  (nth j ps) should be added*)
-(* let get_constr_smaller (small: Svs.t) (hd: vsymbol option) (m: mut_adt)
-  (vs: ty list) (f: lsymbol) (tms: term list) (p: pattern) : Svs.t =
-  match p.pat_node with
-| Papp (f1, ps) -> if ls_equal f f1 then 
-    List.fold_right Svs.union (List.map2 (fun t p -> if tm_var_case small hd t then pat_constr_vars m vs p else Svs.empty) tms ps) Svs.empty
-else Svs.empty
-| _ -> Svs.empty
-
-let svs_remove_all (l: vsymbol list) (s: Svs.t) : Svs.t =
-  List.fold_right Svs.remove l s *)
-
-(*TODO: move/implement*)
-(*let big_nth l n =
-  if BigInt.lt n BigInt.zero then invalid_arg "big_nth" else
-  let rec nth_aux l n =
-    match l with
-    | [] -> failwith "nth"
-    | a::l -> if BigInt.is_zero n then a else nth_aux l (BigInt.pred n)
-  in nth_aux l n*)
-
-(*let rec check_decrease_fun (funs: (lsymbol * BigInt.t) list)
-  (small: Svs.t) (hd: vsymbol option) (m: mut_adt) (vs: ty list) (t: term) : bool =
-match t.t_node with
-| Tapp(f, ts) ->
-  begin match List.find_opt (fun y -> f = (fst y)) funs with
-  | Some (_, i) ->
-      (*Needs to be called on smaller variable at ith index*)
-      begin match big_nth ts i with
-      | None -> false
-      | Some j -> 
-        begin match j.t_node with
-        | Tvar x -> Svs.contains small x && (*Check that map is uniform*)
-        check_unif_map (ls_arg_inst f ts) &&
-        List.for_all (check_decrease_fun funs small hd m vs) ts
-        | _ -> false
-        end
-      end
-      
-  | None -> (*not recursive*)
-    List.for_all (check_decrease_fun funs small hd m vs) ts
-  end
-(*Other interesting case is Tcase*)
-| Tcase (t, pats) -> 
-  check_decrease_fun funs small hd m vs t &&
-  (*TODO: merge these - maybe case inside function and just change the thing that is being union'ed*)
-  List.for_all (fun tb ->
-    let (p, t1) = t_open_branch tb in
-    let toadd = begin match t.t_node with 
-      | Tvar mvar -> if check_var_case small hd mvar then pat_constr_vars m vs p else Svs.empty
-      | Tapp(c, tms) -> get_constr_smaller small hd m vs c tms p
-      | _ -> Svs.empty
-    end in
-    let newsmall = Svs.union toadd (Svs.diff small p.pat_vars) in
-    check_decrease_fun funs newsmall (upd_option_iter hd p.pat_vars) m vs t1
-    ) pats
-
-  (* begin match t.t_node with
-  | Tvar mvar ->
-    if hd = Some mvar || Svs.mem mvar small then
-      List.for_all (fun tb ->
-        let (p, t) = t_open_branch tb in
-        (*Add smaller variables*)
-        let newsmall = Svs.union (pat_constr_vars m vs p) (Svs.diff small (p.pat_vars)) in
-        check_decrease_fun funs newsmall (upd_option_iter hd p.pat_vars) m vs t
-        ) pats
-      else 
-        (*Non-smaller cases*)
-        List.for_all (fun tb ->
-          let (p, t) = t_open_branch tb in
-          let newsmall = Svs.diff small (p.pat_vars) in
-          check_decrease_fun funs newsmall (upd_option_iter hd p.pat_vars) m vs t
-          ) pats
-  | Tapp(c, tms) ->
-    List.for_all (fun tb ->
-      let (p, t) = t_open_branch tb in
-      let newsmall = Svs.union (get_constr_smaller small hd m vs c tms p) (Svs.diff small (p.pat_vars)) in
-      check_decrease_fun funs newsmall (upd_option_iter hd p.pat_vars) m vs t
-      ) pats
-
-  | _ -> List.for_all (fun tb ->
-    let (p, t) = t_open_branch tb in
-    let newsmall = Svs.diff small (p.pat_vars) in
-    check_decrease_fun funs newsmall (upd_option_iter hd p.pat_vars) m vs t
-    ) pats
-  end *)
-  (*START*)
-  (*1*)
-| Tlet(t1, tb) -> check_decrease_fun funs small hd m vs t1 &&
-  let (x, t2) = t_open_bound tb in
-  (*TODO: is this remove useless because x is guaranteed to be fresh?*)
-  check_decrease_fun funs (Svs.remove x small) (upd_option hd x) m vs t2
-| Tif(t1, t2, t3) -> check_decrease_fun funs small hd m vs t1 &&
-  check_decrease_fun funs small hd m vs t2 &&
-  check_decrease_fun funs small hd m vs t3
-| Teps(tb) ->  let (x, t2) = t_open_bound tb in
-  (*same as Tlet*) (*I think we can get rid of all of these*)
-  check_decrease_fun funs (Svs.remove x small) (upd_option hd x) m vs t2
-| Tquant(q, tq) -> let (vars, _, f) = t_open_quant tq in
-  check_decrease_fun funs (svs_remove_all vars small) (upd_option_iter hd (Svs.of_list vars)) m vs f
-| Tbinop(_, t1, t2) -> check_decrease_fun funs small hd m vs t1 && check_decrease_fun funs small hd m vs t2
-| Tnot(t) -> check_decrease_fun funs small hd m vs t
-| Tvar _ -> true
-| Tconst _ -> true
-| Ttrue -> true
-| Tfalse -> true*)
-
-let find_idx_list (l: (lsymbol * (vsymbol list * term)) list) m vs (candidates : BigInt.t list list) : BigInt.t list option =
-  List.find_opt (fun il -> 
-    List.for_all (fun ((f, (vars, t)), i) ->
-      match big_nth vars i with
-      | None -> false
-      | Some x ->
-      check_decrease_fun (List.combine (List.map fst l) il) Svs.empty (Some x) m vs t
-      ) (List.combine l il)) candidates
-
-(*START*)
-
-(*TODO:*)
-let mut_in_ctx (m: mut_adt) (kn: decl Mid.t) : bool =
-  List.mem m (fst (get_ctx_tys kn))
-
-let find_elt (f: 'a -> 'b option) (l: 'a list) : ('a * 'b) option =
-  List.fold_right (fun x acc -> match f x with | None -> acc | Some y -> Some (x, y)) l None
-
- (*TODO: do we need mutual ADT?*)
-let check_termination_aux kn (funs: (vsymbol list * term) Mls.t) :
-      (BigInt.t Mls.t) option =
-  if Mls.is_empty funs then None
-  else 
-    let l = Mls.bindings funs in
-    let idxs = (get_idx_lists kn funs) in
-    Option.bind
-  (*TODO: skipping params for now - do we need?*)
-
-  (find_elt (fun ((m, vs), cands) -> 
-    (*Skip params, implied by typing*)
-    if mut_in_ctx m kn then 
-      find_idx_list l m vs (get_possible_index_lists cands)
-  else None
-    )
-  idxs)
-  (fun (_, idxs) -> 
-    (*Match index with corresponding symbol*)
-    Some (List.fold_right (fun x acc -> Mls.add (fst x) (snd x) acc) (List.combine (List.map fst l) idxs) Mls.empty)
-    )
-
-(*Other case: non-recursive*)
-(*TODO: better way to check?*)
-(*See if lsymbol appears in term*)
-let rec ls_in_tm (l: lsymbol) (t: term) : bool =
-  match t.t_node with
-| Tapp (f, ts) -> ls_equal f l || List.exists (ls_in_tm l) ts
-| Tif (t1, t2, t3) -> ls_in_tm l t1 || ls_in_tm l t2 || ls_in_tm l t3
-| Tlet (t1, tb) -> ls_in_tm l t1 || let (_, t2) = t_open_bound tb in
-  ls_in_tm l t2
-| Tcase (t1, pats) -> ls_in_tm l t1 || List.exists (fun tb ->
-    let (_, t) = t_open_branch tb in ls_in_tm l t) pats
-| Teps tb -> let (_, t2) = t_open_bound tb in ls_in_tm l t2
-| Tquant (_, tq) -> let (_, _ ,t2) = t_open_quant tq in ls_in_tm l t2
-| Tbinop (_, t1, t2) -> ls_in_tm l t1 || ls_in_tm l t2
-| Tnot f -> ls_in_tm l f
-|_ -> false
-
-
-let check_termination_strict kn d : decl =
-  match d.d_node with
-  | Dlogic ((l :: ls) as ld) ->
-
-    let add acc (ls,ld) = Mls.add ls (open_ls_defn ld) acc in
-    let syms = List.fold_left add Mls.empty ld in
-    (*First, see if non-recursive*)
-    let binds = Mls.bindings syms in
-    if List.for_all (fun t -> List.for_all (fun l -> not (ls_in_tm l t)) (List.map fst binds)) (List.map (fun x -> snd (snd x)) binds) 
-      then d else
-    begin match (check_termination_aux kn syms) with
-    | Some idxs -> (*TODO: do we actually need index info?*)
-      (*TODO: change from int list to int maybe?*)
-      let ldl =  List.map (fun (ls,((_,f),_)) -> (ls,((ls,f),[BigInt.to_int (Mls.find ls idxs)]))) ld in (*JOSH TODO delete to_int*)
-      (*TODO: do we need to hashcons?*)
-      { d_node = Dlogic ldl;
-        d_news = d.d_news;
-        d_tag  = d.d_tag;}
-    | None -> raise (NoTerminationProof (fst l))
-    end
-
-  | _ -> d
 
 let known_add_decl kn d =
   let kn = known_add_decl kn d in

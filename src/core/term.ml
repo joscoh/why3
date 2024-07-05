@@ -1901,6 +1901,11 @@ let rec t_subst_unsafe_aux m t0 =
 let t_subst_unsafe m t0 =
   if Mvs.is_empty m then (fun x -> x) t0 else t_subst_unsafe_aux m t0
 
+(** val t_view_bound : term_bound -> vsymbol * (term_node term_o) **)
+
+let t_view_bound = function
+| (p, t0) -> let (v, _) = p in (v, t0)
+
 (** val t_open_bound :
     term_bound -> (BigInt.t, vsymbol * (term_node term_o)) st **)
 
@@ -1911,6 +1916,12 @@ let t_open_bound = function
     let (m, v0) = y in
     (@@) (fun t1 -> (fun x -> x) (v0, t1)) (t_subst_unsafe m t0))
     (vs_rename Mvs.empty v)
+
+(** val t_view_branch :
+    term_branch -> (pattern_node pattern_o) * (term_node term_o) **)
+
+let t_view_branch = function
+| (p0, t0) -> let (p, _) = p0 in (p, t0)
 
 (** val t_open_branch :
     term_branch -> (BigInt.t, (pattern_node pattern_o) * (term_node term_o))
@@ -1936,6 +1947,12 @@ let t_open_quant1 = function
     (@@) (fun tl0 ->
       (@@) (fun t1 -> (fun x -> x) ((vl0, tl0), t1)) (t_subst_unsafe m f))
       (st_tr (tr_map (t_subst_unsafe m) tl))) (vl_rename Mvs.empty vl)
+
+(** val t_view_quant :
+    term_quant -> (vsymbol list * trigger) * (term_node term_o) **)
+
+let t_view_quant = function
+| (p, f) -> let (p0, tl) = p in let (vl, _) = p0 in ((vl, tl), f)
 
 (** val t_open_bound_with :
     (term_node term_o) -> term_bound -> (BigInt.t, (term_node term_o))
@@ -2079,6 +2096,11 @@ let ps_app ps tl =
 
 let coq_assert b msg =
   if b then  () else raise (AssertFail msg)
+
+(** val assert_false : string -> 'a1 errorM **)
+
+let assert_false msg =
+  raise (AssertFail msg)
 
 (** val t_nat_const : Stdlib.Int.t -> (term_node term_o) errorM **)
 
