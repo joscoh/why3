@@ -398,13 +398,19 @@ let get_constr_smaller small hd m vs f tms p =
 let svs_remove_all l s =
   fold_right Svs.remove s l
 
+(** val rem_opt_list : 'a1 option list -> 'a1 list **)
+
+let rem_opt_list l =
+  fold_right (fun x acc -> match x with
+                           | Some y -> y :: acc
+                           | None -> acc) [] l
+
 (** val check_decrease_fun :
     (lsymbol * BigInt.t) list -> Svs.t -> vsymbol option -> mut_adt ->
-    ty_node_c ty_o list -> (term_node term_o) -> (ty_node_c ty_o hashcons_ty,
-    bool) errState **)
+    ty_node_c ty_o list -> (term_node term_o) -> bool **)
 
 let check_decrease_fun funs small hd m vs t0 =
-  term_rec (fun _ _ _ ->  true) (fun _ _ _ ->  true)
+  term_rec (fun _ _ _ -> true) (fun _ _ _ -> true)
     (fun f ts recs small0 hd0 ->
     match list_find_opt (fun y -> ls_equal f (fst y)) funs with
     | Some p ->
@@ -413,88 +419,58 @@ let check_decrease_fun funs small hd m vs t0 =
        | Some tm ->
          (match t_node tm with
           | Tvar x ->
-            (@@) (fun l ->
-              (@@) (fun a ->
-                
-                  ((&&) ((&&) (Svs.contains small0 x) (check_unif_map l))
-                    (forallb (fun x0 -> x0) a)))
-                (errst_list (map (fun x0 -> x0 small0 hd0) recs)))
-              (ls_arg_inst f ts)
-          | _ ->  false)
-       | None ->  false)
-    | None ->
-      (@@) (fun a ->  (forallb (fun x -> x) a))
-        (errst_list (map (fun x -> x small0 hd0) recs)))
+            (&&)
+              ((&&) (Svs.contains small0 x)
+                (list_eqb ty_equal f.ls_args (rem_opt_list (map t_ty ts))))
+              (forallb (fun x0 -> x0) (map (fun x0 -> x0 small0 hd0) recs))
+          | _ -> false)
+       | None -> false)
+    | None -> forallb (fun x -> x) (map (fun x -> x small0 hd0) recs))
     (fun _ rec1 _ rec2 _ rec3 small0 hd0 ->
-    (@@) (fun r1 ->
-      (@@) (fun r2 ->
-        (@@) (fun r3 ->  ((&&) ((&&) r1 r2) r3)) (rec3 small0 hd0))
-        (rec2 small0 hd0)) (rec1 small0 hd0))
+    (&&) ((&&) (rec1 small0 hd0) (rec2 small0 hd0)) (rec3 small0 hd0))
     (fun _ rec1 x _ rec2 small0 hd0 ->
-    (@@) (fun r1 ->
-      (@@) (fun r2 ->  ((&&) r1 r2))
-        (rec2 (Svs.remove x small0) (upd_option hd0 x))) (rec1 small0 hd0))
+    (&&) (rec1 small0 hd0) (rec2 (Svs.remove x small0) (upd_option hd0 x)))
     (fun t1 rec1 recps small0 hd0 ->
-    (@@) (fun r1 ->
-      (@@) (fun r2 ->  ((&&) r1 (forallb (fun x -> x) r2)))
-        (errst_list
-          (map (fun y ->
-            let (y0, rec0) = y in
-            let (p, _) = y0 in
-            let toadd =
-              match t_node t1 with
-              | Tvar mvar ->
-                if check_var_case small0 hd0 mvar
-                then pat_constr_vars m vs p
-                else Svs.empty
-              | Tapp (c, tms) -> get_constr_smaller small0 hd0 m vs c tms p
-              | _ -> Svs.empty
-            in
-            let newsmall = Svs.union toadd (Svs.diff small0 (pat_vars p)) in
-            rec0 newsmall (upd_option_iter hd0 (pat_vars p))) recps)))
-      (rec1 small0 hd0)) (fun v _ rec0 small0 hd0 ->
+    let r2 =
+      map (fun y ->
+        let (y0, rec0) = y in
+        let (p, _) = y0 in
+        let toadd =
+          match t_node t1 with
+          | Tvar mvar ->
+            if check_var_case small0 hd0 mvar
+            then pat_constr_vars m vs p
+            else Svs.empty
+          | Tapp (c, tms) -> get_constr_smaller small0 hd0 m vs c tms p
+          | _ -> Svs.empty
+        in
+        let newsmall = Svs.union toadd (Svs.diff small0 (pat_vars p)) in
+        rec0 newsmall (upd_option_iter hd0 (pat_vars p))) recps
+    in
+    (&&) (rec1 small0 hd0) (forallb (fun x -> x) r2))
+    (fun v _ rec0 small0 hd0 ->
     rec0 (Svs.remove v small0) (upd_option hd0 v))
     (fun _ vars _ rec0 small0 hd0 ->
     rec0 (svs_remove_all vars small0) (upd_option_iter hd0 (Svs.of_list vars)))
     (fun _ _ rec1 _ rec2 small0 hd0 ->
-    (@@) (fun r1 -> (@@) (fun r2 ->  ((&&) r1 r2)) (rec2 small0 hd0))
-      (rec1 small0 hd0)) (fun _ rec0 -> rec0) (fun _ _ ->  true) (fun _ _ ->
-     true) t0 small hd
-
-(** val fold_errst :
-    ('a2 -> 'a1 -> ('a3, 'a1) errState) -> 'a2 list -> 'a1 -> ('a3, 'a1)
-    errState **)
-
-let rec fold_errst f l x =
-  match l with
-  | [] ->  x
-  | h :: t0 -> (@@) (fun j -> f h j) (fold_errst f t0 x)
-
-(** val find_opt_errst :
-    ('a1 -> ('a2, bool) errState) -> 'a1 list -> ('a2, 'a1 option) errState **)
-
-let find_opt_errst f l =
-  fold_errst (fun x acc ->
-    (@@) (fun y ->  (if y then Some x else acc)) (f x)) l None
+    (&&) (rec1 small0 hd0) (rec2 small0 hd0)) (fun _ rec0 -> rec0)
+    (fun _ _ -> true) (fun _ _ -> true) t0 small hd
 
 (** val find_idx_list :
     (lsymbol * (vsymbol list * (term_node term_o))) list -> mut_adt ->
-    ty_node_c ty_o list -> BigInt.t list list -> (ty_node_c ty_o hashcons_ty,
-    BigInt.t list option) errState **)
+    ty_node_c ty_o list -> BigInt.t list list -> BigInt.t list option **)
 
 let find_idx_list l m vs candidates =
-  find_opt_errst (fun il ->
-    (@@) (fun l1 ->  (forallb (fun x -> x) l1))
-      (errst_list
-        (map (fun y ->
-          let (y0, i) = y in
-          let (_, y1) = y0 in
-          let (vars, t0) = y1 in
-          (match big_nth vars i with
-           | Some x ->
-             check_decrease_fun (combine (map fst l) il) Svs.empty (Some x) m
-               vs t0
-           | None ->  false)) (combine l il)))) candidates
+  list_find_opt (fun il ->
+    forallb (fun y ->
+      let (y0, i) = y in
+      let (_, y1) = y0 in
+      let (vars, t0) = y1 in
+      (match big_nth vars i with
+       | Some x ->
+         check_decrease_fun (combine (map fst l) il) Svs.empty (Some x) m vs
+           t0
+       | None -> false)) (combine l il)) candidates
 
 (** val list_inb : ('a1 -> 'a1 -> bool) -> 'a1 -> 'a1 list -> bool **)
 
@@ -506,38 +482,34 @@ let list_inb eq x l =
 let mut_in_ctx m kn =
   list_inb mut_adt_eqb m (fst (get_ctx_tys kn))
 
-(** val find_elt_errst :
-    ('a2 -> ('a1, 'a3 option) errState) -> 'a2 list -> ('a1, ('a2 * 'a3)
-    option) errState **)
+(** val find_elt : ('a1 -> 'a2 option) -> 'a1 list -> ('a1 * 'a2) option **)
 
-let find_elt_errst f l =
-  fold_errst (fun x acc ->
-    (@@) (fun b ->  (match b with
-                     | Some y -> Some (x, y)
-                     | None -> acc)) (f x)) l None
+let find_elt f l =
+  fold_right (fun x acc ->
+    match f x with
+    | Some y -> Some (x, y)
+    | None -> acc) None l
 
 (** val check_termination_aux :
-    decl Mid.t -> (vsymbol list * (term_node term_o)) Mls.t ->
-    (ty_node_c ty_o hashcons_ty, BigInt.t Mls.t option) errState **)
+    decl Mid.t -> (vsymbol list * (term_node term_o)) Mls.t -> BigInt.t Mls.t
+    option **)
 
 let check_termination_aux kn funs =
   if Mls.is_empty funs
-  then  None
+  then None
   else let l = Mls.bindings funs in
        let idxs = get_idx_lists kn funs in
-       (@@) (fun o ->
-         
-           (option_bind o (fun y ->
-             let (_, idxs0) = y in
-             Some
-             (fold_right (fun x acc -> Mls.add (fst x) (snd x) acc) Mls.empty
-               (combine (map fst l) idxs0)))))
-         (find_elt_errst (fun y ->
+       option_bind
+         (find_elt (fun y ->
            let (y0, cands) = y in
            let (m, vs) = y0 in
            if mut_in_ctx m kn
            then find_idx_list l m vs (get_possible_index_lists cands)
-           else  None) idxs)
+           else None) idxs) (fun y ->
+         let (_, idxs0) = y in
+         Some
+         (fold_right (fun x acc -> Mls.add (fst x) (snd x) acc) Mls.empty
+           (combine (map fst l) idxs0)))
 
 (** val ls_in_tm : lsymbol -> (term_node term_o) -> bool **)
 
@@ -566,8 +538,7 @@ let get_logic_defs ld =
         | None -> None)
      | None -> None)) ld (Some Mls.empty)
 
-(** val check_termination_strict :
-    decl Mid.t -> decl -> (ty_node_c ty_o hashcons_ty, decl) errState **)
+(** val check_termination_strict : decl Mid.t -> decl -> decl errorM **)
 
 let check_termination_strict kn d =
   match d.d_node with
@@ -583,23 +554,21 @@ let check_termination_strict kn d =
                forallb (fun l1 -> negb (ls_in_tm l1 t0)) (map fst binds))
                (map (fun x -> snd (snd x)) binds)
           then  d
-          else (@@) (fun o ->
-                 match o with
-                 | Some idxs ->
-                   (@@) (fun ldl ->
-                      (build_decl (Dlogic ldl) d.d_news d.d_tag))
-                     (errst_list
-                       (map (fun y ->
-                         let (ls0, l1) = y in
-                         let (p, _) = l1 in
-                         let (_, f) = p in
-                          (ls0, ((ls0, f),
-                           ((match Mls.find_opt ls0 idxs with
-                             | Some i -> i
-                             | None -> (BigInt.of_int (-1))) :: [])))) ld))
-                 | None ->  (raise (NoTerminationProof (fst l))))
-                 (check_termination_aux kn syms)
-        | None ->  (assert_false "open_ls_defn")))
+          else (match check_termination_aux kn syms with
+                | Some idxs ->
+                  let ldl =
+                    map (fun y ->
+                      let (ls0, l1) = y in
+                      let (p, _) = l1 in
+                      let (_, f) = p in
+                      (ls0, ((ls0, f),
+                      ((match Mls.find_opt ls0 idxs with
+                        | Some i -> i
+                        | None -> (BigInt.of_int (-1))) :: [])))) ld
+                  in
+                   (build_decl (Dlogic ldl) d.d_news d.d_tag)
+                | None -> raise (NoTerminationProof (fst l)))
+        | None -> assert_false "open_ls_defn"))
   | _ ->  d
 (********************************************************************)
 (*                                                                  *)
