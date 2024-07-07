@@ -15,6 +15,10 @@ let option_map f = function
 | Some a -> Some (f a)
 | None -> None
 
+type ('a, 'b) sum =
+| Coq_inl of 'a
+| Coq_inr of 'b
+
 (** val app : 'a1 list -> 'a1 list -> 'a1 list **)
 
 let rec app l m =

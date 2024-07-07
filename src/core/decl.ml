@@ -1,9 +1,20 @@
+open BinNums
 open Common
+open CoqHashtbl
 open CoqUtil
 open Weakhtbl
+open Wstdlib
+open Datatypes
 open Ident
+open Monads
+open Specif
+open State
 open Term
+
 open Ty
+open Hashcons
+open Pmap
+open Zmap
 
 type hack = tysymbol
 
@@ -22,7 +33,48 @@ type prsymbol = { pr_name : ident }
 let pr_name p =
   p.pr_name
 
-type ind_decl = lsymbol * (prsymbol * term) list
+(** val prsymbol_eqb : prsymbol -> prsymbol -> bool **)
+
+let prsymbol_eqb p1 p2 =
+  id_equal p1.pr_name p2.pr_name
+
+module PropTag =
+ struct
+  type t = prsymbol
+
+  (** val tag : prsymbol -> tag **)
+
+  let tag pr =
+    pr.pr_name.id_tag
+
+  (** val equal : prsymbol -> prsymbol -> bool **)
+
+  let equal =
+    prsymbol_eqb
+ end
+
+module Prop1 = MakeMSWeak(PropTag)
+
+module Spr = Prop1.S
+
+module Mpr = Prop1.M
+
+(** val pr_equal : prsymbol -> prsymbol -> bool **)
+
+let pr_equal =
+  prsymbol_eqb
+
+(** val pr_hash : prsymbol -> BigInt.t **)
+
+let pr_hash pr =
+  id_hash pr.pr_name
+
+(** val create_prsymbol : preid -> (BigInt.t, prsymbol) st **)
+
+let create_prsymbol n =
+  (@@) (fun i -> (fun x -> x) { pr_name = i }) (id_register n)
+
+type ind_decl = lsymbol * (prsymbol * (term_node term_o)) list
 
 type ind_sign =
 | Ind
@@ -35,7 +87,7 @@ type prop_kind =
 | Paxiom
 | Pgoal
 
-type prop_decl = (prop_kind, prsymbol, term) ocaml_tup3
+type prop_decl = (prop_kind, prsymbol, (term_node term_o)) ocaml_tup3
 
 type decl_node =
 | Dtype of (ty_node_c ty_o) tysymbol_o
@@ -71,9 +123,281 @@ let constructor_eqb =
 
 let data_decl_eqb =
   tuple_eqb ts_equal (list_eqb constructor_eqb)
+
+(** val ind_sign_beq : ind_sign -> ind_sign -> bool **)
+
+let ind_sign_beq x y =
+  match x with
+  | Ind -> (match y with
+            | Ind -> true
+            | Coind -> false)
+  | Coind -> (match y with
+              | Ind -> false
+              | Coind -> true)
+
+(** val ind_sign_eq_dec : ind_sign -> ind_sign -> bool **)
+
+let ind_sign_eq_dec x y =
+  let b = ind_sign_beq x y in if b then true else false
+
+(** val prop_kind_beq : prop_kind -> prop_kind -> bool **)
+
+let prop_kind_beq x y =
+  match x with
+  | Plemma -> (match y with
+               | Plemma -> true
+               | _ -> false)
+  | Paxiom -> (match y with
+               | Paxiom -> true
+               | _ -> false)
+  | Pgoal -> (match y with
+              | Pgoal -> true
+              | _ -> false)
+
+(** val prop_kind_eq_dec : prop_kind -> prop_kind -> bool **)
+
+let prop_kind_eq_dec x y =
+  let b = prop_kind_beq x y in if b then true else false
+
+(** val ind_sign_eqb : ind_sign -> ind_sign -> bool **)
+
+let ind_sign_eqb =
+  ind_sign_beq
+
+(** val prop_kind_eqb : prop_kind -> prop_kind -> bool **)
+
+let prop_kind_eqb =
+  prop_kind_beq
+
+(** val ls_defn_eqb : ls_defn -> ls_defn -> bool **)
+
+let ls_defn_eqb =
+  tuple_eqb (tuple_eqb ls_equal term_eqb) (list_eqb BigInt.eq)
+
+(** val logic_decl_eqb : logic_decl -> logic_decl -> bool **)
+
+let logic_decl_eqb =
+  tuple_eqb ls_equal ls_defn_eqb
+
+(** val ind_decl_eqb : ind_decl -> ind_decl -> bool **)
+
+let ind_decl_eqb =
+  tuple_eqb ls_equal (list_eqb (tuple_eqb prsymbol_eqb term_eqb))
+
+(** val decl_node_eqb : decl_node -> decl_node -> bool **)
+
+let decl_node_eqb d1 d2 =
+  match d1 with
+  | Dtype s1 -> (match d2 with
+                 | Dtype s2 -> ts_equal s1 s2
+                 | _ -> false)
+  | Ddata l1 ->
+    (match d2 with
+     | Ddata l2 -> list_eqb data_decl_eqb l1 l2
+     | _ -> false)
+  | Dparam s1 -> (match d2 with
+                  | Dparam s2 -> ls_equal s1 s2
+                  | _ -> false)
+  | Dlogic l1 ->
+    (match d2 with
+     | Dlogic l2 -> list_eqb logic_decl_eqb l1 l2
+     | _ -> false)
+  | Dind i ->
+    let (s1, l1) = i in
+    (match d2 with
+     | Dind i0 ->
+       let (s2, l2) = i0 in
+       (&&) (ind_sign_eqb s1 s2) (list_eqb ind_decl_eqb l1 l2)
+     | _ -> false)
+  | Dprop p1 ->
+    (match d2 with
+     | Dprop p2 ->
+       let (p, f1) = (fun (x, y, z) -> ((x, y), z)) p1 in
+       let (k1, pr1) = p in
+       let (p0, f2) = (fun (x, y, z) -> ((x, y), z)) p2 in
+       let (k2, pr2) = p0 in
+       (&&) ((&&) (prop_kind_eqb k1 k2) (pr_equal pr1 pr2)) (term_eqb f1 f2)
+     | _ -> false)
+
+(** val decl_eqb : decl -> decl -> bool **)
+
+let decl_eqb d1 d2 =
+  (&&)
+    ((&&) (decl_node_eqb d1.d_node d2.d_node) (Sid.equal d1.d_news d2.d_news))
+    (tag_equal d1.d_tag d2.d_tag)
+
+module DeclHash =
+ struct
+  type t = decl
+
+  (** val eq_ld : logic_decl -> logic_decl -> bool **)
+
+  let eq_ld x1 x2 =
+    (&&) (ls_equal (fst x1) (fst x2))
+      (t_equal_strict (snd (fst (snd x1))) (snd (fst (snd x2))))
+
+  (** val eq_iax :
+      (prsymbol * (term_node term_o)) -> (prsymbol * (term_node term_o)) ->
+      bool **)
+
+  let eq_iax =
+    tuple_eqb pr_equal t_equal_strict
+
+  (** val eq_ind1 : ind_decl -> ind_decl -> bool **)
+
+  let eq_ind1 =
+    tuple_eqb ls_equal (list_eqb eq_iax)
+
+  (** val equal : decl -> decl -> bool **)
+
+  let equal d1 d2 =
+    match d1.d_node with
+    | Dtype s1 ->
+      (match d2.d_node with
+       | Dtype s2 -> ts_equal s1 s2
+       | _ -> false)
+    | Ddata l1 ->
+      (match d2.d_node with
+       | Ddata l2 -> list_eqb data_decl_eqb l1 l2
+       | _ -> false)
+    | Dparam s1 ->
+      (match d2.d_node with
+       | Dparam s2 -> ls_equal s1 s2
+       | _ -> false)
+    | Dlogic l1 ->
+      (match d2.d_node with
+       | Dlogic l2 -> list_eqb eq_ld l1 l2
+       | _ -> false)
+    | Dind i ->
+      let (s1, l1) = i in
+      (match d2.d_node with
+       | Dind i0 ->
+         let (s2, l2) = i0 in
+         (&&) (ind_sign_eqb s1 s2) (list_eqb eq_ind1 l1 l2)
+       | _ -> false)
+    | Dprop p1 ->
+      (match d2.d_node with
+       | Dprop p2 ->
+         let (p, f1) = (fun (x, y, z) -> ((x, y), z)) p1 in
+         let (k1, pr1) = p in
+         let (p0, f2) = (fun (x, y, z) -> ((x, y), z)) p2 in
+         let (k2, pr2) = p0 in
+         (&&) ((&&) (prop_kind_eqb k1 k2) (pr_equal pr1 pr2))
+           (t_equal_strict f1 f2)
+       | _ -> false)
+
+  (** val cs_hash : constructor -> BigInt.t **)
+
+  let cs_hash x =
+    combine_big_list (combine_big_option ls_hash) (ls_hash (fst x)) (snd x)
+
+  (** val hs_td : data_decl -> BigInt.t **)
+
+  let hs_td x =
+    combine_big_list cs_hash (ts_hash (fst x)) (snd x)
+
+  (** val hs_ld : logic_decl -> BigInt.t **)
+
+  let hs_ld x =
+    combine_big (ls_hash (fst x)) (t_hash_strict (snd (fst (snd x))))
+
+  (** val hs_prop : (prsymbol * (term_node term_o)) -> BigInt.t **)
+
+  let hs_prop x =
+    combine_big (pr_hash (fst x)) (t_hash_strict (snd x))
+
+  (** val hs_ind : ind_decl -> BigInt.t **)
+
+  let hs_ind x =
+    combine_big_list hs_prop (ls_hash (fst x)) (snd x)
+
+  (** val hs_kind : prop_kind -> BigInt.t **)
+
+  let hs_kind = function
+  | Plemma -> (BigInt.of_int 11)
+  | Paxiom -> (BigInt.of_int 13)
+  | Pgoal -> (BigInt.of_int 17)
+
+  (** val hash : decl -> BigInt.t **)
+
+  let hash d =
+    match d.d_node with
+    | Dtype s -> ts_hash s
+    | Ddata l -> combine_big_list hs_td (BigInt.of_int 3) l
+    | Dparam s -> ls_hash s
+    | Dlogic l -> combine_big_list hs_ld (BigInt.of_int 5) l
+    | Dind i -> let (_, l) = i in combine_big_list hs_ind (BigInt.of_int 7) l
+    | Dprop y ->
+      let (p, f) = (fun (x, y, z) -> ((x, y), z)) y in
+      let (k, pr) = p in combine_big (hs_kind k) (hs_prop (pr, f))
+
+  (** val tag : tag -> decl -> decl **)
+
+  let tag n d =
+    { d_node = d.d_node; d_news = d.d_news; d_tag = (create_tag n) }
+ end
+
+module Hsdecl = Make(DeclHash)
+
+module DeclTag =
+ struct
+  type t = decl
+
+  (** val tag : decl -> tag **)
+
+  let tag d =
+    d.d_tag
+
+  (** val equal : decl -> decl -> bool **)
+
+  let equal =
+    decl_eqb
+ end
+
+module Decl1 = MakeMSWeak(DeclTag)
+
+module Sdecl = Decl1.S
+
+module Mdecl = Decl1.M
+
+(** val d_equal : decl -> decl -> bool **)
+
+let d_equal =
+  decl_eqb
+
+(** val d_hash : decl -> tag **)
+
+let d_hash d =
+  tag_hash d.d_tag
+
+(** val mk_decl : decl_node -> Sid.t -> (decl hashcons_ty, decl) st **)
+
+let mk_decl node news =
+  let d = { d_node = node; d_news = news; d_tag = dummy_tag } in
+  (match node with
+   | Dprop p ->
+     let (p0, _) = (fun (x, y, z) -> ((x, y), z)) p in
+     let (x, _) = p0 in
+     (match x with
+      | Pgoal -> Hsdecl.unique d
+      | _ -> Hsdecl.hashcons d)
+   | _ -> Hsdecl.hashcons d)
 exception UnboundVar of vsymbol
 exception UnexpectedProjOrConstr of lsymbol
 exception NoTerminationProof of lsymbol
+
+exception IllegalTypeAlias of tysymbol
+exception ClashIdent of ident
+exception BadConstructor of lsymbol
+
+exception BadRecordField of lsymbol
+exception RecordFieldMissing of lsymbol
+exception DuplicateRecordField of lsymbol
+
+exception EmptyDecl
+exception EmptyAlgDecl of tysymbol
+
+exception NonPositiveTypeDecl of tysymbol * lsymbol * ty
 open Common
 open CoqUtil
 open Weakhtbl
@@ -570,6 +894,174 @@ let check_termination_strict kn d =
                 | None -> raise (NoTerminationProof (fst l)))
         | None -> assert_false "open_ls_defn"))
   | _ ->  d
+
+(** val news_id : Sid.t -> ident -> Sid.t errorM **)
+
+let news_id s i =
+  Sid.add_new (ClashIdent i) i s
+
+(** val create_ty_decl :
+    (ty_node_c ty_o) tysymbol_o -> (decl hashcons_ty, decl) st **)
+
+let create_ty_decl t0 =
+  mk_decl (Dtype t0) (Sid.singleton (ts_name t0))
+
+(** val is_nodef : 'a1 type_def -> bool **)
+
+let is_nodef = function
+| NoDef -> true
+| _ -> false
+
+(** val foldl_errst :
+    ('a1 -> 'a2 -> ('a3, 'a1) errState) -> 'a2 list -> 'a1 -> ('a3, 'a1)
+    errState **)
+
+let rec foldl_errst f l x =
+  match l with
+  | [] ->  x
+  | h :: t0 -> (@@) (fun j -> foldl_errst f t0 j) (f x h)
+
+(** val foldl_err :
+    ('a1 -> 'a2 -> 'a1 errorM) -> 'a2 list -> 'a1 -> 'a1 errorM **)
+
+let rec foldl_err f l x =
+  match l with
+  | [] ->  x
+  | h :: t0 -> (@@) (fun j -> foldl_err f t0 j) (f x h)
+
+(** val iter_err : ('a1 -> unit errorM) -> 'a1 list -> unit errorM **)
+
+let iter_err f l =
+  foldl_err (fun _ -> f) l ()
+
+(** val fold_left2_err :
+    ('a3 -> 'a1 -> 'a2 -> 'a3 errorM) -> 'a3 -> 'a1 list -> 'a2 list -> 'a3
+    option errorM **)
+
+let rec fold_left2_err f accu l1 l2 =
+  match l1 with
+  | [] -> (match l2 with
+           | [] ->  (Some accu)
+           | _ :: _ ->  None)
+  | a1 :: l3 ->
+    (match l2 with
+     | [] ->  None
+     | a2 :: l4 -> (@@) (fun x -> fold_left2_err f x l3 l4) (f accu a1 a2))
+
+(** val opt_fold : ('a2 -> 'a1 -> 'a2) -> 'a2 -> 'a1 option -> 'a2 **)
+
+let opt_fold f d = function
+| Some y -> f d y
+| None -> d
+
+(** val opt_get_exn : exn -> 'a1 option -> 'a1 errorM **)
+
+let opt_get_exn e = function
+| Some y ->  y
+| None -> raise e
+
+(** val create_data_decl :
+    data_decl list -> (ty_node_c ty_o hashcons_ty * decl hashcons_ty, decl)
+    errState **)
+
+let create_data_decl tdl =
+  if null tdl
+  then  (raise EmptyDecl)
+  else let tss = fold_left (fun s x -> Sts.add (fst x) s) tdl Sts.empty in
+       let check_proj = fun tyv s tya ls ->
+         match ls with
+         | Some ls1 ->
+           (match ls1.ls_args with
+            | [] -> raise (BadRecordField ls1)
+            | ptyv :: l ->
+              (match l with
+               | [] ->
+                 (match ls1.ls_value with
+                  | Some ptya ->
+                    if ls1.ls_proj
+                    then if BigInt.is_zero ls1.ls_constr
+                         then (@@) (fun _ ->
+                                (@@) (fun _ ->
+                                  Sls.add_new (DuplicateRecordField ls1) ls1 s)
+                                  (ty_equal_check tya ptya))
+                                (ty_equal_check tyv ptyv)
+                         else raise (BadRecordField ls1)
+                    else raise (BadRecordField ls1)
+                  | None -> raise (BadRecordField ls1))
+               | _ :: _ -> raise (BadRecordField ls1)))
+         | None ->  s
+       in
+       let check_constr = fun tys ty cll pjs news c ->
+         let (fs, pl) = c in
+         (@@) (fun ty1 ->
+           (@@) (fun _ ->
+             (@@) (fun o ->
+               match o with
+               | Some fs_pjs ->
+                 if negb (Sls.equal pjs fs_pjs)
+                 then (@@) (fun x -> raise (RecordFieldMissing x))
+                        (Sls.choose (Sls.diff pjs fs_pjs))
+                 else if negb (BigInt.eq fs.ls_constr cll)
+                      then raise (BadConstructor fs)
+                      else let vs = ty_freevars Stv.empty ty in
+                           let check =
+                             let rec check seen ty0 =
+                               match ty_node ty0 with
+                               | Tyvar v ->
+                                 if Stv.mem v vs
+                                 then  ()
+                                 else raise (UnboundTypeVar v)
+                               | Tyapp (ts, tl) ->
+                                 let now1 = Sts.mem ts tss in
+                                 if (&&) seen now1
+                                 then raise
+                                        ((fun (x, y, z) ->
+  NonPositiveTypeDecl(x, y, z))
+                                          ((fun ((x, y), z) -> (x, y, z))
+                                            ((tys, fs), ty0)))
+                                 else iter_err (check ((||) seen now1)) tl
+                             in check
+                           in
+                           (@@) (fun _ -> news_id news fs.ls_name)
+                             (iter_err (check false) fs.ls_args)
+               | None -> raise (BadConstructor fs))
+               (fold_left2_err (check_proj ty) Sls.empty fs.ls_args pl))
+             (ty_equal_check ty ty1))
+           (opt_get_exn (BadConstructor fs) fs.ls_value)
+       in
+       let check_decl = fun news d ->
+         let (ts, cl) = d in
+         let cll = int_length cl in
+         if null cl
+         then  (raise (EmptyAlgDecl ts))
+         else if negb (is_nodef (ts_def ts))
+              then  (raise (IllegalTypeAlias ts))
+              else (@@) (fun news1 ->
+                     let pjs =
+                       fold_left (fun s y ->
+                         let pl = snd y in
+                         fold_left (opt_fold Sls.add_left) pl s) cl Sls.empty
+                     in
+                     (match Sls.fold (fun pj s ->
+                              match s with
+                              | Coq_inl s1 ->
+                                let ls = pj.ls_name in
+                                if Sid.contains s1 ls
+                                then Coq_inr ls
+                                else Coq_inl (Sid.add ls s1)
+                              | Coq_inr err -> Coq_inr err) pjs (Coq_inl
+                              news1) with
+                      | Coq_inl news2 ->
+                        (@@) (fun l1 ->
+                          (@@) (fun ty ->
+                             (foldl_err (check_constr ts ty cll pjs) cl news2))
+                            (ty_app ts l1))
+                          ( (st_list (map ty_var (ts_args ts))))
+                      | Coq_inr l ->  (raise (ClashIdent l))))
+                     ( (news_id news (ts_name ts)))
+       in
+       (@@) (fun news ->  ( (mk_decl (Ddata tdl) news)))
+         ( (foldl_errst check_decl tdl Sid.empty))
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -885,22 +1377,23 @@ let syms = List.fold_left add Mls.empty ldl in
   pr_name : ident;
 } *)
 
-module Prop = MakeMSHW (struct
+module Prop = MakeMSHW (PropTag) 
+(*struct
   type t = prsymbol
   let tag pr = pr.pr_name.id_tag
   let equal = (==) (*JOSH TODO equal*)
-end)
+end)*)
 
-module Spr = Prop.S
-module Mpr = Prop.M
+(* module Spr = Prop.S
+module Mpr = Prop.M *)
 module Hpr = Prop.H
 module Wpr = Prop.W
 
-let pr_equal : prsymbol -> prsymbol -> bool = (==)
+(* let pr_equal : prsymbol -> prsymbol -> bool = (==)
 
 let pr_hash pr = id_hash pr.pr_name
 
-let create_prsymbol n = { pr_name = id_register n }
+let create_prsymbol n = { pr_name = id_register n } *)
 
 (* type ind_decl = lsymbol * (prsymbol * term) list *)
 
@@ -937,7 +1430,7 @@ and decl_node =
 *)
 (** Declarations *)
 
-module Hsdecl = Hashcons.Make (struct
+(* module Hsdecl = Hashcons.Make (struct
 
   type t = decl
 
@@ -990,26 +1483,27 @@ module Hsdecl = Hashcons.Make (struct
 
   let tag n d = { d with d_tag = Weakhtbl.create_tag n }
 
-end)
+end) *)
 
-module Decl = MakeMSHW (struct
+module Decl = MakeMSHW (DeclTag)
+(*struct
   type t = decl
   let tag d = d.d_tag
   let equal = (==) (*JOSH TODO equal*)
 end)
 
 module Sdecl = Decl.S
-module Mdecl = Decl.M
+module Mdecl = Decl.M*)
 module Wdecl = Decl.W
 module Hdecl = Decl.H
 
-let d_equal : decl -> decl -> bool = (==)
+(* let d_equal : decl -> decl -> bool = (==)
 
-let d_hash d = Weakhtbl.tag_hash d.d_tag
+let d_hash d = Weakhtbl.tag_hash d.d_tag *)
 
 (** Declaration constructors *)
 
-let mk_decl node news =
+(* let mk_decl node news =
   let d = {
       d_node = node;
       d_news = news;
@@ -1017,28 +1511,28 @@ let mk_decl node news =
     } in
   match node with
   | Dprop (Pgoal,_,_) -> Hsdecl.unique d
-  | _ -> Hsdecl.hashcons d
+  | _ -> Hsdecl.hashcons d *)
 
 
-exception IllegalTypeAlias of tysymbol
-exception ClashIdent of ident
+(* exception IllegalTypeAlias of tysymbol
+exception ClashIdent of ident *)
 exception BadLogicDecl of lsymbol * lsymbol
-exception BadConstructor of lsymbol
+(* exception BadConstructor of lsymbol *)
 
-exception BadRecordField of lsymbol
+(* exception BadRecordField of lsymbol *)
 exception BadRecordType of lsymbol * tysymbol
 exception BadRecordUnnamed of lsymbol * tysymbol
 exception BadRecordCons of lsymbol * tysymbol
-exception RecordFieldMissing of lsymbol
-exception DuplicateRecordField of lsymbol
+(* exception RecordFieldMissing of lsymbol *)
+(* exception DuplicateRecordField of lsymbol *)
 
-exception EmptyDecl
-exception EmptyAlgDecl of tysymbol
+(* exception EmptyDecl *)
+(* exception EmptyAlgDecl of tysymbol *)
 exception EmptyIndDecl of lsymbol
 
-exception NonPositiveTypeDecl of tysymbol * lsymbol * ty
+(* exception NonPositiveTypeDecl of tysymbol * lsymbol * ty *)
 
-let news_id s id = Sid.add_new (ClashIdent id) id s
+(* let news_id s id = Sid.add_new (ClashIdent id) id s *)
 
 let syms_ts s ts = Sid.add ts.ts_name s
 let syms_ls s ls = Sid.add ls.ls_name s
@@ -1049,9 +1543,9 @@ let syms_term s t = t_s_fold syms_ty syms_ls s t
 let syms_ty_decl ts =
   type_def_fold syms_ty Sid.empty ts.ts_def
 
-let create_ty_decl ts =
+(* let create_ty_decl ts =
   let news = Sid.singleton ts.ts_name in
-  mk_decl (Dtype ts) news
+  mk_decl (Dtype ts) news *)
 
 let syms_data_decl tdl =
   let syms_constr syms (fs,_) =
@@ -1060,7 +1554,7 @@ let syms_data_decl tdl =
     List.fold_left syms_constr syms cl in
   List.fold_left syms_decl Sid.empty tdl
 
-let create_data_decl tdl =
+(* let create_data_decl tdl =
   if tdl = [] then raise EmptyDecl;
   let add s (ts,_) = Sts.add ts s in
   let tss = List.fold_left add Sts.empty tdl in
@@ -1107,7 +1601,7 @@ let create_data_decl tdl =
     List.fold_left (check_constr ts ty cll pjs) news cl
   in
   let news = List.fold_left check_decl Sid.empty tdl in
-  mk_decl (Ddata tdl) news
+  mk_decl (Ddata tdl) news *)
 
 let syms_param_decl ls =
   let syms = Opt.fold syms_ty Sid.empty ls.ls_value in
