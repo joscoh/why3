@@ -100,11 +100,16 @@ let null = function
 | [] -> true
 | _ :: _ -> false
 
-(** val option_fold : 'a1 -> ('a2 -> 'a1) -> 'a2 option -> 'a1 **)
+(** val opt_fold : ('a2 -> 'a1 -> 'a2) -> 'a2 -> 'a1 option -> 'a2 **)
 
-let option_fold none some = function
-| Some x -> some x
-| None -> none
+let opt_fold f d = function
+| Some y -> f d y
+| None -> d
+
+(** val option_fold : 'a2 -> ('a1 -> 'a2) -> 'a1 option -> 'a2 **)
+
+let option_fold none some o =
+  opt_fold (fun _ -> some) none o
 
 (** val map_fold_left :
     ('a1 -> 'a2 -> 'a1 * 'a3) -> 'a1 -> 'a2 list -> 'a1 * 'a3 list **)

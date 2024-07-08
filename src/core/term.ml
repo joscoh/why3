@@ -1903,8 +1903,8 @@ let t_subst_unsafe m t0 =
 
 (** val t_view_bound : term_bound -> vsymbol * (term_node term_o) **)
 
-let t_view_bound = function
-| (p, t0) -> let (v, _) = p in (v, t0)
+let t_view_bound x =
+  ((fst (fst x)), (snd x))
 
 (** val t_open_bound :
     term_bound -> (BigInt.t, vsymbol * (term_node term_o)) st **)
@@ -1920,8 +1920,8 @@ let t_open_bound = function
 (** val t_view_branch :
     term_branch -> (pattern_node pattern_o) * (term_node term_o) **)
 
-let t_view_branch = function
-| (p0, t0) -> let (p, _) = p0 in (p, t0)
+let t_view_branch x =
+  ((fst (fst x)), (snd x))
 
 (** val t_open_branch :
     term_branch -> (BigInt.t, (pattern_node pattern_o) * (term_node term_o))
@@ -1951,8 +1951,8 @@ let t_open_quant1 = function
 (** val t_view_quant :
     term_quant -> (vsymbol list * trigger) * (term_node term_o) **)
 
-let t_view_quant = function
-| (p, f) -> let (p0, tl) = p in let (vl, _) = p0 in ((vl, tl), f)
+let t_view_quant x =
+  (((fst (fst (fst x))), (snd (fst x))), (snd x))
 
 (** val t_open_bound_with :
     (term_node term_o) -> term_bound -> (BigInt.t, (term_node term_o))
@@ -2410,6 +2410,64 @@ let t_func_app_l fn tl =
 let t_pred_app_l pr tl =
   (@@) (fun ta -> t_equ ta t_bool_true) (t_func_app_l pr tl)
 
+(** val pat_gen_fold :
+    ('a1 -> ty_node_c ty_o -> 'a1) -> ('a1 -> lsymbol -> 'a1) -> 'a1 ->
+    (pattern_node pattern_o) -> 'a1 **)
+
+let rec pat_gen_fold fnT fnL acc pat =
+  let fn = fun acc0 p -> pat_gen_fold fnT fnL acc0 p in
+  let acc0 = fnT acc (pat_ty pat) in
+  (match pat_node pat with
+   | Papp (s, pl) -> fold_left fn pl (fnL acc0 s)
+   | Por (p, q) -> fn (fn acc0 p) q
+   | Pas (p, _) -> fn acc0 p
+   | _ -> acc0)
+
+(** val t_gen_fold :
+    ('a1 -> ty_node_c ty_o -> 'a1) -> ('a1 -> lsymbol -> 'a1) -> 'a1 ->
+    (term_node term_o) -> 'a1 **)
+
+let rec t_gen_fold fnT fnL acc t0 =
+  let fn = t_gen_fold fnT fnL in
+  let acc0 = CoqUtil.opt_fold fnT acc (t_ty t0) in
+  (match t_node t0 with
+   | Tapp (f, tl) -> fold_left fn tl (fnL acc0 f)
+   | Tif (f, t1, t2) -> fn (fn (fn acc0 f) t1) t2
+   | Tlet (t1, p) -> let (_, t2) = p in fn (fn acc0 t1) t2
+   | Tcase (t1, bl) ->
+     let branch = fun acc1 x ->
+       fn (pat_gen_fold fnT fnL acc1 (fst (fst x))) (snd x)
+     in
+     fold_left branch bl (fn acc0 t1)
+   | Teps p -> let (_, f) = p in fn acc0 f
+   | Tquant (_, p) ->
+     let (p0, f1) = p in
+     let (p1, tl) = p0 in
+     let (vl, _) = p1 in
+     let acc1 = fold_left (fun a v -> fnT a v.vs_ty) vl acc0 in
+     fn (tr_fold fn acc1 tl) f1
+   | Tbinop (_, f1, f2) -> fn (fn acc0 f1) f2
+   | Tnot f1 -> fn acc0 f1
+   | _ -> acc0)
+
+(** val t_s_fold :
+    ('a1 -> ty_node_c ty_o -> 'a1) -> ('a1 -> lsymbol -> 'a1) -> 'a1 ->
+    (term_node term_o) -> 'a1 **)
+
+let t_s_fold =
+  t_gen_fold
+
+(** val t_ty_fold :
+    ('a1 -> ty_node_c ty_o -> 'a1) -> 'a1 -> (term_node term_o) -> 'a1 **)
+
+let t_ty_fold fn acc t0 =
+  t_s_fold fn (fun x _ -> x) acc t0
+
+(** val t_ty_freevars : Stv.t -> (term_node term_o) -> Stv.t **)
+
+let t_ty_freevars =
+  t_ty_fold ty_freevars
+
 (** val bnd_v_fold : ('a1 -> vsymbol -> 'a1) -> 'a1 -> bind_info -> 'a1 **)
 
 let bnd_v_fold fn acc b =
@@ -2728,14 +2786,14 @@ let rec pat_gen_map fnT fnL m pat =
     | Pas (p, v) -> pat_as (fn p) (Mvs.find v m)
     | Por (p, q) -> pat_or (fn p) (fn q)
 
-let rec pat_gen_fold fnT fnL acc pat =
+(* let rec pat_gen_fold fnT fnL acc pat =
   let fn acc p = pat_gen_fold fnT fnL acc p in
   let acc = fnT acc pat.pat_ty in
   match pat.pat_node with
     | Pwild | Pvar _ -> acc
     | Papp (s, pl) -> List.fold_left fn (fnL acc s) pl
     | Por (p, q) -> fn (fn acc p) q
-    | Pas (p, _) -> fn acc p
+    | Pas (p, _) -> fn acc p *)
 
 (** Terms and formulas *)
 
@@ -3797,7 +3855,7 @@ let t_ty_subst mapT mapV t =
 
 (* fold over symbols *)
 
-let rec t_gen_fold fnT fnL acc t =
+(* let rec t_gen_fold fnT fnL acc t =
   let fn = t_gen_fold fnT fnL in
   let acc = Opt.fold fnT acc t.t_ty in
   match t.t_node with
@@ -3818,7 +3876,7 @@ let rec t_gen_fold fnT fnL acc t =
   | Tnot f1 -> fn acc f1
   | Ttrue | Tfalse -> acc
 
-let t_s_fold = t_gen_fold
+let t_s_fold = t_gen_fold *)
 
 let t_s_all prT prL t = Util.alld t_s_fold prT prL t
 let t_s_any prT prL t = Util.anyd t_s_fold prT prL t
@@ -3827,9 +3885,9 @@ let t_s_any prT prL t = Util.anyd t_s_fold prT prL t
 
 let t_ty_map fn t = t_s_map fn (fun ls -> ls) t
 
-let t_ty_fold fn acc t = t_s_fold fn Util.const acc t
+(* let t_ty_fold fn acc t = t_s_fold fn Util.const acc t *)
 
-let t_ty_freevars = t_ty_fold ty_freevars
+(* let t_ty_freevars = t_ty_fold ty_freevars *)
 
 (* map/fold over applications in terms and formulas (but not in patterns!) *)
 

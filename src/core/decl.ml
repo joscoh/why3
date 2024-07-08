@@ -388,6 +388,7 @@ exception NoTerminationProof of lsymbol
 
 exception IllegalTypeAlias of tysymbol
 exception ClashIdent of ident
+exception BadLogicDecl of lsymbol * lsymbol
 exception BadConstructor of lsymbol
 
 exception BadRecordField of lsymbol
@@ -396,8 +397,12 @@ exception DuplicateRecordField of lsymbol
 
 exception EmptyDecl
 exception EmptyAlgDecl of tysymbol
+exception EmptyIndDecl of lsymbol
 
 exception NonPositiveTypeDecl of tysymbol * lsymbol * ty
+
+exception InvalidIndDecl of lsymbol * prsymbol
+exception NonPositiveIndDecl of lsymbol * prsymbol * lsymbol
 open Common
 open CoqUtil
 open Weakhtbl
@@ -948,12 +953,6 @@ let rec fold_left2_err f accu l1 l2 =
      | [] ->  None
      | a2 :: l4 -> (@@) (fun x -> fold_left2_err f x l3 l4) (f accu a1 a2))
 
-(** val opt_fold : ('a2 -> 'a1 -> 'a2) -> 'a2 -> 'a1 option -> 'a2 **)
-
-let opt_fold f d = function
-| Some y -> f d y
-| None -> d
-
 (** val opt_get_exn : exn -> 'a1 option -> 'a1 errorM **)
 
 let opt_get_exn e = function
@@ -1040,7 +1039,8 @@ let create_data_decl tdl =
                      let pjs =
                        fold_left (fun s y ->
                          let pl = snd y in
-                         fold_left (opt_fold Sls.add_left) pl s) cl Sls.empty
+                         fold_left (CoqUtil.opt_fold Sls.add_left) pl s) cl
+                         Sls.empty
                      in
                      (match Sls.fold (fun pj s ->
                               match s with
@@ -1062,6 +1062,139 @@ let create_data_decl tdl =
        in
        (@@) (fun news ->  ( (mk_decl (Ddata tdl) news)))
          ( (foldl_errst check_decl tdl Sid.empty))
+
+(** val create_param_decl : lsymbol -> (decl hashcons_ty, decl) errState **)
+
+let create_param_decl ls =
+  if (||) (negb (BigInt.is_zero ls.ls_constr)) ls.ls_proj
+  then  (raise (UnexpectedProjOrConstr ls))
+  else let news = Sid.singleton ls.ls_name in  (mk_decl (Dparam ls) news)
+
+(** val create_logic_decl_nocheck :
+    logic_decl list -> (decl hashcons_ty, decl) errState **)
+
+let create_logic_decl_nocheck ldl =
+  if null ldl
+  then  (raise EmptyDecl)
+  else let check_decl = fun news x ->
+         let (ls, l) = x in
+         let (p, _) = l in
+         let (s, _) = p in
+         if negb (ls_equal s ls)
+         then raise (BadLogicDecl (ls, s))
+         else if (||) (negb (BigInt.is_zero ls.ls_constr)) ls.ls_proj
+              then raise (UnexpectedProjOrConstr ls)
+              else news_id news ls.ls_name
+       in
+       (@@) (fun news ->  (mk_decl (Dlogic ldl) news))
+         ( (foldl_err check_decl ldl Sid.empty))
+
+(** val lsyms_notin_tm : Sls.t -> (term_node term_o) -> bool **)
+
+let lsyms_notin_tm p t0 =
+  Sls.for_all (fun x -> negb (ls_in_tm x t0)) p
+
+(** val ind_strict_pos : Sls.t -> (term_node term_o) -> bool **)
+
+let rec ind_strict_pos sps f =
+  (||) (lsyms_notin_tm sps f)
+    (match t_node f with
+     | Tapp (p, tms) ->
+       (&&) (Sls.mem p sps) (forallb (lsyms_notin_tm sps) tms)
+     | Tif (f1, f2, f3) ->
+       (&&) ((&&) (lsyms_notin_tm sps f1) (ind_strict_pos sps f2))
+         (ind_strict_pos sps f3)
+     | Tlet (t0, tb) ->
+       let (_, t2) = t_view_bound tb in
+       (&&) (ind_strict_pos sps t2) (lsyms_notin_tm sps t0)
+     | Tcase (t0, pats) ->
+       (&&) (lsyms_notin_tm sps t0)
+         (forallb (fun x ->
+           let (_, t1) = t_view_branch x in ind_strict_pos sps t1) pats)
+     | Tquant (_, tq) ->
+       let (_, f0) = t_view_quant tq in ind_strict_pos sps f0
+     | Tbinop (b, f1, f2) ->
+       (match b with
+        | Timplies -> (&&) (ind_strict_pos sps f2) (lsyms_notin_tm sps f1)
+        | _ ->
+          (match b with
+           | Tiff -> false
+           | _ -> (&&) (ind_strict_pos sps f1) (ind_strict_pos sps f2)))
+     | _ -> false)
+
+(** val ind_pos : Sls.t -> (term_node term_o) -> bool **)
+
+let rec ind_pos sps f =
+  match t_node f with
+  | Tapp (p, ts) -> (&&) (Sls.mem p sps) (forallb (lsyms_notin_tm sps) ts)
+  | Tlet (t0, tb) ->
+    (&&) (lsyms_notin_tm sps t0) (ind_pos sps (snd (t_view_bound tb)))
+  | Tquant (q, tq) ->
+    (match q with
+     | Tforall -> ind_pos sps (snd (t_view_quant tq))
+     | Texists -> false)
+  | Tbinop (b, f1, f2) ->
+    (match b with
+     | Timplies -> (&&) (ind_strict_pos sps f1) (ind_pos sps f2)
+     | _ -> false)
+  | _ -> false
+
+(** val valid_ind_form :
+    lsymbol -> (term_node term_o) -> (term_node term_o) option **)
+
+let rec valid_ind_form ps f =
+  match t_node f with
+  | Tapp (p, ts) ->
+    if (&&) (ls_equal p ps)
+         (list_eqb ty_equal p.ls_args (rem_opt_list (map t_ty ts)))
+    then Some f
+    else None
+  | Tlet (_, tb) -> valid_ind_form ps (snd (t_view_bound tb))
+  | Tquant (q, tq) ->
+    (match q with
+     | Tforall -> valid_ind_form ps (snd (t_view_quant tq))
+     | Texists -> None)
+  | Tbinop (b, _, f2) ->
+    (match b with
+     | Timplies -> valid_ind_form ps f2
+     | _ -> None)
+  | _ -> None
+
+(** val create_ind_decl :
+    ind_sign -> ind_decl list -> (decl hashcons_ty, decl) errState **)
+
+let create_ind_decl s idl =
+  if null idl
+  then  (raise EmptyDecl)
+  else let sps = fold_left (fun acc x -> Sls.add (fst x) acc) idl Sls.empty in
+       let check_ax = fun ps news x ->
+         let (pr, f) = x in
+         if negb (ind_pos sps f)
+         then raise
+                ((fun ((x, y), z) ->
+  NonPositiveIndDecl(x, y, z)) ((ps,
+                  pr), ps))
+         else (match valid_ind_form ps f with
+               | Some g ->
+                 let gtv = t_ty_freevars Stv.empty g in
+                 let ftv = t_ty_freevars Stv.empty f in
+                 if negb (Stv.subset ftv ftv)
+                 then (@@) (fun y -> raise (UnboundTypeVar y))
+                        (Stv.choose (Stv.diff ftv gtv))
+                 else news_id news pr.pr_name
+               | None -> raise (InvalidIndDecl (ps, pr)))
+       in
+       let check_decl = fun news x ->
+         let (ps, al) = x in
+         if null al
+         then raise (EmptyIndDecl ps)
+         else if isSome ps.ls_value
+              then raise (PredicateSymbolExpected ps)
+              else (@@) (fun news0 -> foldl_err (check_ax ps) al news0)
+                     (news_id news ps.ls_name)
+       in
+       (@@) (fun news ->  (mk_decl (Dind (s, idl)) news))
+         ( (foldl_err check_decl idl Sid.empty))
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -1516,7 +1649,7 @@ let d_hash d = Weakhtbl.tag_hash d.d_tag *)
 
 (* exception IllegalTypeAlias of tysymbol
 exception ClashIdent of ident *)
-exception BadLogicDecl of lsymbol * lsymbol
+(* exception BadLogicDecl of lsymbol * lsymbol *)
 (* exception BadConstructor of lsymbol *)
 
 (* exception BadRecordField of lsymbol *)
@@ -1528,7 +1661,7 @@ exception BadRecordCons of lsymbol * tysymbol
 
 (* exception EmptyDecl *)
 (* exception EmptyAlgDecl of tysymbol *)
-exception EmptyIndDecl of lsymbol
+(* exception EmptyIndDecl of lsymbol *)
 
 (* exception NonPositiveTypeDecl of tysymbol * lsymbol * ty *)
 
@@ -1637,12 +1770,12 @@ let create_logic_decl ldl =
   (* let ldl = List.map lsym_ocaml_to_coq ldl in *)
   mk_decl (Dlogic ldl) news
 
-exception InvalidIndDecl of lsymbol * prsymbol
-exception NonPositiveIndDecl of lsymbol * prsymbol * lsymbol
+(* exception InvalidIndDecl of lsymbol * prsymbol
+exception NonPositiveIndDecl of lsymbol * prsymbol * lsymbol *)
 
-exception Found of lsymbol
-let ls_mem s sps = if Sls.mem s sps then raise (Found s) else false
-let t_pos_ps sps = t_s_all (fun _ -> true) (fun s -> not (ls_mem s sps))
+(* exception Found of lsymbol *)
+(* let ls_mem s sps = if Sls.mem s sps then raise (Found s) else false *)
+(* let t_pos_ps sps = t_s_all (fun _ -> true) (fun s -> not (ls_mem s sps))
 
 let rec f_pos_ps sps pol f = match f.t_node, pol with
   | Tapp (s, _), Some false when ls_mem s sps -> false
@@ -1655,20 +1788,79 @@ let rec f_pos_ps sps pol f = match f.t_node, pol with
       f_pos_ps sps (Option.map not pol) f
   | Tif (f,g,h), _ ->
       f_pos_ps sps None f && f_pos_ps sps pol g && f_pos_ps sps pol h
-  | _ -> TermTF.t_all (t_pos_ps sps) (f_pos_ps sps pol) f
+  | _ -> TermTF.t_all (t_pos_ps sps) (f_pos_ps sps pol) f *)
 
+  (* let lsyms_notin_tm (p: Sls.t) (t: term) : bool =
+    Sls.for_all (fun x -> not (ls_in_tm x t)) p
+  
+  (*JOSH: different positivity check for now*)
+  let rec ind_strict_pos (sps: Sls.t) (f: term) : bool =
+    lsyms_notin_tm sps f ||
+    match f.t_node with
+  | Tapp (p, tms) -> Sls.mem p sps &&
+    List.for_all (lsyms_notin_tm sps) tms
+  | Tbinop (Timplies, f1, f2) -> ind_strict_pos sps f2 && lsyms_notin_tm sps f1
+  | Tquant(q, tq) -> let ((_, _), f) = t_view_quant tq in ind_strict_pos sps f
+  | Tbinop(Tand, f1, f2) | Tbinop(Tor, f1, f2) -> ind_strict_pos sps f1 && ind_strict_pos sps f2
+  (*TODO: too restrictive?*)
+  | Tlet(t, tb) -> let (_, t2) = t_view_bound tb in
+    ind_strict_pos sps t2 && lsyms_notin_tm sps t
+  | Tif(f1, f2, f3) ->
+    lsyms_notin_tm sps f1 && ind_strict_pos sps f2 && ind_strict_pos sps f3
+  | Tcase(t, pats) ->
+      (*Maybe too restrictive*)
+    lsyms_notin_tm sps t &&
+    List.for_all (fun x -> let (_, t) = t_view_branch x in ind_strict_pos sps t) pats
+  | _ -> false
+  
+  let rec ind_pos (sps: Sls.t) (f: term) : bool =
+    match f.t_node with
+    | Tapp(p, ts) -> Sls.mem p sps && List.for_all (lsyms_notin_tm sps) ts
+    | Tquant(Tforall, tq) -> let (_, f) = t_view_quant tq in ind_pos sps f
+    | Tlet(t, tb) -> (*TODO: too restrictive?*) lsyms_notin_tm sps t &&
+      let (_, f) = t_view_bound tb in ind_pos sps f
+    | Tbinop(Timplies, f1, f2) -> ind_strict_pos sps f1 && ind_pos sps f2
+    | _ -> false
+  
+  (*Inductive predicates have a certain shape*)
+  let rec valid_ind_form (ps: lsymbol) (f: term) : term option =
+    match f.t_node with
+    | Tapp(p, ts) -> if ls_equal p ps && (p.ls_args = rem_opt_list (List.map (fun x -> x.t_ty) ts)) then Some f else None (*TODO: do we need this check?*)
+      (*NOTE: ignore length, implied by typing*)
+    | Tbinop(Timplies, f1, f2) -> valid_ind_form ps f2
+    | Tquant(Tforall, tq) -> let (_, f) = t_view_quant tq in valid_ind_form ps f
+    | Tlet(t, tb) -> let (_, f) = t_view_bound tb in valid_ind_form ps f
+    | _ -> None *)
+  
+  
 let syms_ind_decl idl =
   let syms_ax syms (_,f) =
     syms_term syms f in
   let syms_decl syms (_,al) =
     List.fold_left syms_ax syms al in
   List.fold_left syms_decl Sid.empty idl
-
-let create_ind_decl s idl =
+  
+(* let create_ind_decl s idl =
   if idl = [] then raise EmptyDecl;
   let add acc (ps,_) = Sls.add ps acc in
   let sps = List.fold_left add Sls.empty idl in
   let check_ax ps news (pr,f) =
+    (*JOSH - alt*)
+    (*First, check for positivity*)
+    (if not(ind_pos sps f) then raise (NonPositiveIndDecl(ps, pr, ps))); (*TODO: not ps*)
+    match (valid_ind_form ps f) with
+    | Some g ->
+      (*Need g to check for freevars*)
+      let gtv = t_ty_freevars Stv.empty g in
+      let ftv = t_ty_freevars Stv.empty f in
+      if not (Stv.subset ftv gtv) then
+        raise (UnboundTypeVar (Stv.choose (Stv.diff ftv gtv)));
+        news_id news pr.pr_name
+    | None -> raise (InvalidIndDecl (ps, pr))
+    in
+
+    (* (*This does the transformation I proved correct (but less) - 
+      transforms into lists of implications followed by main formula*)
     let rec clause acc f = match f.t_node with
       | Tquant (Tforall, f) ->
           let _,_,f = t_open_quant f in clause acc f
@@ -1682,8 +1874,9 @@ let create_ind_decl s idl =
     match g.t_node with
       | Tapp (s, tl) when ls_equal s ps ->
           List.iter2 check_tl ps.ls_args tl;
-          (try ignore (List.for_all (f_pos_ps sps (Some true)) (g::cls))
-          with Found ls -> raise (NonPositiveIndDecl (ps, pr, ls)));
+          (if not(ind_pos sps f) then raise (NonPositiveIndDecl(ps, pr, s))); (*TODO: not s*)
+          (*(try ignore (ind_strict_pos sps f) (*(List.for_all (ind_strict_pos sps) (*(f_pos_ps sps (Some true))*) (g::cls))*)
+          with Found ls -> raise (NonPositiveIndDecl (ps, pr, ls)));*)
           (* check for unbound type variables *)
           let gtv = t_ty_freevars Stv.empty g in
           let ftv = t_ty_freevars Stv.empty f in
@@ -1691,7 +1884,7 @@ let create_ind_decl s idl =
             raise (UnboundTypeVar (Stv.choose (Stv.diff ftv gtv)));
           news_id news pr.pr_name
       | _ -> raise (InvalidIndDecl (ps, pr))
-  in
+  in *)
   let check_decl news (ps,al) =
     if al = [] then raise (EmptyIndDecl ps);
     if ps.ls_value <> None then raise (Term.PredicateSymbolExpected ps);
@@ -1699,7 +1892,7 @@ let create_ind_decl s idl =
     List.fold_left (check_ax ps) news al
   in
   let news = List.fold_left check_decl Sid.empty idl in
-  mk_decl (Dind (s, idl)) news
+  mk_decl (Dind (s, idl)) news *)
 
 let syms_prop_decl f =
   syms_term Sid.empty f
