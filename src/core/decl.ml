@@ -1169,20 +1169,21 @@ let create_ind_decl s idl =
   else let sps = fold_left (fun acc x -> Sls.add (fst x) acc) idl Sls.empty in
        let check_ax = fun ps news x ->
          let (pr, f) = x in
-         if negb (ind_pos sps f)
-         then raise
-                ((fun ((x, y), z) ->
+         (@@) (fun f0 ->
+           if negb (ind_pos sps f0)
+           then raise
+                  ((fun ((x, y), z) ->
   NonPositiveIndDecl(x, y, z)) ((ps,
-                  pr), ps))
-         else (match valid_ind_form ps f with
-               | Some g ->
-                 let gtv = t_ty_freevars Stv.empty g in
-                 let ftv = t_ty_freevars Stv.empty f in
-                 if negb (Stv.subset ftv ftv)
-                 then (@@) (fun y -> raise (UnboundTypeVar y))
-                        (Stv.choose (Stv.diff ftv gtv))
-                 else news_id news pr.pr_name
-               | None -> raise (InvalidIndDecl (ps, pr)))
+                    pr), ps))
+           else (match valid_ind_form ps f0 with
+                 | Some g ->
+                   let gtv = t_ty_freevars Stv.empty g in
+                   let ftv = t_ty_freevars Stv.empty f0 in
+                   if negb (Stv.subset ftv ftv)
+                   then (@@) (fun y -> raise (UnboundTypeVar y))
+                          (Stv.choose (Stv.diff ftv gtv))
+                   else news_id news pr.pr_name
+                 | None -> raise (InvalidIndDecl (ps, pr)))) (check_fvs f)
        in
        let check_decl = fun news x ->
          let (ps, al) = x in
@@ -1195,6 +1196,102 @@ let create_ind_decl s idl =
        in
        (@@) (fun news ->  (mk_decl (Dind (s, idl)) news))
          ( (foldl_err check_decl idl Sid.empty))
+
+(** val create_prop_decl :
+    prop_kind -> prsymbol -> (term_node term_o) -> (decl hashcons_ty, decl)
+    errState **)
+
+let create_prop_decl k p f =
+  (@@) (fun news ->
+    (@@) (fun f0 ->
+       (mk_decl (Dprop ((fun ((x, y), z) -> (x, y, z)) ((k, p), f0))) news))
+      ( (check_fvs f))) ( (news_id Sid.empty p.pr_name))
+
+(** val syms_ts : Sid.t -> (ty_node_c ty_o) tysymbol_o -> unit Sid.M.t **)
+
+let syms_ts s ts =
+  Sid.add (ts_name ts) s
+
+(** val syms_ls : Sid.t -> lsymbol -> unit Sid.M.t **)
+
+let syms_ls s ls =
+  Sid.add ls.ls_name s
+
+(** val syms_ty : Sid.t -> ty_node_c ty_o -> Sid.t **)
+
+let syms_ty s ty =
+  ty_s_fold syms_ts s ty
+
+(** val syms_term : Sid.t -> (term_node term_o) -> Sid.t **)
+
+let syms_term s t0 =
+  t_s_fold syms_ty syms_ls s t0
+
+(** val syms_ty_decl : (ty_node_c ty_o) tysymbol_o -> Sid.t **)
+
+let syms_ty_decl ts =
+  type_def_fold syms_ty Sid.empty (ts_def ts)
+
+(** val syms_data_decl : data_decl list -> Sid.t **)
+
+let syms_data_decl tdl =
+  let syms_constr = fun syms pat ->
+    let (fs, _) = pat in fold_left syms_ty fs.ls_args syms
+  in
+  let syms_decl = fun syms pat ->
+    let (_, cl) = pat in fold_left syms_constr cl syms
+  in
+  fold_left syms_decl tdl Sid.empty
+
+(** val syms_param_decl : lsymbol -> Sid.t **)
+
+let syms_param_decl ls =
+  let syms = CoqUtil.opt_fold syms_ty Sid.empty ls.ls_value in
+  fold_left syms_ty ls.ls_args syms
+
+(** val syms_logic_decl : logic_decl list -> Sid.t **)
+
+let syms_logic_decl ldl =
+  let syms_decl = fun syms pat ->
+    let (ls, ld) = pat in
+    (match open_ls_defn_aux ld with
+     | Some p ->
+       let (_, e) = p in
+       let syms0 = fold_left syms_ty ls.ls_args syms in syms_term syms0 e
+     | None -> syms)
+  in
+  fold_left syms_decl ldl Sid.empty
+
+(** val syms_ind_decl : ind_decl list -> Sid.t **)
+
+let syms_ind_decl idl =
+  let syms_ax = fun syms pat -> let (_, f) = pat in syms_term syms f in
+  let syms_decl = fun syms pat ->
+    let (_, al) = pat in fold_left syms_ax al syms
+  in
+  fold_left syms_decl idl Sid.empty
+
+(** val syms_prop_decl : (term_node term_o) -> Sid.t **)
+
+let syms_prop_decl f =
+  syms_term Sid.empty f
+
+(** val get_used_syms_ty : ty_node_c ty_o -> Sid.t **)
+
+let get_used_syms_ty ty =
+  syms_ty Sid.empty ty
+
+(** val get_used_syms_decl : decl -> Sid.t **)
+
+let get_used_syms_decl d =
+  match d.d_node with
+  | Dtype ts -> syms_ty_decl ts
+  | Ddata dl -> syms_data_decl dl
+  | Dparam ls -> syms_param_decl ls
+  | Dlogic ldl -> syms_logic_decl ldl
+  | Dind i -> let (_, idl) = i in syms_ind_decl idl
+  | Dprop x ->
+    let (_, f) = (fun (x, y, z) -> ((x, y), z)) x in syms_prop_decl f
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -1667,25 +1764,25 @@ exception BadRecordCons of lsymbol * tysymbol
 
 (* let news_id s id = Sid.add_new (ClashIdent id) id s *)
 
-let syms_ts s ts = Sid.add ts.ts_name s
+(* let syms_ts s ts = Sid.add ts.ts_name s
 let syms_ls s ls = Sid.add ls.ls_name s
 
 let syms_ty s ty = ty_s_fold syms_ts s ty
-let syms_term s t = t_s_fold syms_ty syms_ls s t
+let syms_term s t = t_s_fold syms_ty syms_ls s t *)
 
-let syms_ty_decl ts =
-  type_def_fold syms_ty Sid.empty ts.ts_def
+(* let syms_ty_decl ts =
+  type_def_fold syms_ty Sid.empty ts.ts_def *)
 
 (* let create_ty_decl ts =
   let news = Sid.singleton ts.ts_name in
   mk_decl (Dtype ts) news *)
 
-let syms_data_decl tdl =
+(* let syms_data_decl tdl =
   let syms_constr syms (fs,_) =
     List.fold_left syms_ty syms fs.ls_args in
   let syms_decl syms (_,cl) =
     List.fold_left syms_constr syms cl in
-  List.fold_left syms_decl Sid.empty tdl
+  List.fold_left syms_decl Sid.empty tdl *)
 
 (* let create_data_decl tdl =
   if tdl = [] then raise EmptyDecl;
@@ -1736,7 +1833,7 @@ let syms_data_decl tdl =
   let news = List.fold_left check_decl Sid.empty tdl in
   mk_decl (Ddata tdl) news *)
 
-let syms_param_decl ls =
+(* let syms_param_decl ls =
   let syms = Opt.fold syms_ty Sid.empty ls.ls_value in
   List.fold_left syms_ty syms ls.ls_args
 
@@ -1755,7 +1852,7 @@ let syms_logic_decl ldl =
 
 (*JOSH: TODO hack*)
 let lsym_ocaml_to_coq (x, (y, z, w)) =
-  (x, ((y, z), w))
+  (x, ((y, z), w)) *)
 
 let create_logic_decl ldl =
   if ldl = [] then raise EmptyDecl;
@@ -1833,12 +1930,12 @@ let rec f_pos_ps sps pol f = match f.t_node, pol with
     | _ -> None *)
   
   
-let syms_ind_decl idl =
+(* let syms_ind_decl idl =
   let syms_ax syms (_,f) =
     syms_term syms f in
   let syms_decl syms (_,al) =
     List.fold_left syms_ax syms al in
-  List.fold_left syms_decl Sid.empty idl
+  List.fold_left syms_decl Sid.empty idl *)
   
 (* let create_ind_decl s idl =
   if idl = [] then raise EmptyDecl;
@@ -1894,14 +1991,14 @@ let syms_ind_decl idl =
   let news = List.fold_left check_decl Sid.empty idl in
   mk_decl (Dind (s, idl)) news *)
 
-let syms_prop_decl f =
-  syms_term Sid.empty f
+(* let syms_prop_decl f =
+  syms_term Sid.empty f *)
 
-let create_prop_decl k p f =
+(* let create_prop_decl k p f =
   let news = news_id Sid.empty p.pr_name in
-  mk_decl (Dprop (k,p,check_fvs f)) news
+  mk_decl (Dprop (k,p,check_fvs f)) news *)
 
-let get_used_syms_ty ty = syms_ty Sid.empty ty
+(* let get_used_syms_ty ty = syms_ty Sid.empty ty
 
 let get_used_syms_decl d =
   match d.d_node with
@@ -1910,7 +2007,7 @@ let get_used_syms_decl d =
   | Dparam ls -> syms_param_decl ls
   | Dlogic ldl -> syms_logic_decl ldl
   | Dind (_, idl) -> syms_ind_decl idl
-  | Dprop (_,_,f) -> syms_prop_decl f
+  | Dprop (_,_,f) -> syms_prop_decl f *)
 
 (** Utilities *)
 
