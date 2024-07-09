@@ -403,6 +403,10 @@ exception NonPositiveTypeDecl of tysymbol * lsymbol * ty
 
 exception InvalidIndDecl of lsymbol * prsymbol
 exception NonPositiveIndDecl of lsymbol * prsymbol * lsymbol
+
+exception KnownIdent of ident
+exception UnknownIdent of ident
+exception RedeclaredIdent of ident
 open Common
 open CoqUtil
 open Weakhtbl
@@ -1292,6 +1296,30 @@ let get_used_syms_decl d =
   | Dind i -> let (_, idl) = i in syms_ind_decl idl
   | Dprop x ->
     let (_, f) = (fun (x, y, z) -> ((x, y), z)) x in syms_prop_decl f
+
+type known_map = decl Mid.t
+
+(** val known_id : known_map -> ident -> unit errorM **)
+
+let known_id kn i =
+  if negb (Mid.mem i kn) then raise (UnknownIdent i) else  ()
+
+(** val known_add_decl : known_map -> decl -> known_map errorM **)
+
+let known_add_decl kn0 d =
+  let kn = Mid.map (fun _ -> d) d.d_news in
+  let inter0 = Mid.set_inter kn0 kn in
+  if negb (Mid.is_empty inter0)
+  then (@@) (fun x ->
+         let (i, d1) = x in
+         if d_equal d1 d
+         then raise (KnownIdent i)
+         else raise (RedeclaredIdent i)) (Mid.choose inter0)
+  else let kn1 = Mid.set_union kn0 kn in
+       let unk = Mid.set_diff (get_used_syms_decl d) kn1 in
+       if Sid.is_empty unk
+       then  kn1
+       else (@@) (fun j -> raise (UnknownIdent j)) (Sid.choose unk)
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -2071,14 +2099,14 @@ end
 
 (** Known identifiers *)
 
-exception KnownIdent of ident
+(* exception KnownIdent of ident
 exception UnknownIdent of ident
-exception RedeclaredIdent of ident
+exception RedeclaredIdent of ident *)
 
-type known_map = decl Mid.t
+(* type known_map = decl Mid.t
 
 let known_id kn id =
-  if not (Mid.mem id kn) then raise (UnknownIdent id)
+  if not (Mid.mem id kn) then raise (UnknownIdent id) *)
 
 let merge_known kn1 kn2 =
   let check_known id decl1 decl2 =
@@ -2087,7 +2115,7 @@ let merge_known kn1 kn2 =
   in
   Mid.union check_known kn1 kn2
 
-let known_add_decl kn0 decl =
+(* let known_add_decl kn0 decl =
   let kn = Mid.map (Util.const decl) decl.d_news in
   let check id decl0 _ =
     if d_equal decl0 decl
@@ -2097,7 +2125,7 @@ let known_add_decl kn0 decl =
   let kn = Mid.union check kn0 kn in
   let unk = Mid.set_diff (get_used_syms_decl decl) kn in
   if Sid.is_empty unk then kn
-  else raise (UnknownIdent (Sid.choose unk))
+  else raise (UnknownIdent (Sid.choose unk)) *)
 
 let find_constructors kn ts =
   match (Mid.find ts.ts_name kn).d_node with
