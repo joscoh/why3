@@ -84,15 +84,28 @@ let rec map2 f l1 l2 =
 (** val fold_right2 :
     ('a1 -> 'a2 -> 'a3 -> 'a3) -> 'a1 list -> 'a2 list -> 'a3 -> 'a3 option **)
 
-let rec fold_right2 f l1 l2 base =
+let rec fold_right2 f l1 l2 x =
   match l1 with
   | [] -> (match l2 with
-           | [] -> Some base
+           | [] -> Some x
            | _ :: _ -> None)
   | x1 :: t1 ->
     (match l2 with
      | [] -> None
-     | x2 :: t2 -> option_map (f x1 x2) (fold_right2 f t1 t2 base))
+     | x2 :: t2 -> option_map (f x1 x2) (fold_right2 f t1 t2 x))
+
+(** val fold_left2 :
+    ('a3 -> 'a1 -> 'a2 -> 'a3) -> 'a1 list -> 'a2 list -> 'a3 -> 'a3 option **)
+
+let rec fold_left2 f l1 l2 accu =
+  match l1 with
+  | [] -> (match l2 with
+           | [] -> Some accu
+           | _ :: _ -> None)
+  | a1 :: l3 ->
+    (match l2 with
+     | [] -> None
+     | a2 :: l4 -> fold_left2 f l3 l4 (f accu a1 a2))
 
 (** val null : 'a1 list -> bool **)
 

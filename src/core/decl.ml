@@ -407,6 +407,8 @@ exception NonPositiveIndDecl of lsymbol * prsymbol * lsymbol
 exception KnownIdent of ident
 exception UnknownIdent of ident
 exception RedeclaredIdent of ident
+
+exception NonFoundedTypeDecl of tysymbol
 open Common
 open CoqUtil
 open Weakhtbl
@@ -1320,6 +1322,158 @@ let known_add_decl kn0 d =
        if Sid.is_empty unk
        then  kn1
        else (@@) (fun j -> raise (UnknownIdent j)) (Sid.choose unk)
+
+(** val list_assoc :
+    ('a1 -> 'a1 -> bool) -> 'a1 -> ('a1 * 'a2) list -> 'a2 option **)
+
+let list_assoc eq x l =
+  fold_right (fun y acc -> if eq x (fst y) then Some (snd y) else acc) None l
+
+(** val list_mem_assoc :
+    ('a1 -> 'a1 -> bool) -> 'a1 -> ('a1 * 'a2) list -> bool **)
+
+let list_mem_assoc eq x l =
+  isSome (list_assoc eq x l)
+
+(** val list_of_opt : 'a1 list option -> 'a1 list **)
+
+let list_of_opt = function
+| Some y -> y
+| None -> []
+
+(** val find_constructors :
+    known_map -> (ty_node_c ty_o) tysymbol_o -> constructor list **)
+
+let find_constructors kn ts =
+  list_of_opt
+    (option_bind (Mid.find_opt (ts_name ts) kn) (fun d ->
+      match d.d_node with
+      | Ddata dl -> list_assoc ts_equal ts dl
+      | _ -> None))
+
+(** val find_inductive_cases :
+    known_map -> lsymbol -> (prsymbol * (term_node term_o)) list **)
+
+let find_inductive_cases kn ps =
+  list_of_opt
+    (option_bind (Mid.find_opt ps.ls_name kn) (fun d ->
+      match d.d_node with
+      | Dind i -> let (_, dl) = i in list_assoc ls_equal ps dl
+      | _ -> None))
+
+(** val find_logic_definition : known_map -> lsymbol -> ls_defn option **)
+
+let find_logic_definition kn ls =
+  option_bind (Mid.find_opt ls.ls_name kn) (fun d ->
+    match d.d_node with
+    | Dlogic dl -> list_assoc ls_equal ls dl
+    | _ -> None)
+
+(** val find_prop : known_map -> prsymbol -> (term_node term_o) **)
+
+let find_prop kn pr =
+  match option_bind (Mid.find_opt pr.pr_name kn) (fun d ->
+          match d.d_node with
+          | Dtype _ -> None
+          | Ddata _ -> None
+          | Dparam _ -> None
+          | Dlogic _ -> None
+          | Dind i ->
+            let (_, dl) = i in
+            option_bind
+              (list_find_opt (fun x -> list_mem_assoc pr_equal pr (snd x)) dl)
+              (fun l1 -> list_assoc pr_equal pr (snd l1))
+          | Dprop x -> let (_, f) = (fun (x, y, z) -> ((x, y), z)) x in Some f) with
+  | Some tm -> tm
+  | None -> t_false
+
+(** val find_prop_decl :
+    known_map -> prsymbol -> (prop_kind * (term_node term_o)) errorM **)
+
+let find_prop_decl kn pr =
+  (@@) (fun d ->
+    match d.d_node with
+    | Dind i ->
+      let (_, dl) = i in
+      (match list_find_opt (fun x -> list_mem_assoc pr_equal pr (snd x)) dl with
+       | Some l1 ->
+         (match list_assoc pr_equal pr (snd l1) with
+          | Some f ->  (Paxiom, f)
+          | None -> raise Not_found)
+       | None -> raise Not_found)
+    | Dprop p ->
+      let (p0, f) = (fun (x, y, z) -> ((x, y), z)) p in
+      let (k, _) = p0 in  (k, f)
+    | _ -> assert_false "find_prop_decl") (Mid.find pr.pr_name kn)
+
+(** val all_tysymbols : known_map -> Sts.t **)
+
+let all_tysymbols kn =
+  Mid.fold (fun _ d acc ->
+    match d.d_node with
+    | Dtype ts -> Sts.add ts acc
+    | Ddata ld -> fold_right Sts.add acc (map fst ld)
+    | _ -> acc) kn Sts.empty
+
+(** val is_abstract_type :
+    known_map -> (ty_node_c ty_o) tysymbol_o -> bool **)
+
+let is_abstract_type kn ts =
+  Mid.exists_ (fun _ d ->
+    match d.d_node with
+    | Dtype ts' -> ts_equal ts ts'
+    | _ -> false) kn
+
+(** val check_ts_aux :
+    known_map -> Sts.t -> Stv.t -> (ty_node_c ty_o) tysymbol_o -> BigInt.t ->
+    bool **)
+
+let rec check_ts_aux kn tss tvs ts z =
+  if BigInt.lt z BigInt.zero
+  then false
+  else if BigInt.eq z BigInt.zero
+       then false
+       else if Sts.mem ts tss
+            then false
+            else if is_abstract_type kn ts
+                 then Stv.is_empty tvs
+                 else let cl = find_constructors kn ts in
+                      let tss0 = Sts.add ts tss in
+                      existsb (fun y ->
+                        let (ls, _) = y in
+                        forallb (fun t0 ->
+                          let rec check_type ty =
+                            match ty_node ty with
+                            | Tyvar tv -> negb (Stv.mem tv tvs)
+                            | Tyapp (ts0, tl) ->
+                              (match fold_left2 (fun acc ty0 tv ->
+                                       if check_type ty0
+                                       then acc
+                                       else Stv.add tv acc) tl (ts_args ts0)
+                                       Stv.empty with
+                               | Some tvs0 ->
+                                 check_ts_aux kn tss0 tvs0 ts0 (BigInt.pred z)
+                               | None -> false)
+                          in check_type t0) ls.ls_args) cl
+
+(** val check_ts :
+    known_map -> Sts.t -> Stv.t -> (ty_node_c ty_o) tysymbol_o -> BigInt.t ->
+    bool **)
+
+let check_ts =
+  check_ts_aux
+
+(** val check_foundness : known_map -> decl -> unit errorM **)
+
+let check_foundness kn d =
+  match d.d_node with
+  | Ddata tdl ->
+    foldl_err (fun _ x ->
+      if check_ts kn Sts.empty Stv.empty (fst x)
+           (Sts.cardinal (all_tysymbols kn))
+      then  ()
+      else raise (NonFoundedTypeDecl (fst x))) tdl ()
+  | _ ->  ()
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -2127,7 +2281,7 @@ let merge_known kn1 kn2 =
   if Sid.is_empty unk then kn
   else raise (UnknownIdent (Sid.choose unk)) *)
 
-let find_constructors kn ts =
+(* let find_constructors kn ts =
   match (Mid.find ts.ts_name kn).d_node with
   | Dtype _ -> []
   | Ddata dl -> List.assq ts dl
@@ -2159,7 +2313,7 @@ let find_prop_decl kn pr =
       let test (_,l) = List.mem_assq pr l in
       Paxiom, List.assq pr (snd (List.find test dl))
   | Dprop (k,_,f) -> k,f
-  | Dtype _ | Ddata _ | Dparam _ | Dlogic _ -> assert false
+  | Dtype _ | Ddata _ | Dparam _ | Dlogic _ -> assert false *)
 
 let check_match kn d =
   let rec check () t = match t.t_node with
@@ -2171,7 +2325,7 @@ let check_match kn d =
     | _ -> t_fold check () t
   in
   decl_fold check () d
-
+(* 
 exception NonFoundedTypeDecl of tysymbol
 
 let check_foundness kn d =
@@ -2206,7 +2360,7 @@ let check_foundness kn d =
         then () else raise (NonFoundedTypeDecl ts)
       in
       List.fold_left check () tdl
-  | _ -> ()
+  | _ -> () *)
 
 let rec ts_extract_pos kn sts ts =
   assert (not (is_alias_type_def ts.ts_def));
