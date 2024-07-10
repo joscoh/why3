@@ -1,5 +1,8 @@
 open List0
 
+type __ = Obj.t
+let __ = let rec f _ = Obj.repr f in Obj.repr f
+
 (** val int_length : 'a1 list -> BigInt.t **)
 
 let rec int_length = function
@@ -19,17 +22,29 @@ let option_compare cmp o1 o2 =
      | Some _ -> Stdlib.Int.minus_one
      | None -> Stdlib.Int.zero)
 
-(** val iota_aux : BigInt.t -> BigInt.t list **)
+(** val int_rect_aux :
+    (BigInt.t -> __ -> 'a1) -> 'a1 -> (BigInt.t -> __ -> __ -> 'a1 -> 'a1) ->
+    BigInt.t -> 'a1 **)
 
-let rec iota_aux z =
+let rec int_rect_aux neg_case zero_case ind_case z =
   if BigInt.lt z BigInt.zero
-  then []
-  else if BigInt.eq z BigInt.zero then [] else z :: (iota_aux (BigInt.pred z))
+  then neg_case z __
+  else if BigInt.eq z BigInt.zero
+       then zero_case
+       else ind_case z __ __
+              (int_rect_aux neg_case zero_case ind_case (BigInt.pred z))
+
+(** val int_rect :
+    (BigInt.t -> __ -> 'a1) -> 'a1 -> (BigInt.t -> __ -> __ -> 'a1 -> 'a1) ->
+    BigInt.t -> 'a1 **)
+
+let int_rect =
+  int_rect_aux
 
 (** val iota : BigInt.t -> BigInt.t list **)
 
-let iota =
-  iota_aux
+let iota z =
+  int_rect (fun _ _ -> []) [] (fun z0 _ _ rec0 -> z0 :: rec0) z
 
 (** val iota2 : BigInt.t -> BigInt.t list **)
 
@@ -41,20 +56,13 @@ let iota2 z =
 let lex_comp x1 x2 =
   if (fun x -> Stdlib.Int.equal x Stdlib.Int.zero) x1 then x2 else x1
 
-(** val big_nth_aux : 'a1 list -> BigInt.t -> 'a1 option **)
-
-let rec big_nth_aux l z =
-  if BigInt.lt z BigInt.zero
-  then None
-  else if BigInt.eq z BigInt.zero
-       then (match l with
-             | [] -> None
-             | x :: _ -> Some x)
-       else (match l with
-             | [] -> None
-             | _ :: t -> big_nth_aux t (BigInt.pred z))
-
 (** val big_nth : 'a1 list -> BigInt.t -> 'a1 option **)
 
-let big_nth =
-  big_nth_aux
+let big_nth l z =
+  int_rect (fun _ _ _ -> None) (fun l0 ->
+    match l0 with
+    | [] -> None
+    | x :: _ -> Some x) (fun _ _ _ rec0 l0 ->
+    match l0 with
+    | [] -> None
+    | _ :: t -> rec0 t) z l

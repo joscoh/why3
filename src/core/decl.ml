@@ -1020,10 +1020,8 @@ let create_data_decl tdl =
                                  let now1 = Sts.mem ts tss in
                                  if (&&) seen now1
                                  then raise
-                                        ((fun (x, y, z) ->
-  NonPositiveTypeDecl(x, y, z))
-                                          ((fun ((x, y), z) -> (x, y, z))
-                                            ((tys, fs), ty0)))
+                                        ((fun ((x, y), z) -> NonPositiveTypeDecl(x, y, z))
+                                          ((tys, fs), ty0))
                                  else iter_err (check ((||) seen now1)) tl
                              in check
                            in
@@ -1178,8 +1176,7 @@ let create_ind_decl s idl =
          (@@) (fun f0 ->
            if negb (ind_pos sps f0)
            then raise
-                  ((fun ((x, y), z) ->
-  NonPositiveIndDecl(x, y, z)) ((ps,
+                  ((fun ((x, y), z) -> NonPositiveIndDecl(x, y, z)) ((ps,
                     pr), ps))
            else (match valid_ind_form ps f0 with
                  | Some g ->
@@ -1424,44 +1421,34 @@ let is_abstract_type kn ts =
     | Dtype ts' -> ts_equal ts ts'
     | _ -> false) kn
 
-(** val check_ts_aux :
-    known_map -> Sts.t -> Stv.t -> (ty_node_c ty_o) tysymbol_o -> BigInt.t ->
-    bool **)
-
-let rec check_ts_aux kn tss tvs ts z =
-  if BigInt.lt z BigInt.zero
-  then false
-  else if BigInt.eq z BigInt.zero
-       then false
-       else if Sts.mem ts tss
-            then false
-            else if is_abstract_type kn ts
-                 then Stv.is_empty tvs
-                 else let cl = find_constructors kn ts in
-                      let tss0 = Sts.add ts tss in
-                      existsb (fun y ->
-                        let (ls, _) = y in
-                        forallb (fun t0 ->
-                          let rec check_type ty =
-                            match ty_node ty with
-                            | Tyvar tv -> negb (Stv.mem tv tvs)
-                            | Tyapp (ts0, tl) ->
-                              (match fold_left2 (fun acc ty0 tv ->
-                                       if check_type ty0
-                                       then acc
-                                       else Stv.add tv acc) tl (ts_args ts0)
-                                       Stv.empty with
-                               | Some tvs0 ->
-                                 check_ts_aux kn tss0 tvs0 ts0 (BigInt.pred z)
-                               | None -> false)
-                          in check_type t0) ls.ls_args) cl
-
 (** val check_ts :
     known_map -> Sts.t -> Stv.t -> (ty_node_c ty_o) tysymbol_o -> BigInt.t ->
     bool **)
 
-let check_ts =
-  check_ts_aux
+let check_ts kn tss tvs ts z =
+  int_rect (fun _ _ _ -> false) (fun _ -> false) (fun _ _ _ rec0 x ->
+    let (p, ts0) = x in
+    let (p0, tvs0) = p in
+    let (kn0, tss0) = p0 in
+    if Sts.mem ts0 tss0
+    then false
+    else if is_abstract_type kn0 ts0
+         then Stv.is_empty tvs0
+         else let cl = find_constructors kn0 ts0 in
+              let tss1 = Sts.add ts0 tss0 in
+              existsb (fun y ->
+                let (ls, _) = y in
+                forallb (fun t0 ->
+                  let rec check_type ty =
+                    match ty_node ty with
+                    | Tyvar tv -> negb (Stv.mem tv tvs0)
+                    | Tyapp (ts1, tl) ->
+                      (match fold_left2 (fun acc ty0 tv ->
+                               if check_type ty0 then acc else Stv.add tv acc)
+                               tl (ts_args ts1) Stv.empty with
+                       | Some tvs1 -> rec0 (((kn0, tss1), tvs1), ts1)
+                       | None -> false)
+                  in check_type t0) ls.ls_args) cl) z (((kn, tss), tvs), ts)
 
 (** val check_foundness : known_map -> decl -> unit errorM **)
 
@@ -1473,6 +1460,97 @@ let check_foundness kn d =
            (Sts.cardinal (all_tysymbols kn))
       then  ()
       else raise (NonFoundedTypeDecl (fst x))) tdl ()
+  | _ ->  ()
+
+(** val get_opt_def : 'a1 option -> 'a1 -> 'a1 **)
+
+let get_opt_def x d =
+  match x with
+  | Some y -> y
+  | None -> d
+
+(** val ts_extract_pos_aux :
+    known_map -> Sts.t -> (ty_node_c ty_o) tysymbol_o -> BigInt.t -> bool
+    list option **)
+
+let ts_extract_pos_aux kn sts ts z =
+  int_rect (fun _ _ _ -> None) (fun _ -> None) (fun _ _ _ rec0 x ->
+    let (p, ts0) = x in
+    let (kn0, sts0) = p in
+    if is_alias_type_def (ts_def ts0)
+    then None
+    else if ts_equal ts0 ts_func
+         then Some (false :: (true :: []))
+         else if Sts.mem ts0 sts0
+              then Some (map (fun _ -> true) (ts_args ts0))
+              else (match find_constructors kn0 ts0 with
+                    | [] -> Some (map (fun _ -> false) (ts_args ts0))
+                    | c :: l ->
+                      let sts1 = Sts.add ts0 sts0 in
+                      let get_ty =
+                        let rec get_ty ty stv =
+                          match ty_node ty with
+                          | Tyvar _ -> stv
+                          | Tyapp (ts1, tl) ->
+                            (match rec0 ((kn0, sts1), ts1) with
+                             | Some l0 ->
+                               let get = fun acc t0 pos ->
+                                 if pos
+                                 then get_ty t0 acc
+                                 else ty_freevars acc t0
+                               in
+                               get_opt_def (fold_left2 get tl l0 stv)
+                                 Stv.empty
+                             | None -> Stv.empty)
+                        in get_ty
+                      in
+                      let negs =
+                        fold_left (fun acc x0 ->
+                          let (ls, _) = x0 in
+                          fold_left (fun x1 y -> get_ty y x1) ls.ls_args acc)
+                          (c :: l) Stv.empty
+                      in
+                      Some
+                      (map (fun v -> negb (Stv.mem v negs)) (ts_args ts0))))
+    z ((kn, sts), ts)
+
+(** val ts_extract_pos :
+    known_map -> Sts.t -> (ty_node_c ty_o) tysymbol_o -> bool list errorM **)
+
+let ts_extract_pos kn sts ts =
+  match ts_extract_pos_aux kn sts ts (Sts.cardinal (all_tysymbols kn)) with
+  | Some l ->  l
+  | None -> assert_false "ts_extract_pos"
+
+(** val check_positivity : known_map -> decl -> unit errorM **)
+
+let check_positivity kn d =
+  match d.d_node with
+  | Ddata tdl ->
+    let tss = fold_left (fun acc x -> Sts.add (fst x) acc) tdl Sts.empty in
+    let check_constr = fun tys x ->
+      let (cs, _) = x in
+      let check_ty =
+        let rec check_ty ty =
+          match ty_node ty with
+          | Tyvar _ ->  ()
+          | Tyapp (ts, tl) ->
+            let check = fun ty0 pos ->
+              if pos
+              then check_ty ty0
+              else if ty_s_any (Sts.contains tss) ty0
+                   then raise
+                          ((fun ((x, y), z) -> NonPositiveTypeDecl(x, y, z))
+                            ((tys, cs), ty0))
+                   else  ()
+            in
+            (@@) (fun l1 -> list_iter2 check tl l1)
+              (ts_extract_pos kn Sts.empty ts)
+        in check_ty
+      in
+      iter_err check_ty cs.ls_args
+    in
+    iter_err (fun x -> iter_err (check_constr (fst x)) (snd x)) tdl
   | _ ->  ()
 (********************************************************************)
 (*                                                                  *)
@@ -2362,7 +2440,7 @@ let check_foundness kn d =
       List.fold_left check () tdl
   | _ -> () *)
 
-let rec ts_extract_pos kn sts ts =
+(* let rec ts_extract_pos kn sts ts =
   assert (not (is_alias_type_def ts.ts_def));
   if ts_equal ts ts_func then [false;true] else
   if Sts.mem ts sts then List.map Util.ttrue ts.ts_args else
@@ -2400,7 +2478,7 @@ let check_positivity kn d = match d.d_node with
       in
       let check_decl (ts,cl) = List.iter (check_constr ts) cl in
       List.iter check_decl tdl
-  | _ -> ()
+  | _ -> () *)
 
 let known_add_decl kn d =
   let kn = known_add_decl kn d in
