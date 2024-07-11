@@ -1303,9 +1303,9 @@ type known_map = decl Mid.t
 let known_id kn i =
   if negb (Mid.mem i kn) then raise (UnknownIdent i) else  ()
 
-(** val known_add_decl : known_map -> decl -> known_map errorM **)
+(** val known_add_decl_aux : known_map -> decl -> known_map errorM **)
 
-let known_add_decl kn0 d =
+let known_add_decl_aux kn0 d =
   let kn = Mid.map (fun _ -> d) d.d_news in
   let inter0 = Mid.set_inter kn0 kn in
   if negb (Mid.is_empty inter0)
@@ -1552,6 +1552,16 @@ let check_positivity kn d =
     in
     iter_err (fun x -> iter_err (check_constr (fst x)) (snd x)) tdl
   | _ ->  ()
+
+(** val known_add_decl : known_map -> decl -> (decl * decl Mid.t) errorM **)
+
+let known_add_decl kn d =
+  (@@) (fun kn0 ->
+    (@@) (fun _ ->
+      (@@) (fun _ ->
+        (@@) (fun d0 ->  (d0, kn0)) (check_termination_strict kn0 d))
+        (check_foundness kn0 d)) (check_positivity kn0 d))
+    (known_add_decl_aux kn d)
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -2480,13 +2490,13 @@ let check_positivity kn d = match d.d_node with
       List.iter check_decl tdl
   | _ -> () *)
 
-let known_add_decl kn d =
+(* let known_add_decl kn d =
   let kn = known_add_decl kn d in
   check_positivity kn d;
   check_foundness kn d;
   check_match kn d;
   let d = check_termination_strict kn d in
-  (d, kn)
+  (d, kn) *)
 
 (** Records *)
 
