@@ -18,13 +18,13 @@ open Zmap
 
 type hack = tysymbol
 
-type constructor = lsymbol * lsymbol option list
+type constructor = lsymbol*lsymbol option list
 
-type data_decl = (ty_node_c ty_o) tysymbol_o * constructor list
+type data_decl = (ty_node_c ty_o) tysymbol_o*constructor list
 
-type ls_defn = (lsymbol * (term_node term_o)) * BigInt.t list
+type ls_defn = (lsymbol*(term_node term_o))*BigInt.t list
 
-type logic_decl = lsymbol * ls_defn
+type logic_decl = lsymbol*ls_defn
 
 type prsymbol = { pr_name : ident }
 
@@ -74,13 +74,13 @@ let pr_hash pr =
 let create_prsymbol n =
   (@@) (fun i -> (fun x -> x) { pr_name = i }) (id_register n)
 
-type ind_decl = lsymbol * (prsymbol * (term_node term_o)) list
+type ind_decl = lsymbol*(prsymbol*(term_node term_o)) list
 
 type ind_sign =
 | Ind
 | Coind
 
-type ind_list = ind_sign * ind_decl list
+type ind_list = ind_sign*ind_decl list
 
 type prop_kind =
 | Plemma
@@ -203,19 +203,19 @@ let decl_node_eqb d1 d2 =
      | Dlogic l2 -> list_eqb logic_decl_eqb l1 l2
      | _ -> false)
   | Dind i ->
-    let (s1, l1) = i in
+    let s1,l1 = i in
     (match d2 with
      | Dind i0 ->
-       let (s2, l2) = i0 in
+       let s2,l2 = i0 in
        (&&) (ind_sign_eqb s1 s2) (list_eqb ind_decl_eqb l1 l2)
      | _ -> false)
   | Dprop p1 ->
     (match d2 with
      | Dprop p2 ->
-       let (p, f1) = (fun (x, y, z) -> ((x, y), z)) p1 in
-       let (k1, pr1) = p in
-       let (p0, f2) = (fun (x, y, z) -> ((x, y), z)) p2 in
-       let (k2, pr2) = p0 in
+       let p,f1 = (fun (x, y, z) -> ((x, y), z)) p1 in
+       let k1,pr1 = p in
+       let p0,f2 = (fun (x, y, z) -> ((x, y), z)) p2 in
+       let k2,pr2 = p0 in
        (&&) ((&&) (prop_kind_eqb k1 k2) (pr_equal pr1 pr2)) (term_eqb f1 f2)
      | _ -> false)
 
@@ -237,8 +237,7 @@ module DeclHash =
       (t_equal_strict (snd (fst (snd x1))) (snd (fst (snd x2))))
 
   (** val eq_iax :
-      (prsymbol * (term_node term_o)) -> (prsymbol * (term_node term_o)) ->
-      bool **)
+      (prsymbol*(term_node term_o)) -> (prsymbol*(term_node term_o)) -> bool **)
 
   let eq_iax =
     tuple_eqb pr_equal t_equal_strict
@@ -269,19 +268,18 @@ module DeclHash =
        | Dlogic l2 -> list_eqb eq_ld l1 l2
        | _ -> false)
     | Dind i ->
-      let (s1, l1) = i in
+      let s1,l1 = i in
       (match d2.d_node with
        | Dind i0 ->
-         let (s2, l2) = i0 in
-         (&&) (ind_sign_eqb s1 s2) (list_eqb eq_ind1 l1 l2)
+         let s2,l2 = i0 in (&&) (ind_sign_eqb s1 s2) (list_eqb eq_ind1 l1 l2)
        | _ -> false)
     | Dprop p1 ->
       (match d2.d_node with
        | Dprop p2 ->
-         let (p, f1) = (fun (x, y, z) -> ((x, y), z)) p1 in
-         let (k1, pr1) = p in
-         let (p0, f2) = (fun (x, y, z) -> ((x, y), z)) p2 in
-         let (k2, pr2) = p0 in
+         let p,f1 = (fun (x, y, z) -> ((x, y), z)) p1 in
+         let k1,pr1 = p in
+         let p0,f2 = (fun (x, y, z) -> ((x, y), z)) p2 in
+         let k2,pr2 = p0 in
          (&&) ((&&) (prop_kind_eqb k1 k2) (pr_equal pr1 pr2))
            (t_equal_strict f1 f2)
        | _ -> false)
@@ -301,7 +299,7 @@ module DeclHash =
   let hs_ld x =
     combine_big (ls_hash (fst x)) (t_hash_strict (snd (fst (snd x))))
 
-  (** val hs_prop : (prsymbol * (term_node term_o)) -> BigInt.t **)
+  (** val hs_prop : (prsymbol*(term_node term_o)) -> BigInt.t **)
 
   let hs_prop x =
     combine_big (pr_hash (fst x)) (t_hash_strict (snd x))
@@ -326,10 +324,10 @@ module DeclHash =
     | Ddata l -> combine_big_list hs_td (BigInt.of_int 3) l
     | Dparam s -> ls_hash s
     | Dlogic l -> combine_big_list hs_ld (BigInt.of_int 5) l
-    | Dind i -> let (_, l) = i in combine_big_list hs_ind (BigInt.of_int 7) l
+    | Dind i -> let _,l = i in combine_big_list hs_ind (BigInt.of_int 7) l
     | Dprop y ->
-      let (p, f) = (fun (x, y, z) -> ((x, y), z)) y in
-      let (k, pr) = p in combine_big (hs_kind k) (hs_prop (pr, f))
+      let p,f = (fun (x, y, z) -> ((x, y), z)) y in
+      let k,pr = p in combine_big (hs_kind k) (hs_prop (pr,f))
 
   (** val tag : tag -> decl -> decl **)
 
@@ -376,8 +374,8 @@ let mk_decl node news =
   let d = { d_node = node; d_news = news; d_tag = dummy_tag } in
   (match node with
    | Dprop p ->
-     let (p0, _) = (fun (x, y, z) -> ((x, y), z)) p in
-     let (x, _) = p0 in
+     let p0,_ = (fun (x, y, z) -> ((x, y), z)) p in
+     let x,_ = p0 in
      (match x with
       | Pgoal -> Hsdecl.unique d
       | _ -> Hsdecl.hashcons d)
@@ -443,13 +441,13 @@ let rec map2_opt f l1 l2 =
   match l1 with
   | [] -> (match l2 with
            | [] -> Some []
-           | _ :: _ -> None)
-  | x1 :: t1 ->
+           | _::_ -> None)
+  | x1::t1 ->
     (match l2 with
      | [] -> None
-     | x2 :: t2 ->
+     | x2::t2 ->
        (match map2_opt f t1 t2 with
-        | Some l3 -> Some ((f x1 x2) :: l3)
+        | Some l3 -> Some ((f x1 x2)::l3)
         | None -> None))
 
 (** val list_iter2 :
@@ -457,18 +455,17 @@ let rec map2_opt f l1 l2 =
 
 let rec list_iter2 f l1 l2 =
   match l1 with
-  | [] ->
-    (match l2 with
-     | [] ->  ()
-     | _ :: _ -> raise (Invalid_argument "iter2"))
-  | x1 :: t1 ->
+  | [] -> (match l2 with
+           | [] ->  ()
+           | _::_ -> raise (Invalid_argument "iter2"))
+  | x1::t1 ->
     (match l2 with
      | [] -> raise (Invalid_argument "iter2")
-     | x2 :: t2 -> (@@) (fun _ -> list_iter2 f t1 t2) (f x1 x2))
+     | x2::t2 -> (@@) (fun _ -> list_iter2 f t1 t2) (f x1 x2))
 
 (** val make_ls_defn :
     lsymbol -> vsymbol list -> (term_node term_o) -> (ty_node_c ty_o
-    hashcons_ty, lsymbol * ls_defn) errState **)
+    hashcons_ty, lsymbol*ls_defn) errState **)
 
 let make_ls_defn ls vl t0 =
   if (||) (negb (BigInt.is_zero ls.ls_constr)) ls.ls_proj
@@ -480,7 +477,7 @@ let make_ls_defn ls vl t0 =
              (@@) (fun tforall ->
                (@@) (fun fd ->
                  (@@) (fun _ ->
-                   (@@) (fun _ ->  (ls, ((ls, fd), [])))
+                   (@@) (fun _ ->  (ls,((ls,fd),[])))
                      ( (t_ty_check t0 ls.ls_value)))
                    ( (list_iter2 check_vl ls.ls_args vl)))
                  ( (check_fvs tforall))) ( (t_forall_close vl [] bd)))
@@ -494,43 +491,42 @@ let make_ls_defn ls vl t0 =
                | None -> raise (DuplicateVar x)) acc) vl ( Svs.empty)))
 
 (** val open_ls_defn_aux :
-    ls_defn -> (vsymbol list * (term_node term_o)) option **)
+    ls_defn -> (vsymbol list*(term_node term_o)) option **)
 
 let open_ls_defn_aux = function
-| (p, _) ->
-  let (_, f) = p in
+| p,_ ->
+  let _,f = p in
   let s =
     match t_node f with
-    | Tvar _ -> (([], []), f)
-    | Tconst _ -> (([], []), f)
-    | Tapp (_, _) -> (([], []), f)
-    | Tif (_, _, _) -> (([], []), f)
-    | Tlet (_, _) -> (([], []), f)
-    | Tcase (_, _) -> (([], []), f)
-    | Teps _ -> (([], []), f)
+    | Tvar _ -> ([],[]),f
+    | Tconst _ -> ([],[]),f
+    | Tapp (_, _) -> ([],[]),f
+    | Tif (_, _, _) -> ([],[]),f
+    | Tlet (_, _) -> ([],[]),f
+    | Tcase (_, _) -> ([],[]),f
+    | Teps _ -> ([],[]),f
     | Tquant (q, b) ->
       (match q with
        | Tforall -> t_view_quant b
-       | Texists -> (([], []), f))
-    | _ -> (([], []), f)
+       | Texists -> ([],[]),f)
+    | _ -> ([],[]),f
   in
-  let (p0, f0) = s in
-  let (vl, _) = p0 in
+  let p0,f0 = s in
+  let vl,_ = p0 in
   (match t_node f0 with
    | Tapp (_, l1) ->
      (match l1 with
       | [] -> None
-      | _ :: l2 ->
+      | _::l2 ->
         (match l2 with
          | [] -> None
-         | f1 :: l3 -> (match l3 with
-                        | [] -> Some (vl, f1)
-                        | _ :: _ -> None)))
-   | Tbinop (_, _, f1) -> Some (vl, f1)
+         | f1::l3 -> (match l3 with
+                      | [] -> Some (vl,f1)
+                      | _::_ -> None)))
+   | Tbinop (_, _, f1) -> Some (vl,f1)
    | _ -> None)
 
-(** val open_ls_defn :
-    ls_defn -> (vsymbol list * (term_node term_o)) errorM **)
+(** val open_ls_defn : ls_defn -> (vsymbol list*(term_node term_o)) errorM **)
 
 let open_ls_defn l =
   match open_ls_defn_aux l with
@@ -539,7 +535,7 @@ let open_ls_defn l =
 
 type mut_adt = data_decl list
 
-type mut_info = mut_adt list * mut_adt Mts.t
+type mut_info = mut_adt list*mut_adt Mts.t
 
 (** val mut_adt_eqb : mut_adt -> mut_adt -> bool **)
 
@@ -552,19 +548,19 @@ let get_ctx_tys kn =
   Mid.fold (fun _ d acc ->
     match d.d_node with
     | Ddata m ->
-      let (ms, mp) = acc in
-      ((m :: ms), (fold_right (fun t0 ts -> Mts.add t0 m ts) mp (map fst m)))
-    | _ -> acc) kn ([], Mts.empty)
+      let ms,mp = acc in
+      (m::ms),(fold_right (fun t0 ts -> Mts.add t0 m ts) mp (map fst m))
+    | _ -> acc) kn ([],Mts.empty)
 
 (** val is_vty_adt :
     mut_info -> ty_node_c ty_o ->
-    ((mut_adt * (ty_node_c ty_o) tysymbol_o) * ty_node_c ty_o list) option **)
+    ((mut_adt*(ty_node_c ty_o) tysymbol_o)*ty_node_c ty_o list) option **)
 
 let is_vty_adt ctx t0 =
   match ty_node t0 with
   | Tyvar _ -> None
   | Tyapp (ts, tys) ->
-    option_bind (Mts.find_opt ts (snd ctx)) (fun m -> Some ((m, ts), tys))
+    option_bind (Mts.find_opt ts (snd ctx)) (fun m -> Some ((m,ts),tys))
 
 (** val ts_in_mut : (ty_node_c ty_o) tysymbol_o -> mut_adt -> bool **)
 
@@ -589,28 +585,28 @@ let vty_in_m' m v =
 (** val add_union : ('a1 -> 'a1 -> bool) -> 'a1 -> 'a1 list -> 'a1 list **)
 
 let add_union eq x l =
-  if existsb (fun y -> eq x y) l then l else x :: l
+  if existsb (fun y -> eq x y) l then l else x::l
 
 (** val get_adts_present :
-    mut_info -> vsymbol list -> (mut_adt * ty_node_c ty_o list) list **)
+    mut_info -> vsymbol list -> (mut_adt*ty_node_c ty_o list) list **)
 
 let get_adts_present ctx l =
   fold_right (fun v acc ->
     match is_vty_adt ctx v.vs_ty with
     | Some p ->
-      let (p0, vs) = p in
-      let (m, _) = p0 in
-      add_union (tuple_eqb mut_adt_eqb (list_eqb ty_eqb)) (m, vs) acc
+      let p0,vs = p in
+      let m,_ = p0 in
+      add_union (tuple_eqb mut_adt_eqb (list_eqb ty_eqb)) (m,vs) acc
     | None -> acc) [] l
 
 (** val get_idx_lists_aux :
-    decl Mid.t -> (vsymbol list * (term_node term_o)) Mls.t ->
-    ((mut_adt * ty_node_c ty_o list) * BigInt.t list list) list **)
+    decl Mid.t -> (vsymbol list*(term_node term_o)) Mls.t ->
+    ((mut_adt*ty_node_c ty_o list)*BigInt.t list list) list **)
 
 let get_idx_lists_aux kn funs =
-  let syms = Mls.fold (fun _ x y -> (fst x) :: y) funs [] in
+  let syms = Mls.fold (fun _ x y -> (fst x)::y) funs [] in
   map (fun pat ->
-    let (m, vs) = pat in
+    let m,vs = pat in
     let l =
       map (fun args ->
         map fst
@@ -618,24 +614,24 @@ let get_idx_lists_aux kn funs =
             (combine (iota2 (int_length args)) (map (fun v -> v.vs_ty) args))))
         syms
     in
-    ((m, vs), (if existsb null l then [] else l)))
+    (m,vs),(if existsb null l then [] else l))
     (get_adts_present (get_ctx_tys kn) (concat syms))
 
 (** val get_idx_lists :
-    decl Mid.t -> (vsymbol list * (term_node term_o)) Mls.t ->
-    ((mut_adt * ty_node_c ty_o list) * BigInt.t list list) list **)
+    decl Mid.t -> (vsymbol list*(term_node term_o)) Mls.t ->
+    ((mut_adt*ty_node_c ty_o list)*BigInt.t list list) list **)
 
 let get_idx_lists kn funs =
-  filter (fun pat -> let (_, x) = pat in negb (null x))
+  filter (fun pat -> let _,x = pat in negb (null x))
     (get_idx_lists_aux kn funs)
 
 (** val get_possible_index_lists : 'a1 list list -> 'a1 list list **)
 
 let rec get_possible_index_lists = function
-| [] -> [] :: []
-| l1 :: rest ->
+| [] -> []::[]
+| l1::rest ->
   let r = get_possible_index_lists rest in
-  concat (map (fun x -> map (fun y -> x :: y) r) l1)
+  concat (map (fun x -> map (fun y -> x::y) r) l1)
 
 (** val check_unif_map : ty_node_c ty_o Mtv.t -> bool **)
 
@@ -737,11 +733,11 @@ let svs_remove_all l s =
 
 let rem_opt_list l =
   fold_right (fun x acc -> match x with
-                           | Some y -> y :: acc
+                           | Some y -> y::acc
                            | None -> acc) [] l
 
 (** val check_decrease_fun :
-    (lsymbol * BigInt.t) list -> Svs.t -> vsymbol option -> mut_adt ->
+    (lsymbol*BigInt.t) list -> Svs.t -> vsymbol option -> mut_adt ->
     ty_node_c ty_o list -> (term_node term_o) -> bool **)
 
 let check_decrease_fun funs small hd m vs t0 =
@@ -749,7 +745,7 @@ let check_decrease_fun funs small hd m vs t0 =
     (fun f ts recs small0 hd0 ->
     match list_find_opt (fun y -> ls_equal f (fst y)) funs with
     | Some p ->
-      let (_, i) = p in
+      let _,i = p in
       (match big_nth ts i with
        | Some tm ->
          (match t_node tm with
@@ -768,8 +764,8 @@ let check_decrease_fun funs small hd m vs t0 =
     (fun t1 rec1 recps small0 hd0 ->
     let r2 =
       map (fun y ->
-        let (y0, rec0) = y in
-        let (p, _) = y0 in
+        let y0,rec0 = y in
+        let p,_ = y0 in
         let toadd =
           match t_node t1 with
           | Tvar mvar ->
@@ -792,15 +788,15 @@ let check_decrease_fun funs small hd m vs t0 =
     (fun _ _ -> true) (fun _ _ -> true) t0 small hd
 
 (** val find_idx_list :
-    (lsymbol * (vsymbol list * (term_node term_o))) list -> mut_adt ->
+    (lsymbol*(vsymbol list*(term_node term_o))) list -> mut_adt ->
     ty_node_c ty_o list -> BigInt.t list list -> BigInt.t list option **)
 
 let find_idx_list l m vs candidates =
   list_find_opt (fun il ->
     forallb (fun y ->
-      let (y0, i) = y in
-      let (_, y1) = y0 in
-      let (vars, t0) = y1 in
+      let y0,i = y in
+      let _,y1 = y0 in
+      let vars,t0 = y1 in
       (match big_nth vars i with
        | Some x ->
          check_decrease_fun (combine (map fst l) il) Svs.empty (Some x) m vs
@@ -817,16 +813,15 @@ let list_inb eq x l =
 let mut_in_ctx m kn =
   list_inb mut_adt_eqb m (fst (get_ctx_tys kn))
 
-(** val find_elt : ('a1 -> 'a2 option) -> 'a1 list -> ('a1 * 'a2) option **)
+(** val find_elt : ('a1 -> 'a2 option) -> 'a1 list -> ('a1*'a2) option **)
 
 let find_elt f l =
-  fold_right (fun x acc ->
-    match f x with
-    | Some y -> Some (x, y)
-    | None -> acc) None l
+  fold_right (fun x acc -> match f x with
+                           | Some y -> Some (x,y)
+                           | None -> acc) None l
 
 (** val check_termination_aux :
-    decl Mid.t -> (vsymbol list * (term_node term_o)) Mls.t -> BigInt.t Mls.t
+    decl Mid.t -> (vsymbol list*(term_node term_o)) Mls.t -> BigInt.t Mls.t
     option **)
 
 let check_termination_aux kn funs =
@@ -836,12 +831,12 @@ let check_termination_aux kn funs =
        let idxs = get_idx_lists kn funs in
        option_bind
          (find_elt (fun y ->
-           let (y0, cands) = y in
-           let (m, vs) = y0 in
+           let y0,cands = y in
+           let m,vs = y0 in
            if mut_in_ctx m kn
            then find_idx_list l m vs (get_possible_index_lists cands)
            else None) idxs) (fun y ->
-         let (_, idxs0) = y in
+         let _,idxs0 = y in
          Some
          (fold_right (fun x acc -> Mls.add (fst x) (snd x) acc) Mls.empty
            (combine (map fst l) idxs0)))
@@ -861,11 +856,11 @@ let build_decl node news tag0 =
   { d_node = node; d_news = news; d_tag = tag0 }
 
 (** val get_logic_defs :
-    logic_decl list -> (vsymbol list * (term_node term_o)) Mls.t option **)
+    logic_decl list -> (vsymbol list*(term_node term_o)) Mls.t option **)
 
 let get_logic_defs ld =
   fold_left (fun acc y ->
-    let (ls, ld0) = y in
+    let ls,ld0 = y in
     (match acc with
      | Some m ->
        (match open_ls_defn_aux ld0 with
@@ -880,8 +875,8 @@ let check_termination_strict kn d =
   | Dlogic l0 ->
     (match l0 with
      | [] ->  d
-     | l :: ls ->
-       let ld = l :: ls in
+     | l::ls ->
+       let ld = l::ls in
        (match get_logic_defs ld with
         | Some syms ->
           let binds = Mls.bindings syms in
@@ -893,13 +888,12 @@ let check_termination_strict kn d =
                 | Some idxs ->
                   let ldl =
                     map (fun y ->
-                      let (ls0, l1) = y in
-                      let (p, _) = l1 in
-                      let (_, f) = p in
-                      (ls0, ((ls0, f),
-                      ((match Mls.find_opt ls0 idxs with
-                        | Some i -> i
-                        | None -> (BigInt.of_int (-1))) :: [])))) ld
+                      let ls0,l1 = y in
+                      let p,_ = l1 in
+                      let _,f = p in
+                      ls0,((ls0,f),((match Mls.find_opt ls0 idxs with
+                                     | Some i -> i
+                                     | None -> (BigInt.of_int (-1)))::[]))) ld
                   in
                    (build_decl (Dlogic ldl) d.d_news d.d_tag)
                 | None -> raise (NoTerminationProof (fst l)))
@@ -930,7 +924,7 @@ let is_nodef = function
 let rec foldl_errst f l x =
   match l with
   | [] ->  x
-  | h :: t0 -> (@@) (fun j -> foldl_errst f t0 j) (f x h)
+  | h::t0 -> (@@) (fun j -> foldl_errst f t0 j) (f x h)
 
 (** val foldl_err :
     ('a1 -> 'a2 -> 'a1 errorM) -> 'a2 list -> 'a1 -> 'a1 errorM **)
@@ -938,7 +932,7 @@ let rec foldl_errst f l x =
 let rec foldl_err f l x =
   match l with
   | [] ->  x
-  | h :: t0 -> (@@) (fun j -> foldl_err f t0 j) (f x h)
+  | h::t0 -> (@@) (fun j -> foldl_err f t0 j) (f x h)
 
 (** val iter_err : ('a1 -> unit errorM) -> 'a1 list -> unit errorM **)
 
@@ -953,11 +947,11 @@ let rec fold_left2_err f accu l1 l2 =
   match l1 with
   | [] -> (match l2 with
            | [] ->  (Some accu)
-           | _ :: _ ->  None)
-  | a1 :: l3 ->
+           | _::_ ->  None)
+  | a1::l3 ->
     (match l2 with
      | [] ->  None
-     | a2 :: l4 -> (@@) (fun x -> fold_left2_err f x l3 l4) (f accu a1 a2))
+     | a2::l4 -> (@@) (fun x -> fold_left2_err f x l3 l4) (f accu a1 a2))
 
 (** val opt_get_exn : exn -> 'a1 option -> 'a1 errorM **)
 
@@ -966,7 +960,7 @@ let opt_get_exn e = function
 | None -> raise e
 
 (** val create_data_decl :
-    data_decl list -> (ty_node_c ty_o hashcons_ty * decl hashcons_ty, decl)
+    data_decl list -> (ty_node_c ty_o hashcons_ty*decl hashcons_ty, decl)
     errState **)
 
 let create_data_decl tdl =
@@ -978,7 +972,7 @@ let create_data_decl tdl =
          | Some ls1 ->
            (match ls1.ls_args with
             | [] -> raise (BadRecordField ls1)
-            | ptyv :: l ->
+            | ptyv::l ->
               (match l with
                | [] ->
                  (match ls1.ls_value with
@@ -993,11 +987,11 @@ let create_data_decl tdl =
                          else raise (BadRecordField ls1)
                     else raise (BadRecordField ls1)
                   | None -> raise (BadRecordField ls1))
-               | _ :: _ -> raise (BadRecordField ls1)))
+               | _::_ -> raise (BadRecordField ls1)))
          | None ->  s
        in
        let check_constr = fun tys ty cll pjs news c ->
-         let (fs, pl) = c in
+         let fs,pl = c in
          (@@) (fun ty1 ->
            (@@) (fun _ ->
              (@@) (fun o ->
@@ -1021,7 +1015,7 @@ let create_data_decl tdl =
                                  if (&&) seen now1
                                  then raise
                                         ((fun ((x, y), z) -> NonPositiveTypeDecl(x, y, z))
-                                          ((tys, fs), ty0))
+                                          ((tys,fs),ty0))
                                  else iter_err (check ((||) seen now1)) tl
                              in check
                            in
@@ -1033,7 +1027,7 @@ let create_data_decl tdl =
            (opt_get_exn (BadConstructor fs) fs.ls_value)
        in
        let check_decl = fun news d ->
-         let (ts, cl) = d in
+         let ts,cl = d in
          let cll = int_length cl in
          if null cl
          then  (raise (EmptyAlgDecl ts))
@@ -1081,11 +1075,11 @@ let create_logic_decl_nocheck ldl =
   if null ldl
   then  (raise EmptyDecl)
   else let check_decl = fun news x ->
-         let (ls, l) = x in
-         let (p, _) = l in
-         let (s, _) = p in
+         let ls,l = x in
+         let p,_ = l in
+         let s,_ = p in
          if negb (ls_equal s ls)
-         then raise (BadLogicDecl (ls, s))
+         then raise (BadLogicDecl (ls,s))
          else if (||) (negb (BigInt.is_zero ls.ls_constr)) ls.ls_proj
               then raise (UnexpectedProjOrConstr ls)
               else news_id news ls.ls_name
@@ -1109,14 +1103,13 @@ let rec ind_strict_pos sps f =
        (&&) ((&&) (lsyms_notin_tm sps f1) (ind_strict_pos sps f2))
          (ind_strict_pos sps f3)
      | Tlet (t0, tb) ->
-       let (_, t2) = t_view_bound tb in
+       let _,t2 = t_view_bound tb in
        (&&) (ind_strict_pos sps t2) (lsyms_notin_tm sps t0)
      | Tcase (t0, pats) ->
        (&&) (lsyms_notin_tm sps t0)
          (forallb (fun x ->
-           let (_, t1) = t_view_branch x in ind_strict_pos sps t1) pats)
-     | Tquant (_, tq) ->
-       let (_, f0) = t_view_quant tq in ind_strict_pos sps f0
+           let _,t1 = t_view_branch x in ind_strict_pos sps t1) pats)
+     | Tquant (_, tq) -> let _,f0 = t_view_quant tq in ind_strict_pos sps f0
      | Tbinop (b, f1, f2) ->
        (match b with
         | Timplies -> (&&) (ind_strict_pos sps f2) (lsyms_notin_tm sps f1)
@@ -1172,12 +1165,12 @@ let create_ind_decl s idl =
   then  (raise EmptyDecl)
   else let sps = fold_left (fun acc x -> Sls.add (fst x) acc) idl Sls.empty in
        let check_ax = fun ps news x ->
-         let (pr, f) = x in
+         let pr,f = x in
          (@@) (fun f0 ->
            if negb (ind_pos sps f0)
            then raise
-                  ((fun ((x, y), z) -> NonPositiveIndDecl(x, y, z)) ((ps,
-                    pr), ps))
+                  ((fun ((x, y), z) -> NonPositiveIndDecl(x, y, z))
+                    ((ps,pr),ps))
            else (match valid_ind_form ps f0 with
                  | Some g ->
                    let gtv = t_ty_freevars Stv.empty g in
@@ -1186,10 +1179,10 @@ let create_ind_decl s idl =
                    then (@@) (fun y -> raise (UnboundTypeVar y))
                           (Stv.choose (Stv.diff ftv gtv))
                    else news_id news pr.pr_name
-                 | None -> raise (InvalidIndDecl (ps, pr)))) (check_fvs f)
+                 | None -> raise (InvalidIndDecl (ps,pr)))) (check_fvs f)
        in
        let check_decl = fun news x ->
-         let (ps, al) = x in
+         let ps,al = x in
          if null al
          then raise (EmptyIndDecl ps)
          else if isSome ps.ls_value
@@ -1197,7 +1190,7 @@ let create_ind_decl s idl =
               else (@@) (fun news0 -> foldl_err (check_ax ps) al news0)
                      (news_id news ps.ls_name)
        in
-       (@@) (fun news ->  (mk_decl (Dind (s, idl)) news))
+       (@@) (fun news ->  (mk_decl (Dind (s,idl)) news))
          ( (foldl_err check_decl idl Sid.empty))
 
 (** val create_prop_decl :
@@ -1207,7 +1200,7 @@ let create_ind_decl s idl =
 let create_prop_decl k p f =
   (@@) (fun news ->
     (@@) (fun f0 ->
-       (mk_decl (Dprop ((fun ((x, y), z) -> (x, y, z)) ((k, p), f0))) news))
+       (mk_decl (Dprop ((fun ((x, y), z) -> (x, y, z)) ((k,p),f0))) news))
       ( (check_fvs f))) ( (news_id Sid.empty p.pr_name))
 
 (** val syms_ts : Sid.t -> (ty_node_c ty_o) tysymbol_o -> unit Sid.M.t **)
@@ -1239,10 +1232,10 @@ let syms_ty_decl ts =
 
 let syms_data_decl tdl =
   let syms_constr = fun syms pat ->
-    let (fs, _) = pat in fold_left syms_ty fs.ls_args syms
+    let fs,_ = pat in fold_left syms_ty fs.ls_args syms
   in
   let syms_decl = fun syms pat ->
-    let (_, cl) = pat in fold_left syms_constr cl syms
+    let _,cl = pat in fold_left syms_constr cl syms
   in
   fold_left syms_decl tdl Sid.empty
 
@@ -1256,10 +1249,10 @@ let syms_param_decl ls =
 
 let syms_logic_decl ldl =
   let syms_decl = fun syms pat ->
-    let (ls, ld) = pat in
+    let ls,ld = pat in
     (match open_ls_defn_aux ld with
      | Some p ->
-       let (_, e) = p in
+       let _,e = p in
        let syms0 = fold_left syms_ty ls.ls_args syms in syms_term syms0 e
      | None -> syms)
   in
@@ -1268,9 +1261,8 @@ let syms_logic_decl ldl =
 (** val syms_ind_decl : ind_decl list -> Sid.t **)
 
 let syms_ind_decl idl =
-  let syms_ax = fun syms pat -> let (_, f) = pat in syms_term syms f in
-  let syms_decl = fun syms pat ->
-    let (_, al) = pat in fold_left syms_ax al syms
+  let syms_ax = fun syms pat -> let _,f = pat in syms_term syms f in
+  let syms_decl = fun syms pat -> let _,al = pat in fold_left syms_ax al syms
   in
   fold_left syms_decl idl Sid.empty
 
@@ -1292,9 +1284,8 @@ let get_used_syms_decl d =
   | Ddata dl -> syms_data_decl dl
   | Dparam ls -> syms_param_decl ls
   | Dlogic ldl -> syms_logic_decl ldl
-  | Dind i -> let (_, idl) = i in syms_ind_decl idl
-  | Dprop x ->
-    let (_, f) = (fun (x, y, z) -> ((x, y), z)) x in syms_prop_decl f
+  | Dind i -> let _,idl = i in syms_ind_decl idl
+  | Dprop x -> let _,f = (fun (x, y, z) -> ((x, y), z)) x in syms_prop_decl f
 
 type known_map = decl Mid.t
 
@@ -1310,7 +1301,7 @@ let known_add_decl_aux kn0 d =
   let inter0 = Mid.set_inter kn0 kn in
   if negb (Mid.is_empty inter0)
   then (@@) (fun x ->
-         let (i, d1) = x in
+         let i,d1 = x in
          if d_equal d1 d
          then raise (KnownIdent i)
          else raise (RedeclaredIdent i)) (Mid.choose inter0)
@@ -1321,13 +1312,13 @@ let known_add_decl_aux kn0 d =
        else (@@) (fun j -> raise (UnknownIdent j)) (Sid.choose unk)
 
 (** val list_assoc :
-    ('a1 -> 'a1 -> bool) -> 'a1 -> ('a1 * 'a2) list -> 'a2 option **)
+    ('a1 -> 'a1 -> bool) -> 'a1 -> ('a1*'a2) list -> 'a2 option **)
 
 let list_assoc eq x l =
   fold_right (fun y acc -> if eq x (fst y) then Some (snd y) else acc) None l
 
 (** val list_mem_assoc :
-    ('a1 -> 'a1 -> bool) -> 'a1 -> ('a1 * 'a2) list -> bool **)
+    ('a1 -> 'a1 -> bool) -> 'a1 -> ('a1*'a2) list -> bool **)
 
 let list_mem_assoc eq x l =
   isSome (list_assoc eq x l)
@@ -1349,13 +1340,13 @@ let find_constructors kn ts =
       | _ -> None))
 
 (** val find_inductive_cases :
-    known_map -> lsymbol -> (prsymbol * (term_node term_o)) list **)
+    known_map -> lsymbol -> (prsymbol*(term_node term_o)) list **)
 
 let find_inductive_cases kn ps =
   list_of_opt
     (option_bind (Mid.find_opt ps.ls_name kn) (fun d ->
       match d.d_node with
-      | Dind i -> let (_, dl) = i in list_assoc ls_equal ps dl
+      | Dind i -> let _,dl = i in list_assoc ls_equal ps dl
       | _ -> None))
 
 (** val find_logic_definition : known_map -> lsymbol -> ls_defn option **)
@@ -1376,31 +1367,30 @@ let find_prop kn pr =
           | Dparam _ -> None
           | Dlogic _ -> None
           | Dind i ->
-            let (_, dl) = i in
+            let _,dl = i in
             option_bind
               (list_find_opt (fun x -> list_mem_assoc pr_equal pr (snd x)) dl)
               (fun l1 -> list_assoc pr_equal pr (snd l1))
-          | Dprop x -> let (_, f) = (fun (x, y, z) -> ((x, y), z)) x in Some f) with
+          | Dprop x -> let _,f = (fun (x, y, z) -> ((x, y), z)) x in Some f) with
   | Some tm -> tm
   | None -> t_false
 
 (** val find_prop_decl :
-    known_map -> prsymbol -> (prop_kind * (term_node term_o)) errorM **)
+    known_map -> prsymbol -> (prop_kind*(term_node term_o)) errorM **)
 
 let find_prop_decl kn pr =
   (@@) (fun d ->
     match d.d_node with
     | Dind i ->
-      let (_, dl) = i in
+      let _,dl = i in
       (match list_find_opt (fun x -> list_mem_assoc pr_equal pr (snd x)) dl with
        | Some l1 ->
          (match list_assoc pr_equal pr (snd l1) with
-          | Some f ->  (Paxiom, f)
+          | Some f ->  (Paxiom,f)
           | None -> raise Not_found)
        | None -> raise Not_found)
     | Dprop p ->
-      let (p0, f) = (fun (x, y, z) -> ((x, y), z)) p in
-      let (k, _) = p0 in  (k, f)
+      let p0,f = (fun (x, y, z) -> ((x, y), z)) p in let k,_ = p0 in  (k,f)
     | _ -> assert_false "find_prop_decl") (Mid.find pr.pr_name kn)
 
 (** val all_tysymbols : known_map -> Sts.t **)
@@ -1427,9 +1417,9 @@ let is_abstract_type kn ts =
 
 let check_ts kn tss tvs ts z =
   int_rect (fun _ _ _ -> false) (fun _ -> false) (fun _ _ _ rec0 x ->
-    let (p, ts0) = x in
-    let (p0, tvs0) = p in
-    let (kn0, tss0) = p0 in
+    let p,ts0 = x in
+    let p0,tvs0 = p in
+    let kn0,tss0 = p0 in
     if Sts.mem ts0 tss0
     then false
     else if is_abstract_type kn0 ts0
@@ -1437,7 +1427,7 @@ let check_ts kn tss tvs ts z =
          else let cl = find_constructors kn0 ts0 in
               let tss1 = Sts.add ts0 tss0 in
               existsb (fun y ->
-                let (ls, _) = y in
+                let ls,_ = y in
                 forallb (fun t0 ->
                   let rec check_type ty =
                     match ty_node ty with
@@ -1446,9 +1436,9 @@ let check_ts kn tss tvs ts z =
                       (match fold_left2 (fun acc ty0 tv ->
                                if check_type ty0 then acc else Stv.add tv acc)
                                tl (ts_args ts1) Stv.empty with
-                       | Some tvs1 -> rec0 (((kn0, tss1), tvs1), ts1)
+                       | Some tvs1 -> rec0 (((kn0,tss1),tvs1),ts1)
                        | None -> false)
-                  in check_type t0) ls.ls_args) cl) z (((kn, tss), tvs), ts)
+                  in check_type t0) ls.ls_args) cl) z (((kn,tss),tvs),ts)
 
 (** val check_foundness : known_map -> decl -> unit errorM **)
 
@@ -1475,24 +1465,24 @@ let get_opt_def x d =
 
 let ts_extract_pos_aux kn sts ts z =
   int_rect (fun _ _ _ -> None) (fun _ -> None) (fun _ _ _ rec0 x ->
-    let (p, ts0) = x in
-    let (kn0, sts0) = p in
+    let p,ts0 = x in
+    let kn0,sts0 = p in
     if is_alias_type_def (ts_def ts0)
     then None
     else if ts_equal ts0 ts_func
-         then Some (false :: (true :: []))
+         then Some (false::(true::[]))
          else if Sts.mem ts0 sts0
               then Some (map (fun _ -> true) (ts_args ts0))
               else (match find_constructors kn0 ts0 with
                     | [] -> Some (map (fun _ -> false) (ts_args ts0))
-                    | c :: l ->
+                    | c::l ->
                       let sts1 = Sts.add ts0 sts0 in
                       let get_ty =
                         let rec get_ty ty stv =
                           match ty_node ty with
                           | Tyvar _ -> stv
                           | Tyapp (ts1, tl) ->
-                            (match rec0 ((kn0, sts1), ts1) with
+                            (match rec0 ((kn0,sts1),ts1) with
                              | Some l0 ->
                                let get = fun acc t0 pos ->
                                  if pos
@@ -1506,13 +1496,13 @@ let ts_extract_pos_aux kn sts ts z =
                       in
                       let negs =
                         fold_left (fun acc x0 ->
-                          let (ls, _) = x0 in
+                          let ls,_ = x0 in
                           fold_left (fun x1 y -> get_ty y x1) ls.ls_args acc)
-                          (c :: l) Stv.empty
+                          (c::l) Stv.empty
                       in
                       Some
                       (map (fun v -> negb (Stv.mem v negs)) (ts_args ts0))))
-    z ((kn, sts), ts)
+    z ((kn,sts),ts)
 
 (** val ts_extract_pos :
     known_map -> Sts.t -> (ty_node_c ty_o) tysymbol_o -> bool list errorM **)
@@ -1529,7 +1519,7 @@ let check_positivity kn d =
   | Ddata tdl ->
     let tss = fold_left (fun acc x -> Sts.add (fst x) acc) tdl Sts.empty in
     let check_constr = fun tys x ->
-      let (cs, _) = x in
+      let cs,_ = x in
       let check_ty =
         let rec check_ty ty =
           match ty_node ty with
@@ -1541,7 +1531,7 @@ let check_positivity kn d =
               else if ty_s_any (Sts.contains tss) ty0
                    then raise
                           ((fun ((x, y), z) -> NonPositiveTypeDecl(x, y, z))
-                            ((tys, cs), ty0))
+                            ((tys,cs),ty0))
                    else  ()
             in
             (@@) (fun l1 -> list_iter2 check tl l1)
@@ -1553,13 +1543,13 @@ let check_positivity kn d =
     iter_err (fun x -> iter_err (check_constr (fst x)) (snd x)) tdl
   | _ ->  ()
 
-(** val known_add_decl : known_map -> decl -> (decl * decl Mid.t) errorM **)
+(** val known_add_decl : known_map -> decl -> (decl*decl Mid.t) errorM **)
 
 let known_add_decl kn d =
   (@@) (fun kn0 ->
     (@@) (fun _ ->
       (@@) (fun _ ->
-        (@@) (fun d0 ->  (d0, kn0)) (check_termination_strict kn0 d))
+        (@@) (fun d0 ->  (d0,kn0)) (check_termination_strict kn0 d))
         (check_foundness kn0 d)) (check_positivity kn0 d))
     (known_add_decl_aux kn d)
 (********************************************************************)

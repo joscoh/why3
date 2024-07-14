@@ -7,7 +7,7 @@ let __ = let rec f _ = Obj.repr f in Obj.repr f
 
 let rec int_length = function
 | [] -> BigInt.zero
-| _ :: t -> BigInt.succ (int_length t)
+| _::t -> BigInt.succ (int_length t)
 
 (** val option_compare :
     ('a1 -> 'a1 -> Stdlib.Int.t) -> 'a1 option -> 'a1 option -> Stdlib.Int.t **)
@@ -44,7 +44,7 @@ let int_rect =
 (** val iota : BigInt.t -> BigInt.t list **)
 
 let iota z =
-  int_rect (fun _ _ -> []) [] (fun z0 _ _ rec0 -> z0 :: rec0) z
+  int_rect (fun _ _ -> []) [] (fun z0 _ _ rec0 -> z0::rec0) z
 
 (** val iota2 : BigInt.t -> BigInt.t list **)
 
@@ -62,7 +62,7 @@ let big_nth l z =
   int_rect (fun _ _ _ -> None) (fun l0 ->
     match l0 with
     | [] -> None
-    | x :: _ -> Some x) (fun _ _ _ rec0 l0 ->
+    | x::_ -> Some x) (fun _ _ _ rec0 l0 ->
     match l0 with
     | [] -> None
-    | _ :: t -> rec0 t) z l
+    | _::t -> rec0 t) z l

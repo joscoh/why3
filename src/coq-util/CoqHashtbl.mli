@@ -13,13 +13,13 @@ module type HashedType =
   val hash : t -> BigInt.t
  end
 
-type ('key, 'a) hashtbl = ('key * 'a) list coq_Zmap
+type ('key, 'a) hashtbl = ('key*'a) list coq_Zmap
 
 val create_hashtbl : ('a1, 'a2) hashtbl
 
 val find_opt_hashtbl :
   ('a1 -> BigInt.t) -> ('a1 -> 'a1 -> bool) -> ('a1, 'a2) hashtbl -> 'a1 ->
-  ('a1 * 'a2) option
+  ('a1*'a2) option
 
 val add_hashtbl :
   ('a1 -> BigInt.t) -> ('a1, 'a2) hashtbl -> 'a1 -> 'a2 -> ('a1, 'a2) hashtbl

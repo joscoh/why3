@@ -17,4 +17,4 @@ type ('a, 'b) errState = 'b
 
 val errst_list : ('a1, 'a2) errState list -> ('a1, 'a2 list) errState
 
-type 'k hashcons_ty = BigInt.t * 'k hashset
+type 'k hashcons_ty = BigInt.t*'k hashset

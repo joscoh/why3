@@ -96,6 +96,31 @@ val meta_proved_wf: meta
 
 (** {2 Theories} *)
 
+type symbol_map = { sm_ty : ty_node_c ty_o Mts.t;
+                    sm_ts : (ty_node_c ty_o) tysymbol_o Mts.t;
+                    sm_ls : lsymbol Mls.t; sm_pr : prsymbol Mpr.t }
+
+type 'a tdecl_o = private { td_node : 'a; td_tag : BigInt.t }
+
+type 'a theory_o = private { th_name : ident; th_path : string list;
+                     th_decls : 'a tdecl_o list;
+                     th_ranges : 'a tdecl_o Mts.t;
+                     th_floats : 'a tdecl_o Mts.t; th_crcmap : Coercion.t;
+                     th_proved_wf : (prsymbol*lsymbol) Mls.t;
+                     th_export : namespace; th_known : known_map;
+                     th_local : Sid.t; th_used : Sid.t }
+
+type tdecl_node =
+| Decl of decl
+| Use of tdecl_node theory_o
+| Clone of tdecl_node theory_o * symbol_map
+| Meta of meta * meta_arg list
+
+type tdecl = tdecl_node tdecl_o
+
+type theory = tdecl_node theory_o
+
+(* 
 type theory = private {
   th_name   : ident;          (** theory name *)
   th_path   : string list;    (** environment qualifiers *)
@@ -132,7 +157,7 @@ and symbol_map = {
   sm_ts : tysymbol Mts.t;
   sm_ls : lsymbol Mls.t;
   sm_pr : prsymbol Mpr.t;
-}
+} *)
 
 module Mtdecl : Extmap.S with type key = tdecl
 module Stdecl : Extset.S with module M = Mtdecl

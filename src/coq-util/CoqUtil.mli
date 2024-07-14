@@ -6,8 +6,7 @@ open List0
 val bits_to_pos : bool list -> positive
 
 val bittup_to_bits :
-  (bool * (bool * (bool * (bool * (bool * (bool * (bool * bool))))))) -> bool
-  list
+  (bool*(bool*(bool*(bool*(bool*(bool*(bool*bool))))))) -> bool list
 
 val byte_to_bits : char -> bool list
 
@@ -35,8 +34,7 @@ val opt_fold : ('a2 -> 'a1 -> 'a2) -> 'a2 -> 'a1 option -> 'a2
 
 val option_fold : 'a2 -> ('a1 -> 'a2) -> 'a1 option -> 'a2
 
-val map_fold_left :
-  ('a1 -> 'a2 -> 'a1 * 'a3) -> 'a1 -> 'a2 list -> 'a1 * 'a3 list
+val map_fold_left : ('a1 -> 'a2 -> 'a1*'a3) -> 'a1 -> 'a2 list -> 'a1*'a3 list
 
 val option_bind : 'a1 option -> ('a1 -> 'a2 option) -> 'a2 option
 

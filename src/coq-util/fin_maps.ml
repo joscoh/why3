@@ -49,8 +49,7 @@ let map_singleton h h0 i x =
 let map_size h =
   map_fold h (fun _ _ x -> S x) O
 
-(** val map_to_list :
-    ('a1, 'a2, 'a3) coq_MapFold -> 'a3 -> ('a1 * 'a2) list **)
+(** val map_to_list : ('a1, 'a2, 'a3) coq_MapFold -> 'a3 -> ('a1*'a2) list **)
 
 let map_to_list h =
-  map_fold h (fun i x x0 -> (i, x) :: x0) []
+  map_fold h (fun i x x0 -> (i,x)::x0) []

@@ -24,6 +24,25 @@ module BigIntTag =
     BigInt.eq
  end
 
+module Str =
+ struct
+  type t = string
+
+  (** val tag : string -> BigInt.t **)
+
+  let tag =
+    (fun s -> (BigInt.of_int (Hashtbl.hash s)))
+
+  (** val equal : string -> string -> bool **)
+
+  let equal =
+    (=)
+ end
+
+module Mstr = Extmap.Make(Str)
+
+module Sstr = MakeOfMap(Mstr)
+
 module Str2 =
  struct
   type t = string
@@ -37,6 +56,17 @@ module Str2 =
 
   let equal =
     (=)
+ end
+
+module type OrderedHashedType =
+ sig
+  type t
+
+  val hash : t -> BigInt.t
+
+  val equal : t -> t -> bool
+
+  val compare : t -> t -> Stdlib.Int.t
  end
 
 module OrderedHashed =
@@ -118,15 +148,15 @@ module Hint = Exthtbl.Make(struct
   let hash x = x
 end)
 
-module Str = struct
+(* module Str = struct
   type t = string
   (*TODO bad could overwrite*)
   let tag (s: string) : BigInt.t = (BigInt.of_int (Hashtbl.hash s))
   let equal (s1 : string) (s2: string) : bool = s1 = s2
-end
+end *)
 
-module Mstr = Extmap.Make(Str)
-module Sstr = Extset.MakeOfMap(Mstr)
+(* module Mstr = Extmap.Make(Str)
+module Sstr = Extset.MakeOfMap(Mstr) *)
 module Hstr = Exthtbl.Make(struct
   type t    = String.t
   let hash  = (Hashtbl.hash : string -> int)
@@ -157,13 +187,13 @@ sig
   val equal : t -> t -> bool (*JOSH: added*)
 end
 
-module type OrderedHashedType =
+(* module type OrderedHashedType =
 sig
   type t
   val hash : t -> BigInt.t
   val equal : t -> t -> bool
   val compare : t -> t -> int
-end
+end *)
 
 module TaggedList (X: TaggedType) =
 struct

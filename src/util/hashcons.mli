@@ -28,7 +28,7 @@ module type S =
 
   val stats :
     unit -> (t hashcons_ty,
-    ((((Stdlib.Int.t * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t)
+    ((((Stdlib.Int.t*Stdlib.Int.t)*Stdlib.Int.t)*Stdlib.Int.t)*Stdlib.Int.t)*Stdlib.Int.t)
     st
  end
 
@@ -39,9 +39,9 @@ module Make :
 
   module HashconsTy :
    sig
-    type t = BigInt.t * H.t hashset
+    type t = BigInt.t*H.t hashset
 
-    val initial : BigInt.t * H.t hashset
+    val initial : BigInt.t*H.t hashset
    end
 
   module HashconsSt :
@@ -69,7 +69,7 @@ module Make :
 
   val stats :
     unit -> (H.t hashcons_ty,
-    ((((Stdlib.Int.t * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t) * Stdlib.Int.t)
+    ((((Stdlib.Int.t*Stdlib.Int.t)*Stdlib.Int.t)*Stdlib.Int.t)*Stdlib.Int.t)*Stdlib.Int.t)
     st
  end
 
@@ -86,8 +86,7 @@ val combine3 :
 val combine_option : ('a1 -> Stdlib.Int.t) -> 'a1 option -> Stdlib.Int.t
 
 val combine_pair :
-  ('a1 -> Stdlib.Int.t) -> ('a2 -> Stdlib.Int.t) -> ('a1 * 'a2) ->
-  Stdlib.Int.t
+  ('a1 -> Stdlib.Int.t) -> ('a2 -> Stdlib.Int.t) -> ('a1*'a2) -> Stdlib.Int.t
 
 val combine_big : BigInt.t -> BigInt.t -> BigInt.t
 

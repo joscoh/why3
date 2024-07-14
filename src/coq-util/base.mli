@@ -2,6 +2,12 @@ open Datatypes
 
 type __ = Obj.t
 
+type coq_Decision = bool
+
+type ('a, 'b) coq_RelDecision = 'a -> 'b -> coq_Decision
+
+val decide_rel : ('a1, 'a2) coq_RelDecision -> 'a1 -> 'a2 -> coq_Decision
+
 type 'a coq_Empty = 'a
 
 val empty : 'a1 coq_Empty -> 'a1

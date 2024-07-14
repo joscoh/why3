@@ -87,7 +87,7 @@ let tv_hashtbl =
   Hstr_tv.create Stdlib.Int.one
 
 (** val tv_of_string :
-    string -> (BigInt.t * (string, tvsymbol) hashtbl, tvsymbol) st **)
+    string -> (BigInt.t*(string, tvsymbol) hashtbl, tvsymbol) st **)
 
 let tv_of_string s =
   (@@) (fun o ->
@@ -410,7 +410,7 @@ let create_builtin_tvsymbol i =
 let ts_func =
   let tv_a = create_builtin_tvsymbol id_a in
   let tv_b = create_builtin_tvsymbol id_b in
-  mk_ts_builtin id_fun (tv_a :: (tv_b :: [])) NoDef
+  mk_ts_builtin id_fun (tv_a::(tv_b::[])) NoDef
 
 (** val vs_a : tvsymbol **)
 
@@ -435,13 +435,13 @@ let ty_b =
 (** val ty_func_ab : ty_node_c ty_o **)
 
 let ty_func_ab =
-  ty_app_builtin ts_func (ty_a :: (ty_b :: [])) (create_tag (BigInt.of_int 7))
+  ty_app_builtin ts_func (ty_a::(ty_b::[])) (create_tag (BigInt.of_int 7))
 
 (** val ty_hashcons_builtins : (ty_node_c ty_o hashcons_ty, unit) st **)
 
 let ty_hashcons_builtins =
   Hsty.add_builtins
-    (ty_int :: (ty_real :: (ty_bool :: (ty_str :: (ty_a :: (ty_b :: (ty_func_ab :: [])))))))
+    (ty_int::(ty_real::(ty_bool::(ty_str::(ty_a::(ty_b::(ty_func_ab::[])))))))
     (BigInt.of_int 8)
 
 (** val mk_ty : ty_node_c -> ty_node_c ty_o **)
@@ -579,7 +579,7 @@ let ty_closed t0 =
 let rec fold_errorM' f l x =
   match l with
   | [] ->  x
-  | h :: t0 -> (@@) (fun i -> f i h) (fold_errorM' f t0 x)
+  | h::t0 -> (@@) (fun i -> f i h) (fold_errorM' f t0 x)
 
 (** val ty_v_fold_err :
     ('a1 -> tvsymbol -> 'a1 errorM) -> 'a1 -> ty_node_c ty_o -> 'a1 errorM **)
@@ -629,7 +629,7 @@ let create_tysymbol name args d =
 let ts_match_args s tl =
   match fold_right2 Mtv.add (ts_args s) tl Mtv.empty with
   | Some m ->  m
-  | None -> raise (BadTypeArity (s, (int_length tl)))
+  | None -> raise (BadTypeArity (s,(int_length tl)))
 
 (** val ty_match_args : ty_node_c ty_o -> ty_node_c ty_o Mtv.t errorM **)
 
@@ -647,7 +647,7 @@ let ty_app s tl =
   | Alias t0 -> (@@) (fun m -> ty_full_inst m t0) ( (ts_match_args s tl))
   | _ ->
     if negb (BigInt.eq (int_length (ts_args s)) (int_length tl))
-    then  (raise (BadTypeArity (s, (int_length tl))))
+    then  (raise (BadTypeArity (s,(int_length tl))))
     else  (ty_app1 s tl)
 
 (** val ty_s_map :
@@ -708,11 +708,11 @@ let rec fold_right2_error f l1 l2 accu =
   | [] ->
     (match l2 with
      | [] ->  accu
-     | _ :: _ -> raise (Invalid_argument "fold_right2"))
-  | a1 :: l3 ->
+     | _::_ -> raise (Invalid_argument "fold_right2"))
+  | a1::l3 ->
     (match l2 with
      | [] -> raise (Invalid_argument "fold_right2")
-     | a2 :: l4 -> (@@) (fun x -> f x a1 a2) (fold_right2_error f l3 l4 accu))
+     | a2::l4 -> (@@) (fun x -> f x a1 a2) (fold_right2_error f l3 l4 accu))
 
 (** val ty_match_aux :
     ty_node_c ty_o Mtv.t -> ty_node_c ty_o -> ty_node_c ty_o ->
@@ -743,20 +743,20 @@ let ty_match s ty1 ty2 =
   try x ()
   with | e1 -> if e = e1 then ret () else raise e1)
         (fun _ -> ty_match_aux s ty1 ty2) Exit (fun _ ->
-        raise (TypeMismatch (t1, ty2))))) ( (ty_inst s ty1))
+        raise (TypeMismatch (t1,ty2))))) ( (ty_inst s ty1))
 
 (** val ty_func :
     ty_node_c ty_o -> ty_node_c ty_o -> (TyHash.t hashcons_ty,
     ty_node_c ty_o) st **)
 
 let ty_func ty_a0 ty_b0 =
-  ty_app1 ts_func (ty_a0 :: (ty_b0 :: []))
+  ty_app1 ts_func (ty_a0::(ty_b0::[]))
 
 (** val ty_pred :
     ty_node_c ty_o -> (TyHash.t hashcons_ty, ty_node_c ty_o) st **)
 
 let ty_pred ty_a0 =
-  ty_app1 ts_func (ty_a0 :: (ty_bool :: []))
+  ty_app1 ts_func (ty_a0::(ty_bool::[]))
 
 module TysymbolT =
  struct
@@ -790,12 +790,12 @@ let tuple_memo =
 let rec fold_left_st f l x =
   match l with
   | [] -> (fun x -> x) x
-  | h :: t0 -> (@@) (fun j -> fold_left_st f t0 j) (f x h)
+  | h::t0 -> (@@) (fun j -> fold_left_st f t0 j) (f x h)
 
 (** val ts_tuple :
-    BigInt.t -> (BigInt.t * ((TupNames.key, TupNames.value)
-    hashtbl * (TupIds.key, TupIds.value) hashtbl),
-    (ty_node_c ty_o) tysymbol_o) st **)
+    BigInt.t -> (BigInt.t*((TupNames.key, TupNames.value)
+    hashtbl*(TupIds.key, TupIds.value) hashtbl), (ty_node_c ty_o) tysymbol_o)
+    st **)
 
 let ts_tuple n =
   (@@) (fun o ->
@@ -804,7 +804,7 @@ let ts_tuple n =
     | None ->
       let vl =
         fold_left_st (fun l _ ->
-          (@@) (fun h -> (fun x -> x) (h :: l))
+          (@@) (fun h -> (fun x -> x) (h::l))
             (create_tvsymbol (id_fresh1 "a"))) (iota n) []
       in
       (@@) (fun l ->
@@ -817,8 +817,8 @@ let ts_tuple n =
         ( vl)) ( ( (TupIds.find_opt n)))
 
 (** val ty_tuple :
-    ty_node_c ty_o list -> ((BigInt.t * ((TupNames.key, TupNames.value)
-    hashtbl * (TupIds.key, TupIds.value) hashtbl)) * TyHash.t hashcons_ty,
+    ty_node_c ty_o list -> ((BigInt.t*((TupNames.key, TupNames.value)
+    hashtbl*(TupIds.key, TupIds.value) hashtbl))*TyHash.t hashcons_ty,
     ty_node_c ty_o) st **)
 
 let ty_tuple l =
@@ -898,12 +898,12 @@ let oty_freevars =
     ty_node_c ty_o list -> ty_node_c ty_o option -> ty_node_c ty_o list **)
 
 let oty_cons l o =
-  opt_fold (fun tl t0 -> t0 :: tl) l o
+  opt_fold (fun tl t0 -> t0::tl) l o
 
 (** val ty_equal_check : ty_node_c ty_o -> ty_node_c ty_o -> unit errorM **)
 
 let ty_equal_check ty1 ty2 =
-  if negb (ty_equal ty1 ty2) then raise (TypeMismatch (ty1, ty2)) else  ()
+  if negb (ty_equal ty1 ty2) then raise (TypeMismatch (ty1,ty2)) else  ()
 (* let oty_type = function Some ty -> ty | None -> raise UnexpectedProp
 let ts_tuple_ids = Hid.create 17
 

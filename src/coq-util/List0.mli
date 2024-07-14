@@ -22,4 +22,4 @@ val filter : ('a1 -> bool) -> 'a1 list -> 'a1 list
 
 val find : ('a1 -> bool) -> 'a1 list -> 'a1 option
 
-val combine : 'a1 list -> 'a2 list -> ('a1 * 'a2) list
+val combine : 'a1 list -> 'a2 list -> ('a1*'a2) list

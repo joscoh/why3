@@ -1,4 +1,6 @@
 
+type __ = Obj.t
+
 val negb : bool -> bool
 
 type nat =
@@ -19,3 +21,5 @@ type comparison =
 | Gt
 
 val coq_CompOpp : comparison -> comparison
+
+val id : __ -> __

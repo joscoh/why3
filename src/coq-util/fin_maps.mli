@@ -25,4 +25,4 @@ val map_singleton :
 
 val map_size : ('a1, 'a2, 'a3) coq_MapFold -> 'a3 coq_Size
 
-val map_to_list : ('a1, 'a2, 'a3) coq_MapFold -> 'a3 -> ('a1 * 'a2) list
+val map_to_list : ('a1, 'a2, 'a3) coq_MapFold -> 'a3 -> ('a1*'a2) list

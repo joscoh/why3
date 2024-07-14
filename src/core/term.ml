@@ -328,25 +328,25 @@ type term_node =
 | Tconst of constant
 | Tapp of lsymbol * (term_node term_o) list
 | Tif of (term_node term_o) * (term_node term_o) * (term_node term_o)
-| Tlet of (term_node term_o) * ((vsymbol * bind_info) * (term_node term_o))
+| Tlet of (term_node term_o) * ((vsymbol*bind_info)*(term_node term_o))
 | Tcase of (term_node term_o)
-   * (((pattern_node pattern_o) * bind_info) * (term_node term_o)) list
-| Teps of ((vsymbol * bind_info) * (term_node term_o))
+   * (((pattern_node pattern_o)*bind_info)*(term_node term_o)) list
+| Teps of ((vsymbol*bind_info)*(term_node term_o))
 | Tquant of quant
-   * (((vsymbol list * bind_info) * (term_node term_o) list
-     list) * (term_node term_o))
+   * (((vsymbol list*bind_info)*(term_node term_o) list
+     list)*(term_node term_o))
 | Tbinop of binop * (term_node term_o) * (term_node term_o)
 | Tnot of (term_node term_o)
 | Ttrue
 | Tfalse
 
-type term_bound = (vsymbol * bind_info) * (term_node term_o)
+type term_bound = (vsymbol*bind_info)*(term_node term_o)
 
-type term_branch = ((pattern_node pattern_o) * bind_info) * (term_node term_o)
+type term_branch = ((pattern_node pattern_o)*bind_info)*(term_node term_o)
 
 type trigger = (term_node term_o) list list
 
-type term_quant = ((vsymbol list * bind_info) * trigger) * (term_node term_o)
+type term_quant = ((vsymbol list*bind_info)*trigger)*(term_node term_o)
 
 type term = term_node term_o
 
@@ -357,10 +357,10 @@ type term = term_node term_o
 let build_term_o t0 o a l =
   { t_node = t0; t_ty = o; t_attrs = a; t_loc = l }
 
-(** val trd : (('a1 * 'a2) * 'a3) -> 'a3 **)
+(** val trd : (('a1*'a2)*'a3) -> 'a3 **)
 
 let trd = function
-| (_, y) -> y
+| _,y -> y
 
 (** val bind_info_eqb : bind_info -> bind_info -> bool **)
 
@@ -425,12 +425,12 @@ and term_node_eqb t1 t2 =
        (&&) ((&&) (term_eqb t3 e1) (term_eqb t4 e2)) (term_eqb t5 e3)
      | _ -> false)
   | Tlet (t3, p) ->
-    let (p0, t4) = p in
-    let (v1, b1) = p0 in
+    let p0,t4 = p in
+    let v1,b1 = p0 in
     (match t2 with
      | Tlet (t5, p1) ->
-       let (p2, t6) = p1 in
-       let (v2, b2) = p2 in
+       let p2,t6 = p1 in
+       let v2,b2 = p2 in
        (&&)
          ((&&) ((&&) (term_eqb t3 t5) (vsymbol_eqb v1 v2))
            (bind_info_eqb b1 b2)) (term_eqb t4 t6)
@@ -440,31 +440,31 @@ and term_node_eqb t1 t2 =
      | Tcase (t4, tbs2) ->
        (&&) (term_eqb t3 t4)
          (list_eqb (fun x1 x2 ->
-           let (y, t5) = x1 in
-           let (p1, b1) = y in
-           let (p, t6) = x2 in
-           let (p2, b2) = p in
+           let y,t5 = x1 in
+           let p1,b1 = y in
+           let p,t6 = x2 in
+           let p2,b2 = p in
            (&&) ((&&) (pattern_eqb p1 p2) (bind_info_eqb b1 b2))
              (term_eqb t5 t6)) tbs1 tbs2)
      | _ -> false)
   | Teps p ->
-    let (p0, t3) = p in
-    let (v1, b1) = p0 in
+    let p0,t3 = p in
+    let v1,b1 = p0 in
     (match t2 with
      | Teps p1 ->
-       let (p2, t4) = p1 in
-       let (v2, b2) = p2 in
+       let p2,t4 = p1 in
+       let v2,b2 = p2 in
        (&&) ((&&) (vsymbol_eqb v1 v2) (bind_info_eqb b1 b2)) (term_eqb t3 t4)
      | _ -> false)
   | Tquant (q1, p) ->
-    let (p0, t3) = p in
-    let (p1, tr1) = p0 in
-    let (l1, b1) = p1 in
+    let p0,t3 = p in
+    let p1,tr1 = p0 in
+    let l1,b1 = p1 in
     (match t2 with
      | Tquant (q2, p2) ->
-       let (p3, t4) = p2 in
-       let (p4, tr2) = p3 in
-       let (l2, b2) = p4 in
+       let p3,t4 = p2 in
+       let p4,tr2 = p3 in
+       let l2,b2 = p4 in
        (&&)
          ((&&)
            ((&&) ((&&) (quant_eqb q1 q2) (list_eqb vsymbol_eqb l1 l2))
@@ -489,30 +489,30 @@ and term_node_eqb t1 t2 =
 (** val term_bound_eqb : term_bound -> term_bound -> bool **)
 
 let term_bound_eqb t1 t2 =
-  let (p, t3) = t1 in
-  let (v1, b1) = p in
-  let (p0, t4) = t2 in
-  let (v2, b2) = p0 in
+  let p,t3 = t1 in
+  let v1,b1 = p in
+  let p0,t4 = t2 in
+  let v2,b2 = p0 in
   (&&) ((&&) (vsymbol_eqb v1 v2) (bind_info_eqb b1 b2)) (term_eqb t3 t4)
 
 (** val term_branch_eqb : term_branch -> term_branch -> bool **)
 
 let term_branch_eqb tb1 tb2 =
-  let (p, t1) = tb1 in
-  let (p1, b1) = p in
-  let (p0, t2) = tb2 in
-  let (p2, b2) = p0 in
+  let p,t1 = tb1 in
+  let p1,b1 = p in
+  let p0,t2 = tb2 in
+  let p2,b2 = p0 in
   (&&) ((&&) (pattern_eqb p1 p2) (bind_info_eqb b1 b2)) (term_eqb t1 t2)
 
 (** val term_quant_eqb : term_quant -> term_quant -> bool **)
 
 let term_quant_eqb tq1 tq2 =
-  let (p, t1) = tq1 in
-  let (p0, tr1) = p in
-  let (vs1, b1) = p0 in
-  let (p1, t2) = tq2 in
-  let (p2, tr2) = p1 in
-  let (vs2, b2) = p2 in
+  let p,t1 = tq1 in
+  let p0,tr1 = p in
+  let vs1,b1 = p0 in
+  let p1,t2 = tq2 in
+  let p2,tr2 = p1 in
+  let vs2,b2 = p2 in
   (&&)
     ((&&) ((&&) (list_eqb vsymbol_eqb vs1 vs2) (bind_info_eqb b1 b2))
       (list_eqb (list_eqb term_eqb) tr1 tr2)) (term_eqb t1 t2)
@@ -666,11 +666,11 @@ let rec fold_left2_errorHashcons f accu l1 l2 =
   match l1 with
   | [] -> (match l2 with
            | [] ->  ( (Some accu))
-           | _ :: _ ->  ( None))
-  | a1 :: l3 ->
+           | _::_ ->  ( None))
+  | a1::l3 ->
     (match l2 with
      | [] ->  ( None)
-     | a2 :: l4 ->
+     | a2::l4 ->
        (@@) (fun x -> fold_left2_errorHashcons f x l3 l4) (f accu a1 a2))
 
 (** val pat_app :
@@ -687,7 +687,7 @@ let pat_app fs pl t0 =
            if BigInt.is_zero fs.ls_constr
            then raise (ConstructorExpected fs)
            else pat_app_aux fs pl t0
-         | None -> raise (BadArity (fs, (int_length pl)))))
+         | None -> raise (BadArity (fs,(int_length pl)))))
       (fold_left2_errorHashcons mtch s fs.ls_args pl))
     (match fs.ls_value with
      | Some vty -> ty_match Mtv.empty vty t0
@@ -815,11 +815,11 @@ let rec fold_left2_def f d1 d2 l1 l2 acc =
   match l1 with
   | [] -> (match l2 with
            | [] -> acc
-           | _ :: _ -> d1)
-  | x1 :: t1 ->
+           | _::_ -> d1)
+  | x1::t1 ->
     (match l2 with
      | [] -> d2
-     | x2 :: t2 -> fold_left2_def f d1 d2 t1 t2 (f acc x1 x2))
+     | x2::t2 -> fold_left2_def f d1 d2 t1 t2 (f acc x1 x2))
 
 (** val or_cmp_vsym :
     BigInt.t Mvs.t -> BigInt.t Mvs.t -> vsymbol -> vsymbol -> Stdlib.Int.t **)
@@ -874,67 +874,68 @@ let rec or_cmp bv1 bv2 q1 q2 =
      | _ -> Stdlib.Int.one)
 
 (** val pat_compare :
-    ((BigInt.t * BigInt.t Mvs.t) * BigInt.t Mvs.t) ->
-    (pattern_node pattern_o) -> (pattern_node pattern_o) ->
-    ((Stdlib.Int.t * BigInt.t) * BigInt.t Mvs.t) * BigInt.t Mvs.t **)
+    ((BigInt.t*BigInt.t Mvs.t)*BigInt.t Mvs.t) -> (pattern_node pattern_o) ->
+    (pattern_node pattern_o) -> ((Stdlib.Int.t*BigInt.t)*BigInt.t
+    Mvs.t)*BigInt.t Mvs.t **)
 
 let rec pat_compare state p1 p2 =
-  let (p, bv2) = state in
-  let (bnd, bv1) = p in
+  let p,bv2 = state in
+  let bnd,bv1 = p in
   (match pat_node p1 with
    | Pwild ->
      (match pat_node p2 with
-      | Pwild -> (((Stdlib.Int.zero, bnd), bv1), bv2)
-      | _ -> (((Stdlib.Int.minus_one, bnd), bv1), bv2))
+      | Pwild -> ((Stdlib.Int.zero,bnd),bv1),bv2
+      | _ -> ((Stdlib.Int.minus_one,bnd),bv1),bv2)
    | Pvar v1 ->
      (match pat_node p2 with
-      | Pwild -> (((Stdlib.Int.one, bnd), bv1), bv2)
+      | Pwild -> ((Stdlib.Int.one,bnd),bv1),bv2
       | Pvar v2 ->
-        (((Stdlib.Int.zero, (BigInt.succ bnd)), (Mvs.add v1 bnd bv1)),
-          (Mvs.add v2 bnd bv2))
-      | _ -> (((Stdlib.Int.minus_one, bnd), bv1), bv2))
+        ((Stdlib.Int.zero,(BigInt.succ bnd)),(Mvs.add v1 bnd bv1)),(Mvs.add
+                                                                    v2 bnd
+                                                                    bv2)
+      | _ -> ((Stdlib.Int.minus_one,bnd),bv1),bv2)
    | Papp (s1, l1) ->
      (match pat_node p2 with
-      | Pwild -> (((Stdlib.Int.one, bnd), bv1), bv2)
-      | Pvar _ -> (((Stdlib.Int.one, bnd), bv1), bv2)
+      | Pwild -> ((Stdlib.Int.one,bnd),bv1),bv2
+      | Pvar _ -> ((Stdlib.Int.one,bnd),bv1),bv2
       | Papp (s2, l2) ->
         let i1 = ls_compare s1 s2 in
-        let (p0, sm2) = state in
-        let (sbnd, sm1) = p0 in
-        let (p3, bv3) =
+        let p0,sm2 = state in
+        let sbnd,sm1 = p0 in
+        let p3,bv3 =
           fold_left2_def (fun acc p3 p4 ->
-            let (y, m2) = acc in
-            let (y0, m1) = y in
-            let (i, bnd1) = y0 in
-            let (p5, m2') = pat_compare ((bnd1, m1), m2) p3 p4 in
-            let (p6, m1') = p5 in
-            let (j, bnd2) = p6 in ((((lex_comp i j), bnd2), m1'), m2'))
-            (((Stdlib.Int.minus_one, sbnd), sm1), sm2) (((Stdlib.Int.one,
-            sbnd), sm1), sm2) l1 l2 (((Stdlib.Int.zero, sbnd), sm1), sm2)
+            let y,m2 = acc in
+            let y0,m1 = y in
+            let i,bnd1 = y0 in
+            let p5,m2' = pat_compare ((bnd1,m1),m2) p3 p4 in
+            let p6,m1' = p5 in
+            let j,bnd2 = p6 in (((lex_comp i j),bnd2),m1'),m2')
+            (((Stdlib.Int.minus_one,sbnd),sm1),sm2)
+            (((Stdlib.Int.one,sbnd),sm1),sm2) l1 l2
+            (((Stdlib.Int.zero,sbnd),sm1),sm2)
         in
-        let (p4, bv4) = p3 in
-        let (i2, bnd0) = p4 in ((((lex_comp i1 i2), bnd0), bv4), bv3)
-      | _ -> (((Stdlib.Int.minus_one, bnd), bv1), bv2))
+        let p4,bv4 = p3 in
+        let i2,bnd0 = p4 in (((lex_comp i1 i2),bnd0),bv4),bv3
+      | _ -> ((Stdlib.Int.minus_one,bnd),bv1),bv2)
    | Por (p3, q1) ->
      (match pat_node p2 with
       | Por (p4, q2) ->
-        let (p0, bv3) = pat_compare state p3 p4 in
-        let (p5, bv4) = p0 in
-        let (i1, bnd1) = p5 in
+        let p0,bv3 = pat_compare state p3 p4 in
+        let p5,bv4 = p0 in
+        let i1,bnd1 = p5 in
         if negb ((fun x -> Stdlib.Int.equal x Stdlib.Int.zero) i1)
-        then (((i1, bnd1), bv4), bv3)
-        else let i2 = or_cmp bv4 bv4 q1 q2 in (((i2, bnd1), bv4), bv3)
-      | Pas (_, _) -> (((Stdlib.Int.minus_one, bnd), bv1), bv2)
-      | _ -> (((Stdlib.Int.one, bnd), bv1), bv2))
+        then ((i1,bnd1),bv4),bv3
+        else let i2 = or_cmp bv4 bv4 q1 q2 in ((i2,bnd1),bv4),bv3
+      | Pas (_, _) -> ((Stdlib.Int.minus_one,bnd),bv1),bv2
+      | _ -> ((Stdlib.Int.one,bnd),bv1),bv2)
    | Pas (p3, v1) ->
      (match pat_node p2 with
       | Pas (p4, v2) ->
-        let (p0, bv3) = pat_compare state p3 p4 in
-        let (p5, bv4) = p0 in
-        let (i1, bnd0) = p5 in
-        (((i1, (BigInt.succ bnd0)), (Mvs.add v1 bnd0 bv4)),
-        (Mvs.add v2 bnd0 bv3))
-      | _ -> (((Stdlib.Int.one, bnd), bv1), bv2)))
+        let p0,bv3 = pat_compare state p3 p4 in
+        let p5,bv4 = p0 in
+        let i1,bnd0 = p5 in
+        ((i1,(BigInt.succ bnd0)),(Mvs.add v1 bnd0 bv4)),(Mvs.add v2 bnd0 bv3)
+      | _ -> ((Stdlib.Int.one,bnd),bv1),bv2))
 
 (** val list_compare :
     ('a1 -> 'a2 -> Stdlib.Int.t) -> 'a1 list -> 'a2 list -> Stdlib.Int.t **)
@@ -1003,16 +1004,16 @@ let rec t_compare_aux trigger0 attr loc const bnd vml1 vml2 t1 t2 =
                        e2))
               | _ -> Stdlib.Int.minus_one)
            | Tlet (t3, p) ->
-             let (p0, e1) = p in
-             let (v1, _) = p0 in
+             let p0,e1 = p in
+             let v1,_ = p0 in
              (match t_node t2 with
               | Tvar _ -> Stdlib.Int.one
               | Tconst _ -> Stdlib.Int.one
               | Tapp (_, _) -> Stdlib.Int.one
               | Tif (_, _, _) -> Stdlib.Int.one
               | Tlet (t4, p1) ->
-                let (p2, e2) = p1 in
-                let (v2, _) = p2 in
+                let p2,e2 = p1 in
+                let v2,_ = p2 in
                 let i4 =
                   t_compare_aux trigger0 attr loc const bnd vml1 vml2 t3 t4
                 in
@@ -1035,15 +1036,14 @@ let rec t_compare_aux trigger0 attr loc const bnd vml1 vml2 t1 t2 =
                 in
                 lex_comp i4
                   (let b_compare = fun x1 x2 ->
-                     let (y, t5) = x1 in
-                     let (p1, _) = y in
-                     let (y0, t6) = x2 in
-                     let (p2, _) = y0 in
-                     let (p, bv2) =
-                       pat_compare ((bnd, Mvs.empty), Mvs.empty) p1 p2
+                     let y,t5 = x1 in
+                     let p1,_ = y in
+                     let y0,t6 = x2 in
+                     let p2,_ = y0 in
+                     let p,bv2 = pat_compare ((bnd,Mvs.empty),Mvs.empty) p1 p2
                      in
-                     let (p0, bv1) = p in
-                     let (ip, bnd0) = p0 in
+                     let p0,bv1 = p in
+                     let ip,bnd0 = p0 in
                      lex_comp ip
                        (let vml3 = Mvs.union (fun _ n1 _ -> Some n1) bv1 vml1
                         in
@@ -1055,12 +1055,12 @@ let rec t_compare_aux trigger0 attr loc const bnd vml1 vml2 t1 t2 =
                    list_compare b_compare bl1 bl2)
               | _ -> Stdlib.Int.minus_one)
            | Teps p ->
-             let (p0, e1) = p in
-             let (v1, _) = p0 in
+             let p0,e1 = p in
+             let v1,_ = p0 in
              (match t_node t2 with
               | Teps p1 ->
-                let (p2, e2) = p1 in
-                let (v2, _) = p2 in
+                let p2,e2 = p1 in
+                let v2,_ = p2 in
                 let vml3 = Mvs.add v1 bnd vml1 in
                 let vml4 = Mvs.add v2 bnd vml2 in
                 t_compare_aux trigger0 attr loc const (BigInt.succ bnd) vml3
@@ -1072,29 +1072,30 @@ let rec t_compare_aux trigger0 attr loc const bnd vml1 vml2 t1 t2 =
               | Tfalse -> Stdlib.Int.minus_one
               | _ -> Stdlib.Int.one)
            | Tquant (q1, p) ->
-             let (p0, f1) = p in
-             let (p1, tr1) = p0 in
-             let (vl1, _) = p1 in
+             let p0,f1 = p in
+             let p1,tr1 = p0 in
+             let vl1,_ = p1 in
              (match t_node t2 with
               | Tquant (q2, p2) ->
-                let (p3, f2) = p2 in
-                let (p4, tr2) = p3 in
-                let (vl2, _) = p4 in
+                let p3,f2 = p2 in
+                let p4,tr2 = p3 in
+                let vl2,_ = p4 in
                 let i4 = quant_compare q1 q2 in
                 lex_comp i4
                   (let add0 = fun bnd0 bv1 bv2 vl3 vl4 ->
                      fold_left2_def (fun acc v1 v2 ->
-                       let (y, bv3) = acc in
-                       let (y0, bv4) = y in
-                       let (val0, bnd1) = y0 in
-                       (((val0, (BigInt.succ bnd1)), (Mvs.add v1 bnd1 bv4)),
-                       (Mvs.add v2 bnd1 bv3))) (((Stdlib.Int.minus_one,
-                       bnd0), bv1), bv2) (((Stdlib.Int.one, bnd0), bv1), bv2)
-                       vl3 vl4 (((Stdlib.Int.zero, bnd0), bv1), bv2)
+                       let y,bv3 = acc in
+                       let y0,bv4 = y in
+                       let val0,bnd1 = y0 in
+                       ((val0,(BigInt.succ bnd1)),(Mvs.add v1 bnd1 bv4)),
+                       (Mvs.add v2 bnd1 bv3))
+                       (((Stdlib.Int.minus_one,bnd0),bv1),bv2)
+                       (((Stdlib.Int.one,bnd0),bv1),bv2) vl3 vl4
+                       (((Stdlib.Int.zero,bnd0),bv1),bv2)
                    in
-                   let (p5, bv2) = add0 bnd Mvs.empty Mvs.empty vl1 vl2 in
-                   let (p6, bv1) = p5 in
-                   let (i5, bnd0) = p6 in
+                   let p5,bv2 = add0 bnd Mvs.empty Mvs.empty vl1 vl2 in
+                   let p6,bv1 = p5 in
+                   let i5,bnd0 = p6 in
                    lex_comp i5
                      (let vml3 = Mvs.union (fun _ n1 _ -> Some n1) bv1 vml1 in
                       let vml4 = Mvs.union (fun _ n1 _ -> Some n1) bv2 vml2 in
@@ -1243,26 +1244,26 @@ let rec or_hash bv q =
 
 (** val pat_hash :
     BigInt.t -> BigInt.t Mvs.t -> (pattern_node pattern_o) ->
-    (BigInt.t * BigInt.t Mvs.t) * BigInt.t **)
+    (BigInt.t*BigInt.t Mvs.t)*BigInt.t **)
 
 let rec pat_hash bnd bv p =
   match pat_node p with
-  | Pwild -> ((bnd, bv), BigInt.zero)
-  | Pvar v -> (((BigInt.succ bnd), (Mvs.add v bnd bv)), (BigInt.succ bnd))
+  | Pwild -> (bnd,bv),BigInt.zero
+  | Pvar v -> ((BigInt.succ bnd),(Mvs.add v bnd bv)),(BigInt.succ bnd)
   | Papp (s, l) ->
     fold_left (fun acc p0 ->
-      let (y, h) = acc in
-      let (bnd0, bv0) = y in
-      let (p1, hp) = pat_hash bnd0 bv0 p0 in (p1, (combine_big h hp))) l
-      ((bnd, bv), (ls_hash s))
+      let y,h = acc in
+      let bnd0,bv0 = y in
+      let p1,hp = pat_hash bnd0 bv0 p0 in p1,(combine_big h hp)) l
+      ((bnd,bv),(ls_hash s))
   | Por (p0, q) ->
-    let (p1, hp) = pat_hash bnd bv p0 in
-    let (bnd1, bv1) = p1 in ((bnd1, bv1), (combine_big hp (or_hash bv1 q)))
+    let p1,hp = pat_hash bnd bv p0 in
+    let bnd1,bv1 = p1 in (bnd1,bv1),(combine_big hp (or_hash bv1 q))
   | Pas (p0, v) ->
-    let (p1, hp) = pat_hash bnd bv p0 in
-    let (bnd1, _) = p1 in
-    (((BigInt.succ bnd1), (Mvs.add v bnd bv)),
-    (combine_big hp (BigInt.succ bnd1)))
+    let p1,hp = pat_hash bnd bv p0 in
+    let bnd1,_ = p1 in
+    ((BigInt.succ bnd1),(Mvs.add v bnd bv)),(combine_big hp
+                                              (BigInt.succ bnd1))
 
 (** val q_hash : quant -> BigInt.t **)
 
@@ -1309,34 +1310,34 @@ let rec t_hash_aux trigger0 attr const bnd vml t0 =
          (t_hash_aux trigger0 attr const bnd vml t1)
          (t_hash_aux trigger0 attr const bnd vml e)
      | Tlet (t1, p) ->
-       let (p0, e) = p in
-       let (v, _) = p0 in
+       let p0,e = p in
+       let v,_ = p0 in
        combine_big (t_hash_aux trigger0 attr const bnd vml t1)
          (t_hash_aux trigger0 attr const (BigInt.succ bnd)
            (Mvs.add v bnd vml) e)
      | Tcase (_, bl) ->
        let b_hash = fun x ->
-         let (y, t1) = x in
-         let (p, _) = y in
-         let (p0, hp) = pat_hash bnd Mvs.empty p in
-         let (bnd0, bv) = p0 in
+         let y,t1 = x in
+         let p,_ = y in
+         let p0,hp = pat_hash bnd Mvs.empty p in
+         let bnd0,bv = p0 in
          let vml0 = Mvs.union (fun _ n1 _ -> Some n1) bv vml in
          combine_big hp (t_hash_aux trigger0 attr const bnd0 vml0 t1)
        in
        combine_big_list b_hash h bl
      | Teps p ->
-       let (p0, e) = p in
-       let (v, _) = p0 in
+       let p0,e = p in
+       let v,_ = p0 in
        t_hash_aux trigger0 attr const (BigInt.succ bnd) (Mvs.add v bnd vml) e
      | Tquant (q, p) ->
-       let (p0, f) = p in
-       let (p1, tr) = p0 in
-       let (vl, _) = p1 in
+       let p0,f = p in
+       let p1,tr = p0 in
+       let vl,_ = p1 in
        let h0 = q_hash q in
-       let (bnd0, bv) =
+       let bnd0,bv =
          fold_left (fun acc v ->
-           let (bnd0, bv) = acc in ((BigInt.succ bnd0), (Mvs.add v bnd0 bv)))
-           vl (bnd, Mvs.empty)
+           let bnd0,bv = acc in (BigInt.succ bnd0),(Mvs.add v bnd0 bv)) vl
+           (bnd,Mvs.empty)
        in
        let vml0 = Mvs.union (fun _ n1 _ -> Some n1) bv vml in
        let h2 =
@@ -1441,7 +1442,7 @@ let tr_fold fn acc l =
   fold_left (fun acc0 tms -> fold_left fn tms acc0) l acc
 
 (** val tr_map_fold :
-    ('a1 -> 'a2 -> 'a1 * 'a3) -> 'a1 -> 'a2 list list -> 'a1 * 'a3 list list **)
+    ('a1 -> 'a2 -> 'a1*'a3) -> 'a1 -> 'a2 list list -> 'a1*'a3 list list **)
 
 let tr_map_fold fn =
   map_fold_left (map_fold_left fn)
@@ -1452,10 +1453,10 @@ let vars_union s1 s2 =
   Mvs.union (fun _ m n -> Some (BigInt.add m n)) s1 s2
 
 (** val add_b_vars :
-    BigInt.t Mvs.t -> (('a1 * bind_info) * 'a2) -> BigInt.t Mvs.t **)
+    BigInt.t Mvs.t -> (('a1*bind_info)*'a2) -> BigInt.t Mvs.t **)
 
 let add_b_vars s = function
-| (p, _) -> let (_, b) = p in vars_union s b.bv_vars
+| p,_ -> let _,b = p in vars_union s b.bv_vars
 
 (** val t_vars : (term_node term_o) -> BigInt.t Mvs.t **)
 
@@ -1468,9 +1469,9 @@ let rec t_vars t0 =
     vars_union (vars_union (t_vars f) (t_vars t1)) (t_vars e)
   | Tlet (t1, bt) -> add_b_vars (t_vars t1) bt
   | Tcase (t1, bl) -> fold_left add_b_vars bl (t_vars t1)
-  | Teps p -> let (p0, _) = p in let (_, b) = p0 in b.bv_vars
+  | Teps p -> let p0,_ = p in let _,b = p0 in b.bv_vars
   | Tquant (_, p) ->
-    let (p0, _) = p in let (p1, _) = p0 in let (_, b) = p1 in b.bv_vars
+    let p0,_ = p in let p1,_ = p0 in let _,b = p1 in b.bv_vars
   | Tbinop (_, f1, f2) -> vars_union (t_vars f1) (t_vars f2)
   | Tnot f -> t_vars f
   | _ -> Mvs.empty
@@ -1511,7 +1512,7 @@ let t_if1 f t1 t2 =
   mk_term (Tif (f, t1, t2)) (t_ty t2)
 
 (** val t_let1 :
-    (term_node term_o) -> ((vsymbol * bind_info) * (term_node term_o)) ->
+    (term_node term_o) -> ((vsymbol*bind_info)*(term_node term_o)) ->
     ty_node_c ty_o option -> (term_node term_o) **)
 
 let t_let1 t1 bt t0 =
@@ -1519,22 +1520,22 @@ let t_let1 t1 bt t0 =
 
 (** val t_case1 :
     (term_node term_o) ->
-    (((pattern_node pattern_o) * bind_info) * (term_node term_o)) list ->
+    (((pattern_node pattern_o)*bind_info)*(term_node term_o)) list ->
     ty_node_c ty_o option -> (term_node term_o) **)
 
 let t_case1 t1 bl t0 =
   mk_term (Tcase (t1, bl)) t0
 
 (** val t_eps1 :
-    ((vsymbol * bind_info) * (term_node term_o)) -> ty_node_c ty_o option ->
+    ((vsymbol*bind_info)*(term_node term_o)) -> ty_node_c ty_o option ->
     (term_node term_o) **)
 
 let t_eps1 bf t0 =
   mk_term (Teps bf) t0
 
 (** val t_quant1 :
-    quant -> (((vsymbol list * bind_info) * (term_node term_o) list
-    list) * (term_node term_o)) -> (term_node term_o) **)
+    quant -> (((vsymbol list*bind_info)*(term_node term_o) list
+    list)*(term_node term_o)) -> (term_node term_o) **)
 
 let t_quant1 q qf =
   mk_term (Tquant (q, qf)) None
@@ -1591,11 +1592,10 @@ let t_attr_copy s t0 =
        (fun (a, b, c, d) -> build_term_o a b c d) ((t_node t0), (t_ty t0),
        attrs, loc)
 
-(** val bound_map :
-    ('a1 -> 'a2) -> (('a3 * 'a4) * 'a1) -> ('a3 * 'a4) * 'a2 **)
+(** val bound_map : ('a1 -> 'a2) -> (('a3*'a4)*'a1) -> ('a3*'a4)*'a2 **)
 
 let bound_map f = function
-| (p, e) -> (p, (f e))
+| p,e -> p,(f e)
 
 (** val t_map_unsafe :
     ((term_node term_o) -> (term_node term_o)) -> (term_node term_o) ->
@@ -1610,26 +1610,26 @@ let t_map_unsafe fn t0 =
      | Tcase (e, bl) -> t_case1 (fn e) (map (bound_map fn) bl) (t_ty t0)
      | Teps b -> t_eps1 (bound_map fn b) (t_ty t0)
      | Tquant (q, p) ->
-       let (p0, f) = p in
-       let (p1, tl) = p0 in t_quant1 q ((p1, (tr_map fn tl)), (fn f))
+       let p0,f = p in
+       let p1,tl = p0 in t_quant1 q ((p1,(tr_map fn tl)),(fn f))
      | Tbinop (op, f1, f2) -> t_binary1 op (fn f1) (fn f2)
      | Tnot f1 -> t_not1 (fn f1)
      | _ -> t0)
 
 (** val bound_map_ctr :
-    ('a1 -> (BigInt.t, 'a2) st) -> (('a3 * 'a4) * 'a1) -> (BigInt.t,
-    ('a3 * 'a4) * 'a2) st **)
+    ('a1 -> (BigInt.t, 'a2) st) -> (('a3*'a4)*'a1) -> (BigInt.t,
+    ('a3*'a4)*'a2) st **)
 
 let bound_map_ctr f = function
-| (p, e) -> (@@) (fun e1 -> (fun x -> x) (p, e1)) (f e)
+| p,e -> (@@) (fun e1 -> (fun x -> x) (p,e1)) (f e)
 
 (** val st_tr :
     (BigInt.t, 'a1) st list list -> (BigInt.t, 'a1 list list) st **)
 
 let rec st_tr = function
 | [] -> (fun x -> x) []
-| l1 :: tl ->
-  (@@) (fun l2 -> (@@) (fun tl2 -> (fun x -> x) (l2 :: tl2)) (st_tr tl))
+| l1::tl ->
+  (@@) (fun l2 -> (@@) (fun tl2 -> (fun x -> x) (l2::tl2)) (st_tr tl))
     (st_list l1)
 
 (** val t_map_ctr_unsafe :
@@ -1659,10 +1659,10 @@ let t_map_ctr_unsafe fn t0 =
        (@@) (fun b1 -> (fun x -> x) (t_eps1 b1 (t_ty t0)))
          (bound_map_ctr fn b)
      | Tquant (q, p) ->
-       let (p0, f) = p in
-       let (p1, tl) = p0 in
+       let p0,f = p in
+       let p1,tl = p0 in
        (@@) (fun l ->
-         (@@) (fun f1 -> (fun x -> x) (t_quant1 q ((p1, l), f1))) (fn f))
+         (@@) (fun f1 -> (fun x -> x) (t_quant1 q ((p1,l),f1))) (fn f))
          (st_tr (tr_map fn tl))
      | Tbinop (op, f1, f2) ->
        (@@) (fun f1' ->
@@ -1671,11 +1671,10 @@ let t_map_ctr_unsafe fn t0 =
      | Tnot f1 -> (@@) (fun f1' -> (fun x -> x) (t_not1 f1')) (fn f1)
      | _ -> (fun x -> x) t0)
 
-(** val bound_fold :
-    ('a1 -> 'a2 -> 'a3) -> 'a1 -> (('a4 * 'a5) * 'a2) -> 'a3 **)
+(** val bound_fold : ('a1 -> 'a2 -> 'a3) -> 'a1 -> (('a4*'a5)*'a2) -> 'a3 **)
 
 let bound_fold fn acc = function
-| (_, e) -> fn acc e
+| _,e -> fn acc e
 
 (** val t_fold_unsafe :
     ('a1 -> (term_node term_o) -> 'a1) -> 'a1 -> (term_node term_o) -> 'a1 **)
@@ -1688,55 +1687,52 @@ let t_fold_unsafe fn acc t0 =
   | Tcase (e, bl) -> fold_left (bound_fold fn) bl (fn acc e)
   | Teps b -> bound_fold fn acc b
   | Tquant (_, p) ->
-    let (p0, f1) = p in let (_, tl) = p0 in fn (tr_fold fn acc tl) f1
+    let p0,f1 = p in let _,tl = p0 in fn (tr_fold fn acc tl) f1
   | Tbinop (_, f1, f2) -> fn (fn acc f1) f2
   | Tnot f1 -> fn acc f1
   | _ -> acc
 
 (** val bound_map_fold :
-    ('a1 -> 'a2 -> 'a3 * 'a4) -> 'a1 -> (('a5 * 'a6) * 'a2) ->
-    'a3 * (('a5 * 'a6) * 'a4) **)
+    ('a1 -> 'a2 -> 'a3*'a4) -> 'a1 -> (('a5*'a6)*'a2) -> 'a3*(('a5*'a6)*'a4) **)
 
 let bound_map_fold fn acc = function
-| (p, e) -> let (acc0, e0) = fn acc e in (acc0, (p, e0))
+| p,e -> let acc0,e0 = fn acc e in acc0,(p,e0)
 
 (** val t_map_fold_unsafe :
-    ('a1 -> (term_node term_o) -> 'a1 * (term_node term_o)) -> 'a1 ->
-    (term_node term_o) -> 'a1 * (term_node term_o) **)
+    ('a1 -> (term_node term_o) -> 'a1*(term_node term_o)) -> 'a1 ->
+    (term_node term_o) -> 'a1*(term_node term_o) **)
 
 let t_map_fold_unsafe fn acc t0 =
   match t_node t0 with
   | Tapp (f, tl) ->
-    let (acc0, sl) = map_fold_left fn acc tl in
-    (acc0, (t_attr_copy t0 (t_app1 f sl (t_ty t0))))
+    let acc0,sl = map_fold_left fn acc tl in
+    acc0,(t_attr_copy t0 (t_app1 f sl (t_ty t0)))
   | Tif (f, t1, t2) ->
-    let (acc0, g) = fn acc f in
-    let (acc1, s1) = fn acc0 t1 in
-    let (acc2, s2) = fn acc1 t2 in (acc2, (t_attr_copy t0 (t_if1 g s1 s2)))
+    let acc0,g = fn acc f in
+    let acc1,s1 = fn acc0 t1 in
+    let acc2,s2 = fn acc1 t2 in acc2,(t_attr_copy t0 (t_if1 g s1 s2))
   | Tlet (e, b) ->
-    let (acc0, e0) = fn acc e in
-    let (acc1, b0) = bound_map_fold fn acc0 b in
-    (acc1, (t_attr_copy t0 (t_let1 e0 b0 (t_ty t0))))
+    let acc0,e0 = fn acc e in
+    let acc1,b0 = bound_map_fold fn acc0 b in
+    acc1,(t_attr_copy t0 (t_let1 e0 b0 (t_ty t0)))
   | Tcase (e, bl) ->
-    let (acc0, e0) = fn acc e in
-    let (acc1, bl0) = map_fold_left (bound_map_fold fn) acc0 bl in
-    (acc1, (t_attr_copy t0 (t_case1 e0 bl0 (t_ty t0))))
+    let acc0,e0 = fn acc e in
+    let acc1,bl0 = map_fold_left (bound_map_fold fn) acc0 bl in
+    acc1,(t_attr_copy t0 (t_case1 e0 bl0 (t_ty t0)))
   | Teps b ->
-    let (acc0, b0) = bound_map_fold fn acc b in
-    (acc0, (t_attr_copy t0 (t_eps1 b0 (t_ty t0))))
+    let acc0,b0 = bound_map_fold fn acc b in
+    acc0,(t_attr_copy t0 (t_eps1 b0 (t_ty t0)))
   | Tquant (q, p) ->
-    let (p0, f1) = p in
-    let (p1, tl) = p0 in
-    let (acc0, tl0) = tr_map_fold fn acc tl in
-    let (acc1, f2) = fn acc0 f1 in
-    (acc1, (t_attr_copy t0 (t_quant1 q ((p1, tl0), f2))))
+    let p0,f1 = p in
+    let p1,tl = p0 in
+    let acc0,tl0 = tr_map_fold fn acc tl in
+    let acc1,f2 = fn acc0 f1 in
+    acc1,(t_attr_copy t0 (t_quant1 q ((p1,tl0),f2)))
   | Tbinop (op, f1, f2) ->
-    let (acc0, g1) = fn acc f1 in
-    let (acc1, g2) = fn acc0 f2 in
-    (acc1, (t_attr_copy t0 (t_binary1 op g1 g2)))
-  | Tnot f1 ->
-    let (acc0, g1) = fn acc f1 in (acc0, (t_attr_copy t0 (t_not1 g1)))
-  | _ -> (acc, t0)
+    let acc0,g1 = fn acc f1 in
+    let acc1,g2 = fn acc0 f2 in acc1,(t_attr_copy t0 (t_binary1 op g1 g2))
+  | Tnot f1 -> let acc0,g1 = fn acc f1 in acc0,(t_attr_copy t0 (t_not1 g1))
+  | _ -> acc,t0
 
 (** val fresh_vsymbol : vsymbol -> (BigInt.t, vsymbol) st **)
 
@@ -1745,10 +1741,10 @@ let fresh_vsymbol v =
 
 (** val vs_rename :
     (term_node term_o) Mvs.t -> vsymbol -> (BigInt.t, (term_node term_o)
-    Mvs.t * vsymbol) st **)
+    Mvs.t*vsymbol) st **)
 
 let vs_rename h v =
-  (@@) (fun u -> (fun x -> x) ((Mvs.add v (t_var u) h), u)) (fresh_vsymbol v)
+  (@@) (fun u -> (fun x -> x) ((Mvs.add v (t_var u) h),u)) (fresh_vsymbol v)
 
 (** val bnd_new : BigInt.t Mvs.t -> bind_info **)
 
@@ -1756,78 +1752,76 @@ let bnd_new s =
   { bv_vars = s }
 
 (** val t_close_bound :
-    vsymbol -> (term_node term_o) ->
-    (vsymbol * bind_info) * (term_node term_o) **)
+    vsymbol -> (term_node term_o) -> (vsymbol*bind_info)*(term_node term_o) **)
 
 let t_close_bound v t0 =
-  ((v, (bnd_new (Mvs.remove v (t_vars t0)))), t0)
+  (v,(bnd_new (Mvs.remove v (t_vars t0)))),t0
 
 (** val add_vars : vsymbol list -> (BigInt.t, vsymbol Mvs.t) st **)
 
 let rec add_vars = function
 | [] -> (fun x -> x) Mvs.empty
-| v :: vs ->
+| v::vs ->
   (@@) (fun v1 ->
     (@@) (fun m -> (fun x -> x) (Mvs.add v v1 m)) (add_vars vs))
     (fresh_vsymbol v)
 
 (** val pat_rename :
     (term_node term_o) Mvs.t -> (pattern_node pattern_o) -> (BigInt.t,
-    (term_node term_o) Mvs.t * (pattern_node pattern_o)) st **)
+    (term_node term_o) Mvs.t*(pattern_node pattern_o)) st **)
 
 let pat_rename h p =
   (@@) (fun m ->
     let p0 = pat_rename_all m p in
-    (fun x -> x) ((Mvs.union (fun _ _ t0 -> Some t0) h (Mvs.map t_var m)), p0))
+    (fun x -> x) ((Mvs.union (fun _ _ t0 -> Some t0) h (Mvs.map t_var m)),p0))
     (add_vars (Svs.elements (pat_vars p)))
 
 (** val t_close_branch :
     (pattern_node pattern_o) -> (term_node term_o) ->
-    ((pattern_node pattern_o) * bind_info) * (term_node term_o) **)
+    ((pattern_node pattern_o)*bind_info)*(term_node term_o) **)
 
 let t_close_branch p t0 =
-  ((p, (bnd_new (Mvs.set_diff (t_vars t0) (pat_vars p)))), t0)
+  (p,(bnd_new (Mvs.set_diff (t_vars t0) (pat_vars p)))),t0
 
 (** val t_close_quant_unsafe :
     vsymbol list -> (term_node term_o) list list -> (term_node term_o) ->
-    ((vsymbol list * bind_info) * (term_node term_o) list
-    list) * (term_node term_o) **)
+    ((vsymbol list*bind_info)*(term_node term_o) list list)*(term_node term_o) **)
 
 let t_close_quant_unsafe vl tl f =
   let del_v = fun s v -> Mvs.remove v s in
   let s = tr_fold add_t_vars (t_vars f) tl in
-  let s0 = fold_left del_v vl s in (((vl, (bnd_new s0)), tl), f)
+  let s0 = fold_left del_v vl s in ((vl,(bnd_new s0)),tl),f
 
 (** val t_close_quant :
     vsymbol list -> (term_node term_o) list list -> (term_node term_o) ->
-    (((vsymbol list * bind_info) * (term_node term_o) list
-    list) * (term_node term_o)) errorM **)
+    (((vsymbol list*bind_info)*(term_node term_o) list
+    list)*(term_node term_o)) errorM **)
 
 let t_close_quant vl tl f =
-  let (p, f0) = t_close_quant_unsafe vl tl f in
-  (@@) (fun p0 ->  (p, p0)) (t_prop f0)
+  let p,f0 = t_close_quant_unsafe vl tl f in
+  (@@) (fun p0 ->  (p,p0)) (t_prop f0)
 
 (** val vl_rename_aux :
-    vsymbol list -> (BigInt.t, (term_node term_o) Mvs.t * vsymbol list) st ->
-    (BigInt.t, (term_node term_o) Mvs.t * vsymbol list) st **)
+    vsymbol list -> (BigInt.t, (term_node term_o) Mvs.t*vsymbol list) st ->
+    (BigInt.t, (term_node term_o) Mvs.t*vsymbol list) st **)
 
 let rec vl_rename_aux vl acc =
   match vl with
   | [] -> acc
-  | v :: vs ->
+  | v::vs ->
     (@@) (fun x ->
-      let (m, vls) = x in
+      let m,vls = x in
       (@@) (fun x1 ->
-        let (m1, v1) = x1 in vl_rename_aux vs ((fun x -> x) (m1, (v1 :: vls))))
+        let m1,v1 = x1 in vl_rename_aux vs ((fun x -> x) (m1,(v1::vls))))
         (vs_rename m v)) acc
 
 (** val vl_rename :
     (term_node term_o) Mvs.t -> vsymbol list -> (BigInt.t, (term_node term_o)
-    Mvs.t * vsymbol list) st **)
+    Mvs.t*vsymbol list) st **)
 
 let vl_rename h vl =
-  (@@) (fun x -> (fun x -> x) ((fst x), (rev' (snd x))))
-    (vl_rename_aux vl ((fun x -> x) (h, [])))
+  (@@) (fun x -> (fun x -> x) ((fst x),(rev' (snd x))))
+    (vl_rename_aux vl ((fun x -> x) (h,[])))
 
 (** val t_subst_unsafe_aux :
     (term_node term_o) Mvs.t -> (term_node term_o) -> (BigInt.t,
@@ -1837,40 +1831,38 @@ let rec t_subst_unsafe_aux m t0 =
   let t_subst = fun t1 -> t_subst_unsafe_aux m t1 in
   let t_open_bnd = fun v m0 t1 f ->
     (@@) (fun x ->
-      let (m1, v0) = x in
-      (@@) (fun t2 -> (fun x -> x) (v0, t2)) (t_subst_unsafe_aux m1 t1))
+      let m1,v0 = x in
+      (@@) (fun t2 -> (fun x -> x) (v0,t2)) (t_subst_unsafe_aux m1 t1))
       (f m0 v)
   in
   let t_open_quant = fun vl m0 tl f ->
     (@@) (fun x ->
-      let (m1, vl0) = x in
+      let m1,vl0 = x in
       (@@) (fun tl0 ->
-        (@@) (fun f1 -> (fun x -> x) ((vl0, tl0), f1))
-          (t_subst_unsafe_aux m1 f))
+        (@@) (fun f1 -> (fun x -> x) ((vl0,tl0),f1)) (t_subst_unsafe_aux m1 f))
         (st_tr (tr_map (t_subst_unsafe_aux m1) tl))) (vl_rename m0 vl)
   in
   let b_subst = fun bv f cl ->
-    let (y, e) = bv in
-    let (u, b) = y in
+    let y,e = bv in
+    let u,b = y in
     if Mvs.set_disjoint m b.bv_vars
     then (fun x -> x) bv
     else let m1 = Mvs.set_inter m b.bv_vars in
-         (@@) (fun y0 ->
-           let (v, t1) = y0 in let x = cl v t1 in (fun x -> x) x)
+         (@@) (fun y0 -> let v,t1 = y0 in let x = cl v t1 in (fun x -> x) x)
            (t_open_bnd u m1 e f)
   in
   let b_subst1 = fun bv -> b_subst bv vs_rename t_close_bound in
   let b_subst2 = fun bv -> b_subst bv pat_rename t_close_branch in
   let b_subst3 = fun bq ->
-    let (y, f1) = bq in
-    let (y0, tl) = y in
-    let (vl, b) = y0 in
+    let y,f1 = bq in
+    let y0,tl = y in
+    let vl,b = y0 in
     if Mvs.set_disjoint m b.bv_vars
     then (fun x -> x) bq
     else let m1 = Mvs.set_inter m b.bv_vars in
          (@@) (fun y1 ->
-           let (y2, t1) = y1 in
-           let (vs, tr) = y2 in
+           let y2,t1 = y1 in
+           let vs,tr = y2 in
            let x = t_close_quant_unsafe vs tr t1 in (fun x -> x) x)
            (t_open_quant vl m1 tl f1)
   in
@@ -1901,109 +1893,108 @@ let rec t_subst_unsafe_aux m t0 =
 let t_subst_unsafe m t0 =
   if Mvs.is_empty m then (fun x -> x) t0 else t_subst_unsafe_aux m t0
 
-(** val t_view_bound : term_bound -> vsymbol * (term_node term_o) **)
+(** val t_view_bound : term_bound -> vsymbol*(term_node term_o) **)
 
 let t_view_bound x =
-  ((fst (fst x)), (snd x))
+  (fst (fst x)),(snd x)
 
 (** val t_open_bound :
-    term_bound -> (BigInt.t, vsymbol * (term_node term_o)) st **)
+    term_bound -> (BigInt.t, vsymbol*(term_node term_o)) st **)
 
 let t_open_bound = function
-| (p, t0) ->
-  let (v, _) = p in
+| p,t0 ->
+  let v,_ = p in
   (@@) (fun y ->
-    let (m, v0) = y in
-    (@@) (fun t1 -> (fun x -> x) (v0, t1)) (t_subst_unsafe m t0))
+    let m,v0 = y in
+    (@@) (fun t1 -> (fun x -> x) (v0,t1)) (t_subst_unsafe m t0))
     (vs_rename Mvs.empty v)
 
 (** val t_view_branch :
-    term_branch -> (pattern_node pattern_o) * (term_node term_o) **)
+    term_branch -> (pattern_node pattern_o)*(term_node term_o) **)
 
 let t_view_branch x =
-  ((fst (fst x)), (snd x))
+  (fst (fst x)),(snd x)
 
 (** val t_open_branch :
-    term_branch -> (BigInt.t, (pattern_node pattern_o) * (term_node term_o))
-    st **)
+    term_branch -> (BigInt.t, (pattern_node pattern_o)*(term_node term_o)) st **)
 
 let t_open_branch = function
-| (p0, t0) ->
-  let (p, _) = p0 in
+| p0,t0 ->
+  let p,_ = p0 in
   (@@) (fun y ->
-    let (m, p1) = y in
-    (@@) (fun t1 -> (fun x -> x) (p1, t1)) (t_subst_unsafe m t0))
+    let m,p1 = y in
+    (@@) (fun t1 -> (fun x -> x) (p1,t1)) (t_subst_unsafe m t0))
     (pat_rename Mvs.empty p)
 
 (** val t_open_quant1 :
-    term_quant -> (BigInt.t, (vsymbol list * trigger) * (term_node term_o)) st **)
+    term_quant -> (BigInt.t, (vsymbol list*trigger)*(term_node term_o)) st **)
 
 let t_open_quant1 = function
-| (p, f) ->
-  let (p0, tl) = p in
-  let (vl, _) = p0 in
+| p,f ->
+  let p0,tl = p in
+  let vl,_ = p0 in
   (@@) (fun y ->
-    let (m, vl0) = y in
+    let m,vl0 = y in
     (@@) (fun tl0 ->
-      (@@) (fun t1 -> (fun x -> x) ((vl0, tl0), t1)) (t_subst_unsafe m f))
+      (@@) (fun t1 -> (fun x -> x) ((vl0,tl0),t1)) (t_subst_unsafe m f))
       (st_tr (tr_map (t_subst_unsafe m) tl))) (vl_rename Mvs.empty vl)
 
 (** val t_view_quant :
-    term_quant -> (vsymbol list * trigger) * (term_node term_o) **)
+    term_quant -> (vsymbol list*trigger)*(term_node term_o) **)
 
 let t_view_quant x =
-  (((fst (fst (fst x))), (snd (fst x))), (snd x))
+  ((fst (fst (fst x))),(snd (fst x))),(snd x)
 
 (** val t_open_bound_with :
     (term_node term_o) -> term_bound -> (BigInt.t, (term_node term_o))
     errState **)
 
 let t_open_bound_with e = function
-| (p, t0) ->
-  let (v, _) = p in
+| p,t0 ->
+  let v,_ = p in
   (@@) (fun _ -> let m = Mvs.singleton v e in  (t_subst_unsafe m t0))
     ( (vs_check v e))
 
 (** val t_open_bound_cb1 :
-    term_bound -> (BigInt.t, (vsymbol * (term_node term_o)) * (vsymbol ->
-    (term_node term_o) -> (vsymbol * bind_info) * (term_node term_o))) st **)
+    term_bound -> (BigInt.t, (vsymbol*(term_node term_o))*(vsymbol ->
+    (term_node term_o) -> (vsymbol*bind_info)*(term_node term_o))) st **)
 
 let t_open_bound_cb1 tb =
   (@@) (fun x ->
-    let (v, t0) = x in
+    let v,t0 = x in
     let close = fun v' t' ->
       if (&&) ((fun x y -> x == y || term_eqb x y) t0 t') (vs_equal v v')
       then tb
       else t_close_bound v' t'
     in
-    (fun x -> x) ((v, t0), close)) (t_open_bound tb)
+    (fun x -> x) ((v,t0),close)) (t_open_bound tb)
 
 (** val t_open_branch_cb1 :
     term_branch -> (BigInt.t,
-    ((pattern_node pattern_o) * (term_node term_o)) * ((pattern_node pattern_o)
+    ((pattern_node pattern_o)*(term_node term_o))*((pattern_node pattern_o)
     -> (term_node term_o) -> term_branch)) st **)
 
 let t_open_branch_cb1 tbr =
   (@@) (fun x ->
-    let (p, t0) = x in
+    let p,t0 = x in
     let close = fun p' t' ->
       if (&&) ((fun x y -> x == y || term_eqb x y) t0 t')
            ((fun x y -> x == y || pattern_eqb x y) p p')
       then tbr
       else t_close_branch p' t'
     in
-    (fun x -> x) ((p, t0), close)) (t_open_branch tbr)
+    (fun x -> x) ((p,t0),close)) (t_open_branch tbr)
 
 (** val t_open_quant_cb1 :
     term_quant -> (BigInt.t, ((vsymbol
-    list * trigger) * (term_node term_o)) * (vsymbol list -> trigger ->
+    list*trigger)*(term_node term_o))*(vsymbol list -> trigger ->
     (term_node term_o) -> (((vsymbol
-    list * bind_info) * trigger) * (term_node term_o)) errorM)) st **)
+    list*bind_info)*trigger)*(term_node term_o)) errorM)) st **)
 
 let t_open_quant_cb1 fq =
   (@@) (fun x ->
-    let (y, f) = x in
-    let (vl, tl) = y in
+    let y,f = x in
+    let vl,tl = y in
     let close = fun vl' tl' f' ->
       if (&&)
            ((&&) ((fun x y -> x == y || term_eqb x y) f f')
@@ -2012,24 +2003,24 @@ let t_open_quant_cb1 fq =
       then  fq
       else t_close_quant vl' tl' f'
     in
-    (fun x -> x) (((vl, tl), f), close)) (t_open_quant1 fq)
+    (fun x -> x) (((vl,tl),f),close)) (t_open_quant1 fq)
 
 (** val t_peek_bound : term_bound -> ident **)
 
 let t_peek_bound = function
-| (p, _) -> let (v, _) = p in v.vs_name
+| p,_ -> let v,_ = p in v.vs_name
 
 (** val t_peek_branch : term_branch -> Sid.t **)
 
 let t_peek_branch = function
-| (p0, _) ->
-  let (p, _) = p0 in
+| p0,_ ->
+  let p,_ = p0 in
   Svs.fold (fun v a -> Sid.add v.vs_name a) (pat_vars p) Sid.empty
 
 (** val t_peek_quant : term_quant -> ident list **)
 
 let t_peek_quant = function
-| (p, _) -> let (p0, _) = p in let (vl, _) = p0 in map (fun v -> v.vs_name) vl
+| p,_ -> let p0,_ = p in let vl,_ = p0 in map (fun v -> v.vs_name) vl
 
 (** val ls_arg_inst :
     lsymbol -> (term_node term_o) list -> (ty_node_c ty_o hashcons_ty,
@@ -2041,7 +2032,7 @@ let ls_arg_inst ls tl =
   (@@) (fun o ->
     match o with
     | Some l ->  l
-    | None ->  (raise (BadArity (ls, (int_length tl)))))
+    | None ->  (raise (BadArity (ls,(int_length tl)))))
     (fold_left2_errorHashcons mtch Mtv.empty ls.ls_args tl)
 
 (** val ls_app_inst :
@@ -2151,7 +2142,7 @@ let check_literal c t0 =
      | Tyapp (ts, l) ->
        (match l with
         | [] ->  ts
-        | _ :: _ ->
+        | _::_ ->
           (match c with
            | ConstInt _ -> raise (InvalidIntegerLiteralType t0)
            | ConstReal _ -> raise (InvalidRealLiteralType t0)
@@ -2174,8 +2165,8 @@ let t_if f t1 t2 =
     (term_node term_o) -> term_bound -> (term_node term_o) errorM **)
 
 let t_let t1 bt = match bt with
-| (p, t2) ->
-  let (v, _) = p in (@@) (fun _ ->  (t_let1 t1 bt (t_ty t2))) (vs_check v t1)
+| p,t2 ->
+  let v,_ = p in (@@) (fun _ ->  (t_let1 t1 bt (t_ty t2))) (vs_check v t1)
 
 (** val t_case :
     (term_node term_o) -> term_branch list -> (term_node term_o) errorM **)
@@ -2184,27 +2175,25 @@ let t_case t0 bl =
   (@@) (fun tty ->
     (@@) (fun bty ->
       let t_check_branch = fun tb ->
-        let (p0, tbr) = tb in
-        let (p, _) = p0 in
+        let p0,tbr = tb in
+        let p,_ = p0 in
         (@@) (fun _ -> t_ty_check tbr bty) (ty_equal_check tty (pat_ty p))
       in
       (@@) (fun _ ->  (t_case1 t0 bl bty))
         (errorM_list (map t_check_branch bl)))
       (match bl with
        | [] -> raise EmptyCase
-       | t1 :: _ -> let (_, tbr) = t1 in  (t_ty tbr))) (t_type t0)
+       | t1::_ -> let _,tbr = t1 in  (t_ty tbr))) (t_type t0)
 
 (** val t_eps : term_bound -> (term_node term_o) errorM **)
 
 let t_eps bf = match bf with
-| (p, f) ->
-  let (v, _) = p in (@@) (fun _ ->  (t_eps1 bf (Some v.vs_ty))) (t_prop f)
+| p,f -> let v,_ = p in (@@) (fun _ ->  (t_eps1 bf (Some v.vs_ty))) (t_prop f)
 
 (** val t_quant : quant -> term_quant -> (term_node term_o) **)
 
 let t_quant q qf = match qf with
-| (p, f) ->
-  let (p0, _) = p in let (vl, _) = p0 in if null vl then f else t_quant1 q qf
+| p,f -> let p0,_ = p in let vl,_ = p0 in if null vl then f else t_quant1 q qf
 
 (** val t_binary :
     binop -> (term_node term_o) -> (term_node term_o) -> (term_node term_o)
@@ -2257,19 +2246,19 @@ let t_iff =
 
 let rec t_and_l = function
 | [] ->  t_true
-| f :: fl ->
+| f::fl ->
   (match fl with
    | [] ->  f
-   | _ :: _ -> (@@) (fun f1 -> t_and f f1) (t_and_l fl))
+   | _::_ -> (@@) (fun f1 -> t_and f f1) (t_and_l fl))
 
 (** val t_or_l : (term_node term_o) list -> (term_node term_o) errorM **)
 
 let rec t_or_l = function
 | [] ->  t_false
-| f :: fl ->
+| f::fl ->
   (match fl with
    | [] ->  f
-   | _ :: _ -> (@@) (fun f1 -> t_or f f1) (t_or_l fl))
+   | _::_ -> (@@) (fun f1 -> t_or f f1) (t_or_l fl))
 
 (** val t_quant_close :
     quant -> vsymbol list -> (term_node term_o) list list ->
@@ -2302,8 +2291,8 @@ let t_let_close v t1 t2 =
   t_let t1 (t_close_bound v t2)
 
 (** val t_case_close :
-    (term_node term_o) -> ((pattern_node pattern_o) * (term_node term_o))
-    list -> (term_node term_o) errorM **)
+    (term_node term_o) -> ((pattern_node pattern_o)*(term_node term_o)) list
+    -> (term_node term_o) errorM **)
 
 let t_case_close t0 l =
   t_case t0 (map (fun x -> t_close_branch (fst x) (snd x)) l)
@@ -2317,21 +2306,21 @@ let t_eps_close v f =
 (** val ps_equ : lsymbol **)
 
 let ps_equ =
-  create_psymbol_builtin id_eq (ty_a :: (ty_a :: []))
+  create_psymbol_builtin id_eq (ty_a::(ty_a::[]))
 
 (** val t_equ :
     (term_node term_o) -> (term_node term_o) -> (ty_node_c ty_o hashcons_ty,
     (term_node term_o)) errState **)
 
 let t_equ t1 t2 =
-  ps_app ps_equ (t1 :: (t2 :: []))
+  ps_app ps_equ (t1::(t2::[]))
 
 (** val t_neq :
     (term_node term_o) -> (term_node term_o) -> (ty_node_c ty_o hashcons_ty,
     (term_node term_o)) errState **)
 
 let t_neq t1 t2 =
-  (@@) (fun a ->  (t_not a)) (ps_app ps_equ (t1 :: (t2 :: [])))
+  (@@) (fun a ->  (t_not a)) (ps_app ps_equ (t1::(t2::[])))
 
 (** val fs_bool_true : lsymbol **)
 
@@ -2370,15 +2359,15 @@ let to_prop t0 =
 (** val fs_func_app : lsymbol **)
 
 let fs_func_app =
-  create_fsymbol_builtin BigInt.zero false id_app
-    (ty_func_ab :: (ty_a :: [])) ty_b
+  create_fsymbol_builtin BigInt.zero false id_app (ty_func_ab::(ty_a::[]))
+    ty_b
 
 (** val t_func_app :
     (term_node term_o) -> (term_node term_o) -> (ty_node_c ty_o hashcons_ty,
     (term_node term_o)) errState **)
 
 let t_func_app fn t0 =
-  t_app_infer fs_func_app (fn :: (t0 :: []))
+  t_app_infer fs_func_app (fn::(t0::[]))
 
 (** val t_pred_app :
     (term_node term_o) -> (term_node term_o) -> (ty_node_c ty_o hashcons_ty,
@@ -2394,7 +2383,7 @@ let t_pred_app pr t0 =
 let rec fold_left_errst f l x =
   match l with
   | [] ->  x
-  | h :: t0 -> (@@) (fun j -> fold_left_errst f t0 j) (f x h)
+  | h::t0 -> (@@) (fun j -> fold_left_errst f t0 j) (f x h)
 
 (** val t_func_app_l :
     (term_node term_o) -> (term_node term_o) list -> (ty_node_c ty_o
@@ -2433,17 +2422,17 @@ let rec t_gen_fold fnT fnL acc t0 =
   (match t_node t0 with
    | Tapp (f, tl) -> fold_left fn tl (fnL acc0 f)
    | Tif (f, t1, t2) -> fn (fn (fn acc0 f) t1) t2
-   | Tlet (t1, p) -> let (_, t2) = p in fn (fn acc0 t1) t2
+   | Tlet (t1, p) -> let _,t2 = p in fn (fn acc0 t1) t2
    | Tcase (t1, bl) ->
      let branch = fun acc1 x ->
        fn (pat_gen_fold fnT fnL acc1 (fst (fst x))) (snd x)
      in
      fold_left branch bl (fn acc0 t1)
-   | Teps p -> let (_, f) = p in fn acc0 f
+   | Teps p -> let _,f = p in fn acc0 f
    | Tquant (_, p) ->
-     let (p0, f1) = p in
-     let (p1, tl) = p0 in
-     let (vl, _) = p1 in
+     let p0,f1 = p in
+     let p1,tl = p0 in
+     let vl,_ = p1 in
      let acc1 = fold_left (fun a v -> fnT a v.vs_ty) vl acc0 in
      fn (tr_fold fn acc1 tl) f1
    | Tbinop (_, f1, f2) -> fn (fn acc0 f1) f2
@@ -2474,10 +2463,10 @@ let bnd_v_fold fn acc b =
   Mvs.fold (fun v _ acc0 -> fn acc0 v) b.bv_vars acc
 
 (** val bound_v_fold :
-    ('a1 -> vsymbol -> 'a1) -> 'a1 -> (('a2 * bind_info) * 'a3) -> 'a1 **)
+    ('a1 -> vsymbol -> 'a1) -> 'a1 -> (('a2*bind_info)*'a3) -> 'a1 **)
 
 let bound_v_fold fn acc = function
-| (p, _) -> let (_, b) = p in bnd_v_fold fn acc b
+| p,_ -> let _,b = p in bnd_v_fold fn acc b
 
 (** val t_v_fold :
     ('a1 -> vsymbol -> 'a1) -> 'a1 -> (term_node term_o) -> 'a1 **)
@@ -2489,8 +2478,7 @@ let rec t_v_fold fn acc t0 =
   | Tcase (e, bl) -> fold_left (bound_v_fold fn) bl (t_v_fold fn acc e)
   | Teps b -> bound_v_fold fn acc b
   | Tquant (_, p) ->
-    let (p0, _) = p in
-    let (p1, _) = p0 in let (_, b) = p1 in bnd_v_fold fn acc b
+    let p0,_ = p in let p1,_ = p0 in let _,b = p1 in bnd_v_fold fn acc b
   | _ -> t_fold_unsafe (t_v_fold fn) acc t0
 
 module TermTFAlt =
@@ -2516,7 +2504,7 @@ module TermTFAlt =
     (term_node term_o) -> 'a1 -> (term_node term_o) -> 'a1 -> 'a1) ->
     ((term_node term_o) -> 'a1 -> vsymbol -> (term_node term_o) -> 'a1 ->
     'a1) -> ((term_node term_o) -> 'a1 ->
-    (((pattern_node pattern_o) * (term_node term_o)) * 'a1) list -> 'a1) ->
+    (((pattern_node pattern_o)*(term_node term_o))*'a1) list -> 'a1) ->
     (vsymbol -> (term_node term_o) -> 'a1 -> 'a1) -> (quant -> vsymbol list
     -> (term_node term_o) -> 'a1 -> 'a1) -> (binop -> (term_node term_o) ->
     'a1 -> (term_node term_o) -> 'a1 -> 'a1) -> ((term_node term_o) -> 'a1 ->
@@ -2540,8 +2528,8 @@ let rec term_rec var_case const_case app_case if_case let_case match_case eps_ca
       (term_rec var_case const_case app_case if_case let_case match_case
         eps_case quant_case binop_case not_case true_case false_case t3)
   | Tlet (t1, p) ->
-    let (p0, t2) = p in
-    let (v, _) = p0 in
+    let p0,t2 = p in
+    let v,_ = p0 in
     let_case t1
       (term_rec var_case const_case app_case if_case let_case match_case
         eps_case quant_case binop_case not_case true_case false_case t1) v t2
@@ -2551,20 +2539,21 @@ let rec term_rec var_case const_case app_case if_case let_case match_case eps_ca
     match_case t1
       (term_rec var_case const_case app_case if_case let_case match_case
         eps_case quant_case binop_case not_case true_case false_case t1)
-      (map (fun x -> (((fst (fst x)), (snd x)),
-        (term_rec var_case const_case app_case if_case let_case match_case
-          eps_case quant_case binop_case not_case true_case false_case
-          (snd x)))) ps)
+      (map (fun x ->
+        ((fst (fst x)),(snd x)),(term_rec var_case const_case app_case
+                                  if_case let_case match_case eps_case
+                                  quant_case binop_case not_case true_case
+                                  false_case (snd x))) ps)
   | Teps p ->
-    let (p0, f) = p in
-    let (v, _) = p0 in
+    let p0,f = p in
+    let v,_ = p0 in
     eps_case v f
       (term_rec var_case const_case app_case if_case let_case match_case
         eps_case quant_case binop_case not_case true_case false_case f)
   | Tquant (q, p) ->
-    let (p0, f) = p in
-    let (p1, _) = p0 in
-    let (vs, _) = p1 in
+    let p0,f = p in
+    let p1,_ = p0 in
+    let vs,_ = p1 in
     quant_case q vs f
       (term_rec var_case const_case app_case if_case let_case match_case
         eps_case quant_case binop_case not_case true_case false_case f)

@@ -13,7 +13,7 @@ module type HashedType =
   val hash : t -> BigInt.t
  end
 
-type ('key, 'a) hashtbl = ('key * 'a) list coq_Zmap
+type ('key, 'a) hashtbl = ('key*'a) list coq_Zmap
 
 (** val create_hashtbl : ('a1, 'a2) hashtbl **)
 
@@ -22,7 +22,7 @@ let create_hashtbl =
 
 (** val find_opt_hashtbl :
     ('a1 -> BigInt.t) -> ('a1 -> 'a1 -> bool) -> ('a1, 'a2) hashtbl -> 'a1 ->
-    ('a1 * 'a2) option **)
+    ('a1*'a2) option **)
 
 let find_opt_hashtbl hash0 eqb m k =
   match lookup coq_Zmap_lookup (ZCompat.to_Z_big (hash0 k)) m with
@@ -37,9 +37,8 @@ let add_hashtbl hash0 m k v =
   let val0 = fun k1 -> ZCompat.to_Z_big (hash0 k1) in
   (match lookup coq_Zmap_lookup (ZCompat.to_Z_big (hash0 k)) m with
    | Some l1 ->
-     insert (map_insert coq_Zmap_partial_alter) (val0 k) ((k, v) :: l1) m
-   | None ->
-     insert (map_insert coq_Zmap_partial_alter) (val0 k) ((k, v) :: []) m)
+     insert (map_insert coq_Zmap_partial_alter) (val0 k) ((k,v)::l1) m
+   | None -> insert (map_insert coq_Zmap_partial_alter) (val0 k) ((k,v)::[]) m)
 
 (** val comb : unit -> unit -> unit **)
 

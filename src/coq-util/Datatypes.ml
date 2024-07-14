@@ -1,4 +1,6 @@
 
+type __ = Obj.t
+
 (** val negb : bool -> bool **)
 
 let negb = function
@@ -24,7 +26,7 @@ type ('a, 'b) sum =
 let rec app l m =
   match l with
   | [] -> m
-  | a :: l1 -> a :: (app l1 m)
+  | a::l1 -> a::(app l1 m)
 
 type comparison =
 | Eq
@@ -37,3 +39,8 @@ let coq_CompOpp = function
 | Eq -> Eq
 | Lt -> Gt
 | Gt -> Lt
+
+(** val id : __ -> __ **)
+
+let id x =
+  x

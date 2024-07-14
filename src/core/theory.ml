@@ -1,3 +1,237 @@
+open Coercion
+open Wstdlib
+open Decl
+
+open Ident
+open Term
+open Ty
+open Base
+open Fin_maps
+open Gmap
+open Strings0
+open Zmap
+
+(** val gmap_to_mstr2 : (string, 'a1) gmap -> 'a1 Mstr.t **)
+
+let gmap_to_mstr2 z =
+  Obj.magic gmap_fold string_eq_dec string_countable Mstr.add Mstr.empty z
+
+(** val mstr2_to_gmap : 'a1 Mstr.t -> (string, 'a1) gmap **)
+
+let mstr2_to_gmap m =
+  Mstr.fold (fun s x acc ->
+    insert (map_insert (gmap_partial_alter string_eq_dec string_countable)) s
+      x acc) m (gmap_empty string_eq_dec string_countable)
+
+type namespace = { ns_ts : (ty_node_c ty_o) tysymbol_o Mstr.t;
+                   ns_ls : lsymbol Mstr.t; ns_pr : prsymbol Mstr.t;
+                   ns_ns : namespace Mstr.t }
+
+(** val ns_ts : namespace -> (ty_node_c ty_o) tysymbol_o Mstr.t **)
+
+let ns_ts n =
+  n.ns_ts
+
+(** val ns_ls : namespace -> lsymbol Mstr.t **)
+
+let ns_ls n =
+  n.ns_ls
+
+(** val ns_pr : namespace -> prsymbol Mstr.t **)
+
+let ns_pr n =
+  n.ns_pr
+
+(** val ns_ns : namespace -> namespace Mstr.t **)
+
+let ns_ns n =
+  n.ns_ns
+
+(** val make_namespace_o :
+    (ty_node_c ty_o) tysymbol_o Mstr.t -> lsymbol Mstr.t -> prsymbol Mstr.t
+    -> namespace Mstr.t -> namespace **)
+
+let make_namespace_o ns_ts0 ns_ls0 ns_pr0 ns_ns0 =
+  { ns_ts = ns_ts0; ns_ls = ns_ls0; ns_pr = ns_pr0; ns_ns = ns_ns0 }
+
+type meta_arg_type =
+| MTty
+| MTtysymbol
+| MTlsymbol
+| MTprsymbol
+| MTstring
+| MTint
+| MTid
+
+type meta_arg =
+| MAty of ty_node_c ty_o
+| MAts of (ty_node_c ty_o) tysymbol_o
+| MAls of lsymbol
+| MApr of prsymbol
+| MAstr of string
+| MAint of Stdlib.Int.t
+| MAid of ident
+
+type meta = { meta_name : string; meta_type : meta_arg_type list;
+              meta_excl : bool; meta_desc : Pp.formatted; meta_tag : 
+              BigInt.t }
+
+(** val meta_name : meta -> string **)
+
+let meta_name m =
+  m.meta_name
+
+(** val meta_type : meta -> meta_arg_type list **)
+
+let meta_type m =
+  m.meta_type
+
+(** val meta_excl : meta -> bool **)
+
+let meta_excl m =
+  m.meta_excl
+
+(** val meta_desc : meta -> Pp.formatted **)
+
+let meta_desc m =
+  m.meta_desc
+
+(** val meta_tag : meta -> BigInt.t **)
+
+let meta_tag m =
+  m.meta_tag
+
+type symbol_map = { sm_ty : ty_node_c ty_o Mts.t;
+                    sm_ts : (ty_node_c ty_o) tysymbol_o Mts.t;
+                    sm_ls : lsymbol Mls.t; sm_pr : prsymbol Mpr.t }
+
+(** val sm_ty : symbol_map -> ty_node_c ty_o Mts.t **)
+
+let sm_ty s =
+  s.sm_ty
+
+(** val sm_ts : symbol_map -> (ty_node_c ty_o) tysymbol_o Mts.t **)
+
+let sm_ts s =
+  s.sm_ts
+
+(** val sm_ls : symbol_map -> lsymbol Mls.t **)
+
+let sm_ls s =
+  s.sm_ls
+
+(** val sm_pr : symbol_map -> prsymbol Mpr.t **)
+
+let sm_pr s =
+  s.sm_pr
+
+type 'a tdecl_o = { td_node : 'a; td_tag : BigInt.t }
+
+(** val td_node : 'a1 tdecl_o -> 'a1 **)
+
+let td_node t0 =
+  t0.td_node
+
+(** val td_tag : 'a1 tdecl_o -> BigInt.t **)
+
+let td_tag t0 =
+  t0.td_tag
+
+type 'a theory_o = { th_name : ident; th_path : string list;
+                     th_decls : 'a tdecl_o list;
+                     th_ranges : 'a tdecl_o Mts.t;
+                     th_floats : 'a tdecl_o Mts.t; th_crcmap : t;
+                     th_proved_wf : (prsymbol*lsymbol) Mls.t;
+                     th_export : namespace; th_known : known_map;
+                     th_local : Sid.t; th_used : Sid.t }
+
+(** val th_name : 'a1 theory_o -> ident **)
+
+let th_name t0 =
+  t0.th_name
+
+(** val th_path : 'a1 theory_o -> string list **)
+
+let th_path t0 =
+  t0.th_path
+
+(** val th_decls : 'a1 theory_o -> 'a1 tdecl_o list **)
+
+let th_decls t0 =
+  t0.th_decls
+
+(** val th_ranges : 'a1 theory_o -> 'a1 tdecl_o Mts.t **)
+
+let th_ranges t0 =
+  t0.th_ranges
+
+(** val th_floats : 'a1 theory_o -> 'a1 tdecl_o Mts.t **)
+
+let th_floats t0 =
+  t0.th_floats
+
+(** val th_crcmap : 'a1 theory_o -> t **)
+
+let th_crcmap t0 =
+  t0.th_crcmap
+
+(** val th_proved_wf : 'a1 theory_o -> (prsymbol*lsymbol) Mls.t **)
+
+let th_proved_wf t0 =
+  t0.th_proved_wf
+
+(** val th_export : 'a1 theory_o -> namespace **)
+
+let th_export t0 =
+  t0.th_export
+
+(** val th_known : 'a1 theory_o -> known_map **)
+
+let th_known t0 =
+  t0.th_known
+
+(** val th_local : 'a1 theory_o -> Sid.t **)
+
+let th_local t0 =
+  t0.th_local
+
+(** val th_used : 'a1 theory_o -> Sid.t **)
+
+let th_used t0 =
+  t0.th_used
+
+type tdecl_node =
+| Decl of decl
+| Use of tdecl_node theory_o
+| Clone of tdecl_node theory_o * symbol_map
+| Meta of meta * meta_arg list
+
+(** val proj_zmap_to_map :
+    ((ty_node_c ty_o) tysymbol_o*'a1) coq_Zmap -> 'a1 Mts.t **)
+
+let proj_zmap_to_map z =
+  Obj.magic coq_Zmap_fold (fun _ y acc ->
+    Obj.magic Mts.add (fst y) (snd y) acc) Mts.empty z
+
+type tdecl = tdecl_node tdecl_o
+
+type theory = tdecl_node theory_o
+
+(** val build_tdecl_o : tdecl_node -> BigInt.t -> tdecl **)
+
+let build_tdecl_o t0 z =
+  { td_node = t0; td_tag = z }
+
+(** val build_theory_o :
+    ident -> string list -> tdecl list -> tdecl Mts.t -> tdecl Mts.t -> t ->
+    (prsymbol*lsymbol) Mls.t -> namespace -> known_map -> Sid.t -> Sid.t ->
+    theory **)
+
+let build_theory_o th_name0 th_path0 th_decls0 th_ranges0 th_floats0 th_crcmap0 th_proved_wf0 th_export0 th_known0 th_local0 th_used0 =
+  { th_name = th_name0; th_path = th_path0; th_decls = th_decls0; th_ranges =
+    th_ranges0; th_floats = th_floats0; th_crcmap = th_crcmap0;
+    th_proved_wf = th_proved_wf0; th_export = th_export0; th_known =
+    th_known0; th_local = th_local0; th_used = th_used0 }
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -21,12 +255,12 @@ let warning_clone_not_abstract =
 
 (** Namespace *)
 
-type namespace = {
+(* type namespace = {
   ns_ts : tysymbol Mstr.t;   (* type symbols *)
   ns_ls : lsymbol Mstr.t;    (* logic symbols *)
   ns_pr : prsymbol Mstr.t;   (* propositions *)
   ns_ns : namespace Mstr.t;  (* inner namespaces *)
-}
+} *)
 
 let empty_ns = {
   ns_ts = Mstr.empty;
@@ -85,7 +319,7 @@ let ns_find_ns = ns_find (fun ns -> ns.ns_ns)
 
 (** Meta properties *)
 
-type meta_arg_type =
+(* type meta_arg_type =
   | MTty
   | MTtysymbol
   | MTlsymbol
@@ -109,7 +343,7 @@ type meta = {
   meta_excl : bool;
   meta_desc : Pp.formatted;
   meta_tag  : BigInt.t;
-}
+} *)
 
 let print_meta_desc fmt m =
   fprintf fmt "@[%s@\n  @[%a@]@]"
@@ -181,7 +415,7 @@ let meta_record = register_meta "model_record" [MTlsymbol]
   ~desc:"Declare@ the@ record field."
 
 (** Theory *)
-
+(* 
 type theory = {
   th_name   : ident;          (* theory name *)
   th_path   : string list;    (* environment qualifiers *)
@@ -212,7 +446,7 @@ and symbol_map = {
   sm_ts : tysymbol Mts.t;
   sm_ls : lsymbol Mls.t;
   sm_pr : prsymbol Mpr.t;
-}
+} *)
 
 (** Theory declarations *)
 

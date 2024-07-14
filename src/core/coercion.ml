@@ -1,3 +1,60 @@
+open Term
+open Ty
+
+type coercion_kind =
+| CRCleaf of lsymbol
+| CRCcomp of coercion_kind * coercion_kind
+
+(** val coercion_kind_rect :
+    (lsymbol -> 'a1) -> (coercion_kind -> 'a1 -> coercion_kind -> 'a1 -> 'a1)
+    -> coercion_kind -> 'a1 **)
+
+let rec coercion_kind_rect f f0 = function
+| CRCleaf l -> f l
+| CRCcomp (c0, c1) ->
+  f0 c0 (coercion_kind_rect f f0 c0) c1 (coercion_kind_rect f f0 c1)
+
+(** val coercion_kind_rec :
+    (lsymbol -> 'a1) -> (coercion_kind -> 'a1 -> coercion_kind -> 'a1 -> 'a1)
+    -> coercion_kind -> 'a1 **)
+
+let rec coercion_kind_rec f f0 = function
+| CRCleaf l -> f l
+| CRCcomp (c0, c1) ->
+  f0 c0 (coercion_kind_rec f f0 c0) c1 (coercion_kind_rec f f0 c1)
+
+type coercion = { crc_kind : coercion_kind;
+                  crc_src_ts : (ty_node_c ty_o) tysymbol_o;
+                  crc_src_tl : ty_node_c ty_o list;
+                  crc_tar_ts : (ty_node_c ty_o) tysymbol_o;
+                  crc_tar_tl : ty_node_c ty_o list }
+
+(** val crc_kind : coercion -> coercion_kind **)
+
+let crc_kind c =
+  c.crc_kind
+
+(** val crc_src_ts : coercion -> (ty_node_c ty_o) tysymbol_o **)
+
+let crc_src_ts c =
+  c.crc_src_ts
+
+(** val crc_src_tl : coercion -> ty_node_c ty_o list **)
+
+let crc_src_tl c =
+  c.crc_src_tl
+
+(** val crc_tar_ts : coercion -> (ty_node_c ty_o) tysymbol_o **)
+
+let crc_tar_ts c =
+  c.crc_tar_ts
+
+(** val crc_tar_tl : coercion -> ty_node_c ty_o list **)
+
+let crc_tar_tl c =
+  c.crc_tar_tl
+
+type t = coercion Mts.t Mts.t
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -13,7 +70,7 @@ open Ident
 open Ty
 open Term
 
-type coercion_kind =
+(* type coercion_kind =
   | CRCleaf of lsymbol
   | CRCcomp of coercion_kind * coercion_kind
 
@@ -23,9 +80,9 @@ type coercion =  {
   crc_src_tl : ty list;
   crc_tar_ts : tysymbol;
   crc_tar_tl : ty list;
-}
+} *)
 
-type t = (coercion Mts.t) Mts.t
+(* type t = (coercion Mts.t) Mts.t *)
 (** invariant: transitively closed *)
 
 let empty = Mts.empty
