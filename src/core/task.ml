@@ -17,17 +17,23 @@ open Theory
 
 (** Clone and meta history *)
 
-module Stdecl = Hcpt.MakeSet(struct
+(*Trying to switch see*)
+module Stdecl = Theory.Stdecl
+
+let stdecl_id (s: Stdecl.t) : BigInt.t =
+  Stdecl.fold (fun t acc -> Hashcons.combine_big t.td_tag acc) s (BigInt.of_int 3)
+
+(* module Stdecl = Hcpt.MakeSet(struct
   type t = tdecl
   let id td = BigInt.to_int td.td_tag 
-end)
+end) *)
 module HStdecl = Stdecl
 
 type tdecl_set = Stdecl.t
 
 module Wtds = Weakhtbl.Make(struct
   type t = tdecl_set
-  let tag s = Weakhtbl.create_int_tag (Stdecl.id s)
+  let tag s = Weakhtbl.create_tag (stdecl_id s) (*(Stdecl.id s)*)
   let equal = (==) (*JOSH TODO equal*)
 end)
 
@@ -41,7 +47,8 @@ let tds_singleton td = Stdecl.singleton td
 let tds_add = Stdecl.add
 
 let tds_equal = Stdecl.equal
-let tds_hash = Stdecl.hash
+(* let tds_hash = Stdecl.hash 
+JOSH SEE *)
 let tds_compare = Stdecl.compare
 
 type clone_map = tdecl_set Mid.t
@@ -254,7 +261,7 @@ let used_theories task =
       | Clone (th, _) -> th
       | _ -> assert false
     in
-    if Stdecl.exists check_use s then Some th else None
+    if Stdecl.exists_ check_use s then Some th else None
   in
   Mid.map_filter used (task_clone task)
 
@@ -313,7 +320,7 @@ let on_meta_excl t task =
 
 let on_used_theory th task =
   let tds = find_clone_tds task th in
-  Stdecl.exists check_use tds
+  Stdecl.exists_ check_use tds
 
 let on_tagged_ty t task =
   begin match t.meta_type with

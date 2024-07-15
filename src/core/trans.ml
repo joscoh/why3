@@ -258,7 +258,7 @@ let on_used_theory th fn =
     | Clone _ -> false
     | _ -> assert false
   in
-  on_theory_tds th (fun tds -> fn (HStdecl.exists check tds))
+  on_theory_tds th (fun tds -> fn (HStdecl.exists_ check tds))
 
 let on_meta_excl t fn =
   if not t.meta_excl then raise (NotExclusiveMeta t);

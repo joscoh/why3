@@ -17,14 +17,16 @@ open Term
 open Decl
 open Theory
 
-module HStdecl : Hcpt.S with type elt = tdecl
+module HStdecl = Theory.Stdecl 
+
+(* module HStdecl : Hcpt.S with type elt = tdecl *)
 
 type tdecl_set = HStdecl.t
 
 module Wtds: Weakhtbl.S with type key = tdecl_set
 
 val tds_equal : tdecl_set -> tdecl_set -> bool
-val tds_hash : tdecl_set -> int
+(* val tds_hash : tdecl_set -> int *)
 val tds_compare : tdecl_set -> tdecl_set -> int
 val tds_empty : tdecl_set
 
