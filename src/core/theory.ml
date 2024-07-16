@@ -1,27 +1,37 @@
+open BinNums
+open Bool0
 open Coercion
+open Common
+open CoqUtil
+open Weakhtbl
 open Wstdlib
+open Datatypes
 open Decl
 
 open Ident
+open Monads
+open PmapExtra
+open Specif
 open Term
 open Ty
 open Base
 open Fin_maps
-open Gmap
+open Pmap
 open Strings0
 open Zmap
 
-(** val gmap_to_mstr2 : (string, 'a1) gmap -> 'a1 Mstr.t **)
+(** val pmap_to_mstr : (string*'a1) coq_Pmap -> 'a1 Mstr.t **)
 
-let gmap_to_mstr2 z =
-  Obj.magic gmap_fold string_eq_dec string_countable Mstr.add Mstr.empty z
+let pmap_to_mstr z =
+  Obj.magic coq_Pmap_fold (fun _ y -> Obj.magic Mstr.add (fst y) (snd y))
+    Mstr.empty z
 
-(** val mstr2_to_gmap : 'a1 Mstr.t -> (string, 'a1) gmap **)
+(** val mstr_to_pmap : 'a1 Mstr.t -> (string*'a1) coq_Pmap **)
 
-let mstr2_to_gmap m =
+let mstr_to_pmap m =
   Mstr.fold (fun s x acc ->
-    insert (map_insert (gmap_partial_alter string_eq_dec string_countable)) s
-      x acc) m (gmap_empty string_eq_dec string_countable)
+    insert (map_insert coq_Pmap_partial_alter) (string_to_pos s) (s,x) acc) m
+    coq_Pmap_empty
 
 type namespace = { ns_ts : (ty_node_c ty_o) tysymbol_o Mstr.t;
                    ns_ls : lsymbol Mstr.t; ns_pr : prsymbol Mstr.t;
@@ -206,12 +216,21 @@ type tdecl_node =
 | Clone of tdecl_node theory_o * symbol_map
 | Meta of meta * meta_arg list
 
-(** val proj_zmap_to_map :
+(** val zmap_to_mts :
     ((ty_node_c ty_o) tysymbol_o*'a1) coq_Zmap -> 'a1 Mts.t **)
 
-let proj_zmap_to_map z =
+let zmap_to_mts z =
   Obj.magic coq_Zmap_fold (fun _ y acc ->
     Obj.magic Mts.add (fst y) (snd y) acc) Mts.empty z
+
+(** val mts_to_zmap :
+    'a1 Mts.t -> ((ty_node_c ty_o) tysymbol_o*'a1) coq_Zmap **)
+
+let mts_to_zmap m =
+  Mts.fold (fun t0 y acc ->
+    insert (map_insert coq_Zmap_partial_alter)
+      (ZCompat.to_Z_big (tag_hash (ts_name t0).id_tag)) (t0,y) acc) m
+    coq_Zmap_empty
 
 type tdecl = tdecl_node tdecl_o
 
@@ -232,6 +251,177 @@ let build_theory_o th_name0 th_path0 th_decls0 th_ranges0 th_floats0 th_crcmap0 
     th_ranges0; th_floats = th_floats0; th_crcmap = th_crcmap0;
     th_proved_wf = th_proved_wf0; th_export = th_export0; th_known =
     th_known0; th_local = th_local0; th_used = th_used0 }
+
+(** val namespace_eqb : namespace -> namespace -> bool **)
+
+let rec namespace_eqb n1 n2 =
+  (&&)
+    ((&&)
+      ((&&) (Mstr.equal ts_equal (ns_ts n1) (ns_ts n2))
+        (Mstr.equal ls_equal (ns_ls n1) (ns_ls n2)))
+      (Mstr.equal pr_equal (ns_pr n1) (ns_pr n2)))
+    (pmap_eqb (tuple_eqb (=) namespace_eqb)
+      ((fun x -> mstr_to_pmap (ns_ns x)) n1)
+      ((fun x -> mstr_to_pmap (ns_ns x)) n2))
+
+(** val meta_arg_type_beq : meta_arg_type -> meta_arg_type -> bool **)
+
+let meta_arg_type_beq x y =
+  match x with
+  | MTty -> (match y with
+             | MTty -> true
+             | _ -> false)
+  | MTtysymbol -> (match y with
+                   | MTtysymbol -> true
+                   | _ -> false)
+  | MTlsymbol -> (match y with
+                  | MTlsymbol -> true
+                  | _ -> false)
+  | MTprsymbol -> (match y with
+                   | MTprsymbol -> true
+                   | _ -> false)
+  | MTstring -> (match y with
+                 | MTstring -> true
+                 | _ -> false)
+  | MTint -> (match y with
+              | MTint -> true
+              | _ -> false)
+  | MTid -> (match y with
+             | MTid -> true
+             | _ -> false)
+
+(** val meta_arg_type_eq_dec : meta_arg_type -> meta_arg_type -> bool **)
+
+let meta_arg_type_eq_dec x y =
+  let b = meta_arg_type_beq x y in if b then true else false
+
+(** val meta_arg_type_eqb : meta_arg_type -> meta_arg_type -> bool **)
+
+let meta_arg_type_eqb =
+  meta_arg_type_beq
+
+(** val meta_arg_eqb : meta_arg -> meta_arg -> bool **)
+
+let meta_arg_eqb m1 m2 =
+  match m1 with
+  | MAty t1 -> (match m2 with
+                | MAty t2 -> ty_eqb t1 t2
+                | _ -> false)
+  | MAts t1 -> (match m2 with
+                | MAts t2 -> ts_equal t1 t2
+                | _ -> false)
+  | MAls l1 -> (match m2 with
+                | MAls l2 -> ls_equal l1 l2
+                | _ -> false)
+  | MApr p1 -> (match m2 with
+                | MApr p2 -> pr_equal p1 p2
+                | _ -> false)
+  | MAstr s1 -> (match m2 with
+                 | MAstr s2 -> (=) s1 s2
+                 | _ -> false)
+  | MAint i1 ->
+    (match m2 with
+     | MAint i2 -> Stdlib.Int.equal i1 i2
+     | _ -> false)
+  | MAid i1 -> (match m2 with
+                | MAid i2 -> id_equal i1 i2
+                | _ -> false)
+
+(** val meta_eqb : meta -> meta -> bool **)
+
+let meta_eqb m1 m2 =
+  (&&)
+    ((&&)
+      ((&&)
+        ((&&) ((=) m1.meta_name m2.meta_name)
+          (list_eqb meta_arg_type_eqb m1.meta_type m2.meta_type))
+        (eqb m1.meta_excl m2.meta_excl)) ((=) m1.meta_desc m2.meta_desc))
+    (BigInt.eq m1.meta_tag m2.meta_tag)
+
+(** val symbol_map_eqb : symbol_map -> symbol_map -> bool **)
+
+let symbol_map_eqb s1 s2 =
+  (&&)
+    ((&&)
+      ((&&) (Mts.equal ty_eqb s1.sm_ty s2.sm_ty)
+        (Mts.equal ts_equal s1.sm_ts s2.sm_ts))
+      (Mls.equal ls_equal s1.sm_ls s2.sm_ls))
+    (Mpr.equal pr_equal s1.sm_pr s2.sm_pr)
+
+(** val theory_eqb : tdecl_node theory_o -> tdecl_node theory_o -> bool **)
+
+let rec theory_eqb t1 t2 =
+  (&&)
+    ((&&)
+      ((&&)
+        ((&&)
+          ((&&)
+            ((&&)
+              ((&&)
+                ((&&)
+                  ((&&)
+                    ((&&) (id_equal (th_name t1) (th_name t2))
+                      (list_eqb (=) (th_path t1) (th_path t2)))
+                    (list_eqb tdecl_eqb (th_decls t1) (th_decls t2)))
+                  (zmap_eqb (tuple_eqb ts_equal tdecl_eqb)
+                    ((fun x -> mts_to_zmap (th_ranges x)) t1)
+                    ((fun x -> mts_to_zmap (th_ranges x)) t2)))
+                (zmap_eqb (tuple_eqb ts_equal tdecl_eqb)
+                  ((fun x -> mts_to_zmap (th_floats x)) t1)
+                  ((fun x -> mts_to_zmap (th_floats x)) t2)))
+              (t_eqb (th_crcmap t1) (th_crcmap t2)))
+            (Mls.equal (tuple_eqb pr_equal ls_equal) (th_proved_wf t1)
+              (th_proved_wf t2)))
+          (namespace_eqb (th_export t1) (th_export t2)))
+        (Mid.equal d_equal (th_known t1) (th_known t2)))
+      (Sid.equal (th_local t1) (th_local t2)))
+    (Sid.equal (th_used t1) (th_used t2))
+
+(** val tdecl_eqb : tdecl_node tdecl_o -> tdecl_node tdecl_o -> bool **)
+
+and tdecl_eqb t1 t2 =
+  (&&) (tdecl_node_eqb (td_node t1) (td_node t2))
+    (BigInt.eq (td_tag t1) (td_tag t2))
+
+(** val tdecl_node_eqb : tdecl_node -> tdecl_node -> bool **)
+
+and tdecl_node_eqb t1 t2 =
+  match t1 with
+  | Decl d1 -> (match t2 with
+                | Decl d2 -> d_equal d1 d2
+                | _ -> false)
+  | Use t3 -> (match t2 with
+               | Use t4 -> theory_eqb t3 t4
+               | _ -> false)
+  | Clone (t3, s1) ->
+    (match t2 with
+     | Clone (t4, s2) -> (&&) (theory_eqb t3 t4) (symbol_map_eqb s1 s2)
+     | _ -> false)
+  | Meta (m1, a1) ->
+    (match t2 with
+     | Meta (m2, a2) -> (&&) (meta_eqb m1 m2) (list_eqb meta_arg_eqb a1 a2)
+     | _ -> false)
+
+module TdeclTag =
+ struct
+  type t = tdecl_node tdecl_o
+
+  (** val tag : tdecl_node tdecl_o -> BigInt.t **)
+
+  let tag =
+    td_tag
+
+  (** val equal : tdecl_node tdecl_o -> tdecl_node tdecl_o -> bool **)
+
+  let equal =
+    tdecl_eqb
+ end
+
+module Tdecl1 = MakeMS(TdeclTag)
+
+module Stdecl1 = Tdecl1.S
+
+module Mtdecl1 = Tdecl1.M
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)

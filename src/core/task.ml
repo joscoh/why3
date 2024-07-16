@@ -18,10 +18,10 @@ open Theory
 (** Clone and meta history *)
 
 (*Trying to switch see*)
-module Stdecl = Theory.Stdecl
+module Stdecl = Theory.Stdecl1
 
-let stdecl_id (s: Stdecl.t) : BigInt.t =
-  Stdecl.fold (fun t acc -> Hashcons.combine_big t.td_tag acc) s (BigInt.of_int 3)
+let stdecl_id (s: Stdecl1.t) : BigInt.t =
+  Stdecl1.fold (fun t acc -> Hashcons.combine_big t.td_tag acc) s (BigInt.of_int 3)
 
 (* module Stdecl = Hcpt.MakeSet(struct
   type t = tdecl

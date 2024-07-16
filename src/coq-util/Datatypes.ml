@@ -1,6 +1,4 @@
 
-type __ = Obj.t
-
 (** val negb : bool -> bool **)
 
 let negb = function
@@ -39,8 +37,3 @@ let coq_CompOpp = function
 | Eq -> Eq
 | Lt -> Gt
 | Gt -> Lt
-
-(** val id : __ -> __ **)
-
-let id x =
-  x

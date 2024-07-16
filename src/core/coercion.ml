@@ -1,3 +1,4 @@
+open CoqUtil
 open Term
 open Ty
 
@@ -55,6 +56,37 @@ let crc_tar_tl c =
   c.crc_tar_tl
 
 type t = coercion Mts.t Mts.t
+
+(** val coercion_kind_eqb : coercion_kind -> coercion_kind -> bool **)
+
+let rec coercion_kind_eqb c1 c2 =
+  match c1 with
+  | CRCleaf l1 ->
+    (match c2 with
+     | CRCleaf l2 -> ls_equal l1 l2
+     | CRCcomp (_, _) -> false)
+  | CRCcomp (c3, c4) ->
+    (match c2 with
+     | CRCleaf _ -> false
+     | CRCcomp (c5, c6) ->
+       (&&) (coercion_kind_eqb c3 c5) (coercion_kind_eqb c4 c6))
+
+(** val coercion_eqb : coercion -> coercion -> bool **)
+
+let coercion_eqb c1 c2 =
+  (&&)
+    ((&&)
+      ((&&)
+        ((&&) (coercion_kind_eqb c1.crc_kind c2.crc_kind)
+          (ts_equal c1.crc_src_ts c2.crc_src_ts))
+        (list_eqb ty_eqb c1.crc_src_tl c2.crc_src_tl))
+      (ts_equal c1.crc_tar_ts c2.crc_tar_ts))
+    (list_eqb ty_eqb c1.crc_tar_tl c2.crc_tar_tl)
+
+(** val t_eqb : t -> t -> bool **)
+
+let t_eqb t1 t2 =
+  Mts.equal (Mts.equal coercion_eqb) t1 t2
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)

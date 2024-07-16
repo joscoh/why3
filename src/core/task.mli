@@ -17,7 +17,7 @@ open Term
 open Decl
 open Theory
 
-module HStdecl = Theory.Stdecl 
+module HStdecl = Theory.Stdecl1
 
 (* module HStdecl : Hcpt.S with type elt = tdecl *)
 
