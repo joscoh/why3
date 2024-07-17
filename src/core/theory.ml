@@ -333,10 +333,10 @@ let meta_eqb m1 m2 =
   (&&)
     ((&&)
       ((&&)
-        ((&&) ((=) m1.meta_name m2.meta_name)
-          (list_eqb meta_arg_type_eqb m1.meta_type m2.meta_type))
-        (eqb m1.meta_excl m2.meta_excl)) ((=) m1.meta_desc m2.meta_desc))
-    (BigInt.eq m1.meta_tag m2.meta_tag)
+        ((&&) (BigInt.eq m1.meta_tag m2.meta_tag)
+          ((=) m1.meta_name m2.meta_name))
+        (list_eqb meta_arg_type_eqb m1.meta_type m2.meta_type))
+      (eqb m1.meta_excl m2.meta_excl)) ((=) m1.meta_desc m2.meta_desc)
 
 (** val symbol_map_eqb : symbol_map -> symbol_map -> bool **)
 
@@ -380,8 +380,8 @@ let rec theory_eqb t1 t2 =
 (** val tdecl_eqb : tdecl_node tdecl_o -> tdecl_node tdecl_o -> bool **)
 
 and tdecl_eqb t1 t2 =
-  (&&) (tdecl_node_eqb (td_node t1) (td_node t2))
-    (BigInt.eq (td_tag t1) (td_tag t2))
+  (&&) (BigInt.eq (td_tag t1) (td_tag t2))
+    (tdecl_node_eqb (td_node t1) (td_node t2))
 
 (** val tdecl_node_eqb : tdecl_node -> tdecl_node -> bool **)
 
@@ -401,6 +401,27 @@ and tdecl_node_eqb t1 t2 =
     (match t2 with
      | Meta (m2, a2) -> (&&) (meta_eqb m1 m2) (list_eqb meta_arg_eqb a1 a2)
      | _ -> false)
+
+module MetaTag =
+ struct
+  type t = meta
+
+  (** val tag : meta -> BigInt.t **)
+
+  let tag m =
+    m.meta_tag
+
+  (** val equal : meta -> meta -> bool **)
+
+  let equal =
+    (fun x y -> x == y || meta_eqb x y)
+ end
+
+module SMmeta1 = MakeMS(MetaTag)
+
+module Smeta = SMmeta1.S
+
+module Mmeta = SMmeta1.M
 
 module TdeclTag =
  struct
@@ -422,6 +443,16 @@ module Tdecl1 = MakeMS(TdeclTag)
 module Stdecl1 = Tdecl1.S
 
 module Mtdecl1 = Tdecl1.M
+
+(** val td_equal : tdecl_node tdecl_o -> tdecl_node tdecl_o -> bool **)
+
+let td_equal =
+  (fun x y -> x == y || tdecl_eqb x y)
+
+(** val td_hash : tdecl_node tdecl_o -> BigInt.t **)
+
+let td_hash =
+  td_tag
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -541,8 +572,8 @@ let print_meta_desc fmt m =
 
 module SMmeta = MakeMSH(struct type t = meta let tag m = m.meta_tag let equal = (==) (*JOSH TODO equal*) end)
 
-module Smeta = SMmeta.S
-module Mmeta = SMmeta.M
+(* module Smeta = SMmeta.S
+module Mmeta = SMmeta.M *)
 module Hmeta = SMmeta.H
 
 let meta_equal : meta -> meta -> bool = (==)
@@ -710,8 +741,8 @@ module Stdecl = Tdecl.S
 module Mtdecl = Tdecl.M
 module Htdecl = Tdecl.H
 
-let td_equal : tdecl -> tdecl -> bool = (==)
-let td_hash td = td.td_tag
+(* let td_equal : tdecl -> tdecl -> bool = (==) *)
+(* let td_hash td = td.td_tag *)
 
 (** Constructors and utilities *)
 

@@ -1,3 +1,154 @@
+open CoqHashtbl
+open CoqUtil
+open Weakhtbl
+open Decl
+
+open Ident
+open Monads
+open State
+open Term
+open Theory
+open Hashcons
+
+module Stdecl = Stdecl1
+
+module HStdecl = Stdecl
+
+type tdecl_set = Stdecl.t
+
+type clone_map = tdecl_set Mid.t
+
+type meta_map = tdecl_set Mmeta.t
+
+type task_hd = { task_decl : tdecl_node tdecl_o; task_prev : task_hd option;
+                 task_known : known_map; task_clone : clone_map;
+                 task_meta : meta_map; task_tag : tag }
+
+(** val task_decl : task_hd -> tdecl_node tdecl_o **)
+
+let task_decl t0 =
+  t0.task_decl
+
+(** val task_prev : task_hd -> task_hd option **)
+
+let task_prev t0 =
+  t0.task_prev
+
+(** val task_known : task_hd -> known_map **)
+
+let task_known t0 =
+  t0.task_known
+
+(** val task_clone : task_hd -> clone_map **)
+
+let task_clone t0 =
+  t0.task_clone
+
+(** val task_meta : task_hd -> meta_map **)
+
+let task_meta t0 =
+  t0.task_meta
+
+(** val task_tag : task_hd -> tag **)
+
+let task_tag t0 =
+  t0.task_tag
+
+type task = task_hd option
+
+(** val task_hd_eqb : task_hd -> task_hd -> bool **)
+
+let rec task_hd_eqb t1 t2 =
+  (&&)
+    ((&&)
+      ((&&)
+        ((&&)
+          ((&&) (tag_equal t1.task_tag t2.task_tag)
+            (td_equal t1.task_decl t2.task_decl))
+          (option_eqb task_hd_eqb t1.task_prev t2.task_prev))
+        (Mid.equal d_equal t1.task_known t2.task_known))
+      (Mid.equal Stdecl.equal t1.task_clone t2.task_clone))
+    (Mmeta.equal Stdecl.equal t1.task_meta t2.task_meta)
+
+(** val task_hd_equal : task_hd -> task_hd -> bool **)
+
+let task_hd_equal t1 t2 =
+  match td_node t1.task_decl with
+  | Decl d1 ->
+    (match td_node t2.task_decl with
+     | Decl d2 ->
+       (match d1.d_node with
+        | Dprop x1 ->
+          (match d2.d_node with
+           | Dprop x2 ->
+             let p,g1 = (fun (x, y, z) -> ((x, y), z)) x1 in
+             let k1,p1 = p in
+             let p0,g2 = (fun (x, y, z) -> ((x, y), z)) x2 in
+             let k2,p2 = p0 in
+             (match k1 with
+              | Pgoal ->
+                (match k2 with
+                 | Pgoal ->
+                   (&&)
+                     ((&&)
+                       (option_eqb (fun x y -> x == y || task_hd_eqb x y)
+                         t1.task_prev t2.task_prev) (pr_equal p1 p2))
+                     (t_equal_strict g1 g2)
+                 | _ -> (fun x y -> x == y || task_hd_eqb x y) t1 t2)
+              | _ -> (fun x y -> x == y || task_hd_eqb x y) t1 t2)
+           | _ -> (fun x y -> x == y || task_hd_eqb x y) t1 t2)
+        | _ -> (fun x y -> x == y || task_hd_eqb x y) t1 t2)
+     | _ -> (fun x y -> x == y || task_hd_eqb x y) t1 t2)
+  | _ -> (fun x y -> x == y || task_hd_eqb x y) t1 t2
+
+(** val task_hd_hash : task_hd -> BigInt.t **)
+
+let task_hd_hash t0 =
+  tag_hash t0.task_tag
+
+(** val task_equal : task -> task -> bool **)
+
+let task_equal t1 t2 =
+  option_eqb (fun x y -> x == y || task_hd_eqb x y) t1 t2
+
+(** val task_hash : task -> BigInt.t **)
+
+let task_hash t0 =
+  option_fold BigInt.zero (fun t1 -> BigInt.succ (task_hd_hash t1)) t0
+
+module TaskHash =
+ struct
+  type t = task_hd
+
+  (** val equal : t -> t -> bool **)
+
+  let equal t1 t2 =
+    (&&) (td_equal t1.task_decl t2.task_decl)
+      (task_equal t1.task_prev t2.task_prev)
+
+  (** val hash : t -> BigInt.t **)
+
+  let hash t1 =
+    combine_big (td_hash t1.task_decl) (task_hash t1.task_prev)
+
+  (** val tag : BigInt.t -> t -> t **)
+
+  let tag i t1 =
+    { task_decl = t1.task_decl; task_prev = t1.task_prev; task_known =
+      t1.task_known; task_clone = t1.task_clone; task_meta = t1.task_meta;
+      task_tag = (create_tag i) }
+ end
+
+module Hstask = Make(TaskHash)
+
+(** val mk_task :
+    tdecl_node tdecl_o -> task -> known_map -> clone_map -> meta_map ->
+    (task_hd hashcons_ty, task) st **)
+
+let mk_task decl prev known clone meta =
+  (@@) (fun t0 -> (fun x -> x) (Some t0))
+    (Hstask.hashcons { task_decl = decl; task_prev = prev; task_known =
+      known; task_clone = clone; task_meta = meta; task_tag = dummy_tag })
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -13,12 +164,12 @@ open Ident
 open Ty
 open Term
 open Decl
-open Theory
+(* open Theory *)
 
 (** Clone and meta history *)
 
 (*Trying to switch see*)
-module Stdecl = Theory.Stdecl1
+(* module Stdecl = Theory.Stdecl1 *)
 
 let stdecl_id (s: Stdecl1.t) : BigInt.t =
   Stdecl1.fold (fun t acc -> Hashcons.combine_big t.td_tag acc) s (BigInt.of_int 3)
@@ -27,9 +178,9 @@ let stdecl_id (s: Stdecl1.t) : BigInt.t =
   type t = tdecl
   let id td = BigInt.to_int td.td_tag 
 end) *)
-module HStdecl = Stdecl
+(* module HStdecl = Stdecl *)
 
-type tdecl_set = Stdecl.t
+(* type tdecl_set = Stdecl.t *)
 
 module Wtds = Weakhtbl.Make(struct
   type t = tdecl_set
@@ -51,8 +202,8 @@ let tds_equal = Stdecl.equal
 JOSH SEE *)
 let tds_compare = Stdecl.compare
 
-type clone_map = tdecl_set Mid.t
-type meta_map = tdecl_set Mmeta.t
+(* type clone_map = tdecl_set Mid.t
+type meta_map = tdecl_set Mmeta.t *)
 
 let cm_find cm th = Mid.find_def tds_empty th.th_name cm
 let mm_find mm t = Mmeta.find_def tds_empty t mm
@@ -71,7 +222,7 @@ let mm_add mm t td = if t.meta_excl
 
 (** Task *)
 
-type task = task_hd option
+(* type task = task_hd option
 
 and task_hd = {
   task_decl  : tdecl;        (* last declaration *)
@@ -80,9 +231,9 @@ and task_hd = {
   task_clone : clone_map;    (* use/clone history *)
   task_meta  : meta_map;     (* meta properties *)
   task_tag   : Weakhtbl.tag; (* unique magical tag *)
-}
+} *)
 
-let task_hd_equal t1 t2 = match t1.task_decl.td_node, t2.task_decl.td_node with
+(* let task_hd_equal t1 t2 = match t1.task_decl.td_node, t2.task_decl.td_node with
   | Decl {d_node = Dprop (Pgoal,p1,g1)}, Decl {d_node = Dprop (Pgoal,p2,g2)} ->
       Option.equal (==) t1.task_prev t2.task_prev &&
       pr_equal p1 p2 && t_equal_strict g1 g2
@@ -92,9 +243,9 @@ let task_hd_hash t = Weakhtbl.tag_hash t.task_tag
 
 let task_equal t1 t2 = Option.equal task_hd_equal t1 t2
 
-let task_hash t = Option.fold ~some:(fun t -> BigInt.succ (task_hd_hash t)) ~none:BigInt.zero t
+let task_hash t = Option.fold ~some:(fun t -> BigInt.succ (task_hd_hash t)) ~none:BigInt.zero t *)
 
-module Hstask = Hashcons.Make (struct
+(* module Hstask = Hashcons.Make (struct
   type t = task_hd
 
   let equal t1 t2 = td_equal t1.task_decl t2.task_decl &&
@@ -112,7 +263,7 @@ let mk_task decl prev known clone meta = Some (Hstask.hashcons {
   task_clone = clone;
   task_meta  = meta;
   task_tag   = Weakhtbl.dummy_tag;
-})
+}) *)
 
 let task_known o = Option.fold ~some:(fun t -> t.task_known) ~none:Mid.empty   o
 let task_clone o = Option.fold ~some:(fun t -> t.task_clone) ~none:Mid.empty   o

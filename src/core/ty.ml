@@ -214,7 +214,7 @@ module TsymTagged =
       (ty_node_c ty_o) tysymbol_o -> (ty_node_c ty_o) tysymbol_o -> bool **)
 
   let equal =
-    tysymbol_eqb
+    (fun x y -> x == y || tysymbol_eqb x y)
  end
 
 module Tsym = MakeMSWeak(TsymTagged)
@@ -227,12 +227,12 @@ module Mts = Tsym.M
     (ty_node_c ty_o) tysymbol_o -> (ty_node_c ty_o) tysymbol_o -> bool **)
 
 let ts_equal =
-  tysymbol_eqb
+  (fun x y -> x == y || tysymbol_eqb x y)
 
 (** val ty_equal : ty_node_c ty_o -> ty_node_c ty_o -> bool **)
 
 let ty_equal =
-  ty_eqb
+  (fun x y -> x == y || ty_eqb x y)
 
 (** val ts_hash : (ty_node_c ty_o) tysymbol_o -> BigInt.t **)
 
@@ -309,7 +309,7 @@ module TyTagged =
   (** val equal : ty_node_c ty_o -> ty_node_c ty_o -> bool **)
 
   let equal =
-    ty_eqb
+    (fun x y -> x == y || ty_eqb x y)
  end
 
 module TyM = MakeMSWeak(TyTagged)

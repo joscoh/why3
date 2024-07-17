@@ -158,9 +158,9 @@ let id_tag i =
 let ident_eqb i1 i2 =
   (&&)
     ((&&)
-      ((&&) ((=) i1.id_string i2.id_string)
-        (Sattr.equal i1.id_attrs i2.id_attrs))
-      (option_eqb equal i1.id_loc i2.id_loc)) (tag_equal i1.id_tag i2.id_tag)
+      ((&&) (tag_equal i1.id_tag i2.id_tag) ((=) i1.id_string i2.id_string))
+      (Sattr.equal i1.id_attrs i2.id_attrs))
+    (option_eqb equal i1.id_loc i2.id_loc)
 
 module IdentTag =
  struct
@@ -174,7 +174,7 @@ module IdentTag =
   (** val equal : ident -> ident -> bool **)
 
   let equal =
-    ident_eqb
+    (fun x y -> x == y || ident_eqb x y)
  end
 
 module Id = MakeMSWeak(IdentTag)
@@ -204,7 +204,7 @@ let pre_loc p =
 (** val id_equal : ident -> ident -> bool **)
 
 let id_equal =
-  ident_eqb
+  (fun x y -> x == y || ident_eqb x y)
 
 (** val id_hash : ident -> BigInt.t **)
 
