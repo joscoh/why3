@@ -2,7 +2,6 @@ open BinNums
 open Bool0
 open Coercion
 open Common
-open CoqHashtbl
 open CoqUtil
 open Weakhtbl
 open Wstdlib

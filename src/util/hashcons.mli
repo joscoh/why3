@@ -39,9 +39,9 @@ module Make :
 
   module HashconsTy :
    sig
-    type t = BigInt.t*H.t hashset
+    type t = H.t hashcons_ty
 
-    val initial : BigInt.t*H.t hashset
+    val initial : H.t hashcons_ty
    end
 
   module HashconsSt :

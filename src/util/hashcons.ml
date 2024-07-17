@@ -39,12 +39,12 @@ module Make =
 
   module HashconsTy =
    struct
-    type t = BigInt.t*H.t hashset
+    type t = H.t hashcons_ty
 
-    (** val initial : BigInt.t*H.t hashset **)
+    (** val initial : H.t hashcons_ty **)
 
     let initial =
-      BigInt.zero,create_hashset
+      { hashcons_ctr = BigInt.zero; hashcons_hash = create_hashset }
    end
 
   module HashconsSt = MakeState(HashconsTy)
@@ -53,21 +53,24 @@ module Make =
 
   let add_builtins l next =
     (@@) (fun x ->
-      let _,h = x in
+      let _,h = get_hashcons x in
       let h' = fold_right (fun x0 acc -> add_hashset H.hash acc x0) h l in
-      HashconsSt.set (next,h')) (HashconsSt.get ())
+      HashconsSt.set { hashcons_ctr = next; hashcons_hash = h' })
+      (HashconsSt.get ())
 
   (** val incr : unit -> (H.t hashcons_ty, unit) st **)
 
   let incr _ =
-    (@@) (fun x -> let i,h = x in HashconsSt.set ((BigInt.succ i),h))
+    (@@) (fun x ->
+      let i,h = get_hashcons x in
+      HashconsSt.set { hashcons_ctr = (BigInt.succ i); hashcons_hash = h })
       (HashconsSt.get ())
 
   (** val unique : t -> (H.t hashcons_ty, t) st **)
 
   let unique d =
     (@@) (fun x ->
-      let i,_ = x in
+      let i,_ = get_hashcons x in
       let d0 = H.tag i d in (@@) (fun _ -> (fun x -> x) d0) (incr ()))
       (HashconsSt.get ())
 
@@ -75,20 +78,21 @@ module Make =
 
   let hashcons d =
     (@@) (fun x ->
-      let i,h = x in
+      let i,h = get_hashcons x in
       let o = find_opt_hashset H.hash H.equal h d in
       (match o with
        | Some k -> (fun x -> x) k
        | None ->
          let d1 = H.tag i d in
          (@@) (fun _ -> (@@) (fun _ -> (fun x -> x) d1) (incr ()))
-           (HashconsSt.set (i,(add_hashset H.hash h d1)))))
-      (HashconsSt.get ())
+           (HashconsSt.set { hashcons_ctr = i; hashcons_hash =
+             (add_hashset H.hash h d1) }))) (HashconsSt.get ())
 
   (** val iter : (t -> unit) -> (H.t hashcons_ty, unit) st **)
 
   let iter f =
-    (@@) (fun x -> let _,h = x in (fun x -> x) (iter_hashset_unsafe f h))
+    (@@) (fun x ->
+      let _,h = get_hashcons x in (fun x -> x) (iter_hashset_unsafe f h))
       (HashconsSt.get ())
 
   (** val stats :

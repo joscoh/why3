@@ -33,4 +33,9 @@ let errst_list l =
   fold_right (fun x acc -> (@@) (fun h -> (@@) (fun t ->  (h::t)) acc) x)
     ( []) l
 
-type 'k hashcons_ty = BigInt.t*'k hashset
+type 'k hashcons_ty = { hashcons_ctr : BigInt.t; hashcons_hash : 'k hashset }
+
+(** val get_hashcons : 'a1 hashcons_ty -> BigInt.t*'a1 hashset **)
+
+let get_hashcons h =
+  h.hashcons_ctr,h.hashcons_hash

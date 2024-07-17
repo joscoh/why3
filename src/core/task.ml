@@ -1,4 +1,3 @@
-open CoqHashtbl
 open CoqUtil
 open Weakhtbl
 open Decl
@@ -172,6 +171,7 @@ open Decl
 
 open Monads
 
+open Term
 open Theory
 
 (** val find_goal : task -> (prsymbol*(term_node term_o)) option **)
@@ -264,6 +264,59 @@ let new_decl t d td =
   (@@) (fun o -> match o with
                  | Known _ ->  t
                  | Normal n ->  n) (new_decl1 t d td)
+
+(** val add_decl :
+    task -> decl -> (tdecl_node tdecl_o hashcons_ty*task_hd hashcons_ty,
+    task) errState **)
+
+let add_decl t d =
+  (@@) (fun td -> new_decl t d td) ( ( (create_decl d)))
+
+(** val add_ty_decl :
+    task -> (ty_node_c ty_o) tysymbol_o -> ((decl
+    hashcons_ty*tdecl_node tdecl_o hashcons_ty)*task_hd hashcons_ty, task)
+    errState **)
+
+let add_ty_decl tk ts =
+  (@@) (fun td ->  ( (add_decl tk td))) ( ( ( (create_ty_decl ts))))
+
+(** val add_data_decl :
+    task -> data_decl list -> (((ty_node_c ty_o hashcons_ty*decl
+    hashcons_ty)*tdecl_node tdecl_o hashcons_ty)*task_hd hashcons_ty, task)
+    errState **)
+
+let add_data_decl tk dl =
+  (@@) (fun td ->  ( (add_decl tk td))) ( ( (create_data_decl dl)))
+
+(** val add_param_decl :
+    task -> lsymbol -> ((decl hashcons_ty*tdecl_node tdecl_o
+    hashcons_ty)*task_hd hashcons_ty, task) errState **)
+
+let add_param_decl tk ls =
+  (@@) (fun td ->  ( (add_decl tk td))) ( ( (create_param_decl ls)))
+
+(** val add_logic_decl :
+    task -> logic_decl list -> ((decl hashcons_ty*tdecl_node tdecl_o
+    hashcons_ty)*task_hd hashcons_ty, task) errState **)
+
+let add_logic_decl tk dl =
+  (@@) (fun td ->  ( (add_decl tk td))) ( ( (create_logic_decl_nocheck dl)))
+
+(** val add_ind_decl :
+    task -> ind_sign -> ind_decl list -> ((decl
+    hashcons_ty*tdecl_node tdecl_o hashcons_ty)*task_hd hashcons_ty, task)
+    errState **)
+
+let add_ind_decl tk s dl =
+  (@@) (fun td ->  ( (add_decl tk td))) ( ( (create_ind_decl s dl)))
+
+(** val add_prop_decl :
+    task -> prop_kind -> prsymbol -> (term_node term_o) -> ((decl
+    hashcons_ty*tdecl_node tdecl_o hashcons_ty)*task_hd hashcons_ty, task)
+    errState **)
+
+let add_prop_decl tk k p f =
+  (@@) (fun td ->  ( (add_decl tk td))) ( ( (create_prop_decl k p f)))
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -437,14 +490,14 @@ let new_meta task t td =
 
 (* declaration constructors + add_decl *)
 
-let add_decl task d = new_decl task d (create_decl d)
+(* let add_decl task d = new_decl task d (create_decl d)
 
 let add_ty_decl tk ts = add_decl tk (create_ty_decl ts)
 let add_data_decl tk dl = add_decl tk (create_data_decl dl)
 let add_param_decl tk ls = add_decl tk (create_param_decl ls)
 let add_logic_decl tk dl = add_decl tk (create_logic_decl dl)
 let add_ind_decl tk s dl = add_decl tk (create_ind_decl s dl)
-let add_prop_decl tk k p f = add_decl tk (create_prop_decl k p f)
+let add_prop_decl tk k p f = add_decl tk (create_prop_decl k p f) *)
 
 (* task constructors *)
 

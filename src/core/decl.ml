@@ -1,6 +1,5 @@
 open BinNums
 open Common
-open CoqHashtbl
 open CoqUtil
 open Weakhtbl
 open Wstdlib
