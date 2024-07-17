@@ -417,7 +417,7 @@ let select_insts env =
   let alginst =
     select meta_select_alginst meta_select_alginst_default ft_select_alginst in
   let trans task =
-    let kn = Task.task_known task in
+    let kn = Task.task_known1 task in
     let inst   = Trans.apply inst   task in
     let lskept = Trans.apply lskept task in
     let lsinst = Trans.apply lsinst task in

@@ -2,6 +2,7 @@ open BinNums
 open Bool0
 open Coercion
 open Common
+open CoqHashtbl
 open CoqUtil
 open Weakhtbl
 open Wstdlib
@@ -12,10 +13,12 @@ open Ident
 open Monads
 open PmapExtra
 open Specif
+open State
 open Term
 open Ty
 open Base
 open Fin_maps
+open Hashcons
 open Pmap
 open Strings0
 open Zmap
@@ -305,7 +308,7 @@ let meta_arg_type_eqb =
 let meta_arg_eqb m1 m2 =
   match m1 with
   | MAty t1 -> (match m2 with
-                | MAty t2 -> ty_eqb t1 t2
+                | MAty t2 -> ty_equal t1 t2
                 | _ -> false)
   | MAts t1 -> (match m2 with
                 | MAts t2 -> ts_equal t1 t2
@@ -402,6 +405,16 @@ and tdecl_node_eqb t1 t2 =
      | Meta (m2, a2) -> (&&) (meta_eqb m1 m2) (list_eqb meta_arg_eqb a1 a2)
      | _ -> false)
 
+(** val meta_equal : meta -> meta -> bool **)
+
+let meta_equal =
+  (fun x y -> x == y || meta_eqb x y)
+
+(** val meta_hash : meta -> BigInt.t **)
+
+let meta_hash m =
+  m.meta_tag
+
 module MetaTag =
  struct
   type t = meta
@@ -453,6 +466,133 @@ let td_equal =
 
 let td_hash =
   td_tag
+
+module TdeclHash =
+ struct
+  type t = tdecl_node tdecl_o
+
+  (** val eq_marg : meta_arg -> meta_arg -> bool **)
+
+  let eq_marg m1 m2 =
+    match m1 with
+    | MAty t1 -> (match m2 with
+                  | MAty t2 -> ty_equal t1 t2
+                  | _ -> false)
+    | MAts t1 -> (match m2 with
+                  | MAts t2 -> ts_equal t1 t2
+                  | _ -> false)
+    | MAls l1 -> (match m2 with
+                  | MAls l2 -> ls_equal l1 l2
+                  | _ -> false)
+    | MApr p1 -> (match m2 with
+                  | MApr p2 -> pr_equal p1 p2
+                  | _ -> false)
+    | MAstr s1 -> (match m2 with
+                   | MAstr s2 -> (=) s1 s2
+                   | _ -> false)
+    | MAint i1 ->
+      (match m2 with
+       | MAint i2 -> Stdlib.Int.equal i1 i2
+       | _ -> false)
+    | MAid _ -> false
+
+  (** val eq_smap : symbol_map -> symbol_map -> bool **)
+
+  let eq_smap =
+    symbol_map_eqb
+
+  (** val equal : tdecl_node tdecl_o -> tdecl_node tdecl_o -> bool **)
+
+  let equal td1 td2 =
+    match td_node td1 with
+    | Decl d1 ->
+      (match td_node td2 with
+       | Decl d2 -> d_equal d1 d2
+       | _ -> false)
+    | Use th1 ->
+      (match td_node td2 with
+       | Use th2 -> id_equal (th_name th1) (th_name th2)
+       | _ -> false)
+    | Clone (th1, sm1) ->
+      (match td_node td2 with
+       | Clone (th2, sm2) ->
+         (&&) (id_equal (th_name th1) (th_name th2)) (eq_smap sm1 sm2)
+       | _ -> false)
+    | Meta (t1, al1) ->
+      (match td_node td2 with
+       | Meta (t2, al2) ->
+         (&&) ((fun x y -> x == y || meta_eqb x y) t1 t2)
+           (list_eqb eq_marg al1 al2)
+       | _ -> false)
+
+  (** val hs_cl_ty : 'a1 -> ty_node_c ty_o -> BigInt.t -> BigInt.t **)
+
+  let hs_cl_ty _ ty acc =
+    combine_big acc (ty_hash ty)
+
+  (** val hs_cl_ts :
+      'a1 -> (ty_node_c ty_o) tysymbol_o -> BigInt.t -> BigInt.t **)
+
+  let hs_cl_ts _ ts acc =
+    combine_big acc (ts_hash ts)
+
+  (** val hs_cl_ls : 'a1 -> lsymbol -> BigInt.t -> BigInt.t **)
+
+  let hs_cl_ls _ ls acc =
+    combine_big acc (ls_hash ls)
+
+  (** val hs_cl_pr : 'a1 -> prsymbol -> BigInt.t -> BigInt.t **)
+
+  let hs_cl_pr _ pr acc =
+    combine_big acc (pr_hash pr)
+
+  (** val hs_ta : meta_arg -> tag **)
+
+  let hs_ta = function
+  | MAty ty -> ty_hash ty
+  | MAts ts -> ts_hash ts
+  | MAls ls -> ls_hash ls
+  | MApr pr -> pr_hash pr
+  | MAstr s -> (fun s -> (BigInt.of_int (Hashtbl.hash s))) s
+  | MAint i -> BigInt.of_int i
+  | MAid i -> id_hash i
+
+  (** val hs_smap : symbol_map -> BigInt.t -> BigInt.t **)
+
+  let hs_smap sm h =
+    Mts.fold hs_cl_ty sm.sm_ty
+      (Mts.fold hs_cl_ts sm.sm_ts
+        (Mls.fold hs_cl_ls sm.sm_ls (Mpr.fold hs_cl_pr sm.sm_pr h)))
+
+  (** val hash : tdecl_node tdecl_o -> BigInt.t **)
+
+  let hash td =
+    match td_node td with
+    | Decl d -> d_hash d
+    | Use th -> id_hash (th_name th)
+    | Clone (th, sm) -> hs_smap sm (id_hash (th_name th))
+    | Meta (t0, al) -> combine_big_list hs_ta (meta_hash t0) al
+
+  (** val tag : BigInt.t -> tdecl_node tdecl_o -> tdecl_node tdecl_o **)
+
+  let tag n td =
+    (fun (x1, x2) -> build_tdecl_o x1 x2) ((td_node td), n)
+ end
+
+module Hstdecl = Make(TdeclHash)
+
+(** val mk_tdecl :
+    tdecl_node -> (tdecl_node tdecl_o hashcons_ty, tdecl_node tdecl_o) st **)
+
+let mk_tdecl n =
+  Hstdecl.hashcons ((fun (x1, x2) -> build_tdecl_o x1 x2) (n,
+    (BigInt.of_int (-1))))
+
+(** val create_decl :
+    decl -> (tdecl_node tdecl_o hashcons_ty, tdecl_node tdecl_o) st **)
+
+let create_decl d =
+  mk_tdecl (Decl d)
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -576,9 +716,9 @@ module SMmeta = MakeMSH(struct type t = meta let tag m = m.meta_tag let equal = 
 module Mmeta = SMmeta.M *)
 module Hmeta = SMmeta.H
 
-let meta_equal : meta -> meta -> bool = (==)
+(* let meta_equal : meta -> meta -> bool = (==)
 
-let meta_hash m = m.meta_tag
+let meta_hash m = m.meta_tag *)
 
 exception KnownMeta of meta
 exception UnknownMeta of string
@@ -671,7 +811,7 @@ and symbol_map = {
 
 (** Theory declarations *)
 
-module Hstdecl = Hashcons.Make (struct
+(* module Hstdecl = Hashcons.Make (struct
 
   type t = tdecl
 
@@ -729,7 +869,7 @@ module Hstdecl = Hashcons.Make (struct
 
 end)
 
-let mk_tdecl n = Hstdecl.hashcons { td_node = n ; td_tag = BigInt.of_int(-1) }
+let mk_tdecl n = Hstdecl.hashcons { td_node = n ; td_tag = BigInt.of_int(-1) } *)
 
 module Tdecl = MakeMSH (struct
   type t = tdecl
@@ -979,7 +1119,7 @@ let add_symbol_ls uc ({ls_name = id} as ls) =
 
 let add_symbol_pr uc pr = add_symbol add_pr pr.pr_name pr uc
 
-let create_decl d = mk_tdecl (Decl d)
+(* let create_decl d = mk_tdecl (Decl d) *)
 
 let print_id fmt id = Ident.print_decoded fmt id.id_string
 

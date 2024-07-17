@@ -55,7 +55,7 @@ let () = Trans.register_transform "eliminate_builtin" eliminate_builtin
 
 (** compute the meta_remove_* given two task one included in the other *)
 let compute_diff t1 t2 =
-  let km = Mid.set_diff (Task.task_known t1) (Task.task_known t2) in
+  let km = Mid.set_diff (Task.task_known1 t1) (Task.task_known1 t2) in
   let hdone = Hdecl.create 10 in
   let remove_ts acc ts =
     (Printer.meta_remove_type, [Theory.MAts ts])::acc in

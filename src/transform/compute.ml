@@ -86,7 +86,7 @@ let normalize_hyp_or_goal ?pr_norm ?step_limit engine : Task.task Trans.tlist  =
     | _ -> [[d]]) None
 
 let craft_engine p env prs task =
-  let km = Task.task_known task in
+  let km = Task.task_known1 task in
   collect_rules p env km prs task
 
 let collect_rules_trans p env : Reduction_engine.engine Trans.trans =
@@ -207,6 +207,6 @@ let simplify check_ls env : 'a Trans.trans =
             Pretty.print_pr pr msg;
           e
       )
-      (create p env (Task.task_known t)) acc in
+      (create p env (Task.task_known1 t)) acc in
   let tr = Trans.store collect in
   Trans.bind tr (fun engine -> normalize_transf engine)

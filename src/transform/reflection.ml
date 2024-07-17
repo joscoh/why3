@@ -601,12 +601,12 @@ let build_goals do_trans renv prev mapdecls defdecls subst env lp g rt =
   ltask_r@lt
 
 let reflection_by_lemma pr env : Task.task Trans.tlist = Trans.store (fun task ->
-  let kn = task_known task in
+  let kn = task_known1 task in
   let g, prev = Task.task_separate_goal task in
   let g = Apply.term_decl g in
   Debug.dprintf debug_refl "start@.";
   let l =
-    let kn' = task_known prev in (* TODO Do we want kn here ? *)
+    let kn' = task_known1 prev in (* TODO Do we want kn here ? *)
     match find_prop_decl kn' pr with
     | (_, t) -> t
     | exception Not_found -> raise (Arg_error "lemma not found")
@@ -636,7 +636,7 @@ exception ReductionFail of reify_env
 let reflection_by_function do_trans s env =
   let tr task =
   Debug.dprintf debug_refl "reflection_f start@.";
-  let kn = task_known task in
+  let kn = task_known1 task in
   let nt = Args_wrapper.build_naming_tables task in
   let crc = nt.Trans.coercion in
   let g, prev = Task.task_separate_goal task in

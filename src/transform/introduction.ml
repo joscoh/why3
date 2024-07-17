@@ -262,7 +262,7 @@ let rec introduce hd =
   match hd.Task.task_decl.Theory.td_node with
   | Theory.Decl {d_node = Dprop (Pgoal,pr,f)} ->
       let mal, task = apply_prev introduce hd in
-      let kn = Some (Task.task_known task) in
+      let kn = Some (Task.task_known1 task) in
       let dl = intros_in_goal kn (List.rev mal) pr f in
       [], List.fold_left Task.add_decl task dl
   | Theory.Meta (m,[ma])
@@ -341,12 +341,12 @@ let rec dequantification hd =
   match d.Theory.td_node with
   | Theory.Decl {d_node = Dprop (Pgoal,pr,f)} ->
       let _, task = apply_prev dequantification hd in
-      let _kn = Some (Task.task_known task) in
+      let _kn = Some (Task.task_known1 task) in
       let dl = dequantify true pr f in
       [], List.fold_left Task.add_decl task dl
   | Theory.Decl {d_node = Dprop (Paxiom,pr,f)} ->
       let _, task = apply_prev dequantification hd in
-      let _kn = Some (Task.task_known task) in
+      let _kn = Some (Task.task_known1 task) in
       let dl = dequantify false pr f in
       [], List.fold_left Task.add_decl task dl
   | Theory.Meta (m,[ma])

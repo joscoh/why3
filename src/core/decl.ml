@@ -1294,7 +1294,12 @@ type known_map = decl Mid.t
 let known_id kn i =
   if negb (Mid.mem i kn) then raise (UnknownIdent i) else  ()
 
-(** val known_add_decl_aux : known_map -> decl -> known_map errorM **)
+type 'a known_res =
+| Known of ident
+| Normal of 'a
+
+(** val known_add_decl_aux :
+    known_map -> decl -> known_map known_res errorM **)
 
 let known_add_decl_aux kn0 d =
   let kn = Mid.map (fun _ -> d) d.d_news in
@@ -1302,13 +1307,12 @@ let known_add_decl_aux kn0 d =
   if negb (Mid.is_empty inter0)
   then (@@) (fun x ->
          let i,d1 = x in
-         if d_equal d1 d
-         then raise (KnownIdent i)
-         else raise (RedeclaredIdent i)) (Mid.choose inter0)
+         if d_equal d1 d then  (Known i) else raise (RedeclaredIdent i))
+         (Mid.choose inter0)
   else let kn1 = Mid.set_union kn0 kn in
        let unk = Mid.set_diff (get_used_syms_decl d) kn1 in
        if Sid.is_empty unk
-       then  kn1
+       then  (Normal kn1)
        else (@@) (fun j -> raise (UnknownIdent j)) (Sid.choose unk)
 
 (** val list_assoc :
@@ -1546,11 +1550,28 @@ let check_positivity kn d =
 (** val known_add_decl : known_map -> decl -> (decl*decl Mid.t) errorM **)
 
 let known_add_decl kn d =
-  (@@) (fun kn0 ->
-    (@@) (fun _ ->
+  (@@) (fun o ->
+    match o with
+    | Known i -> raise (KnownIdent i)
+    | Normal kn0 ->
       (@@) (fun _ ->
-        (@@) (fun d0 ->  (d0,kn0)) (check_termination_strict kn0 d))
-        (check_foundness kn0 d)) (check_positivity kn0 d))
+        (@@) (fun _ ->
+          (@@) (fun d0 ->  (d0,kn0)) (check_termination_strict kn0 d))
+          (check_foundness kn0 d)) (check_positivity kn0 d))
+    (known_add_decl_aux kn d)
+
+(** val known_add_decl_informative :
+    known_map -> decl -> (decl*decl Mid.t) known_res errorM **)
+
+let known_add_decl_informative kn d =
+  (@@) (fun o ->
+    match o with
+    | Known i ->  (Known i)
+    | Normal kn0 ->
+      (@@) (fun _ ->
+        (@@) (fun _ ->
+          (@@) (fun d0 ->  (Normal (d0,kn0))) (check_termination_strict kn0 d))
+          (check_foundness kn0 d)) (check_positivity kn0 d))
     (known_add_decl_aux kn d)
 (********************************************************************)
 (*                                                                  *)

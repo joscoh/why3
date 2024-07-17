@@ -226,7 +226,7 @@ let generate_new_subgoals ~subst_ty ~subst llet lp =
       with values found in 2).
  *)
 let apply pr withed_terms : Task.task Trans.tlist = Trans.store (fun task ->
-  let kn = task_known task in
+  let kn = task_known1 task in
   let g, task = Task.task_separate_goal task in
   let g = term_decl g in
   let t =

@@ -152,7 +152,7 @@ let decl_ud alg_kept tenv kn task =
     | [] -> (tenv,task,dm)
     | (ts, ty0) :: undefined ->
       let tenv = { tenv with undefined } in
-      if Mid.mem ts.ts_name (task_known task) || Mts.mem ts dm then go tenv task dm
+      if Mid.mem ts.ts_name (task_known1 task) || Mts.mem ts dm then go tenv task dm
       else let mono = match ty0.ty_node with Tyapp(_,[]) -> true | _ -> false in
       if not (mono || Sty.mem ty0 alg_kept) then go tenv (add_ty_decl task ts) dm
       else match ty0.ty_node with

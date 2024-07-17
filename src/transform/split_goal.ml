@@ -510,17 +510,17 @@ let split_premise sp d = match d.d_node with
   | _ -> [d]
 
 let prep_goal split = Trans.store (fun t ->
-  let split = split (Some (Task.task_known t)) in
+  let split = split (Some (Task.task_known1 t)) in
   let trans = Trans.goal_l (split_goal split) in
   Trans.apply trans t)
 
 let prep_all split = Trans.store (fun t ->
-  let split = split (Some (Task.task_known t)) in
+  let split = split (Some (Task.task_known1 t)) in
   let trans = Trans.decl_l (split_all split) None in
   Trans.apply trans t)
 
 let prep_premise split = Trans.store (fun t ->
-  let split = split (Some (Task.task_known t)) in
+  let split = split (Some (Task.task_known1 t)) in
   let trans = Trans.decl (split_premise split) None in
   Trans.apply trans t)
 

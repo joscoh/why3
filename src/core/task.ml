@@ -10,11 +10,11 @@ open Term
 open Theory
 open Hashcons
 
-module Stdecl = Stdecl1
+module Stdecl2 = Stdecl1
 
-module HStdecl = Stdecl
+module HStdecl = Stdecl2
 
-type tdecl_set = Stdecl.t
+type tdecl_set = Stdecl2.t
 
 type clone_map = tdecl_set Mid.t
 
@@ -67,8 +67,8 @@ let rec task_hd_eqb t1 t2 =
             (td_equal t1.task_decl t2.task_decl))
           (option_eqb task_hd_eqb t1.task_prev t2.task_prev))
         (Mid.equal d_equal t1.task_known t2.task_known))
-      (Mid.equal Stdecl.equal t1.task_clone t2.task_clone))
-    (Mmeta.equal Stdecl.equal t1.task_meta t2.task_meta)
+      (Mid.equal Stdecl2.equal t1.task_clone t2.task_clone))
+    (Mmeta.equal Stdecl2.equal t1.task_meta t2.task_meta)
 
 (** val task_hd_equal : task_hd -> task_hd -> bool **)
 
@@ -145,10 +145,125 @@ module Hstask = Make(TaskHash)
     tdecl_node tdecl_o -> task -> known_map -> clone_map -> meta_map ->
     (task_hd hashcons_ty, task) st **)
 
-let mk_task decl prev known clone meta =
+let mk_task decl0 prev known clone meta =
   (@@) (fun t0 -> (fun x -> x) (Some t0))
-    (Hstask.hashcons { task_decl = decl; task_prev = prev; task_known =
+    (Hstask.hashcons { task_decl = decl0; task_prev = prev; task_known =
       known; task_clone = clone; task_meta = meta; task_tag = dummy_tag })
+
+(** val task_known1 : task -> decl Mid.t **)
+
+let task_known1 o =
+  option_fold Mid.empty (fun t0 -> t0.task_known) o
+
+(** val task_clone1 : task -> tdecl_set Mid.t **)
+
+let task_clone1 o =
+  option_fold Mid.empty (fun t0 -> t0.task_clone) o
+
+(** val task_meta1 : task -> tdecl_set Mmeta.t **)
+
+let task_meta1 o =
+  option_fold Mmeta.empty (fun t0 -> t0.task_meta) o
+exception LemmaFound
+exception GoalFound
+exception GoalNotFound
+open CoqUtil
+open Decl
+
+open Monads
+
+open Theory
+
+(** val find_goal : task -> (prsymbol*(term_node term_o)) option **)
+
+let find_goal t =
+  option_bind t (fun t0 ->
+    match td_node t0.task_decl with
+    | Decl d ->
+      (match d.d_node with
+       | Dprop x ->
+         let p0,f = (fun (x, y, z) -> ((x, y), z)) x in
+         let k,p = p0 in (match k with
+                          | Pgoal -> Some (p,f)
+                          | _ -> None)
+       | _ -> None)
+    | _ -> None)
+
+(** val task_goal : task -> prsymbol errorM **)
+
+let task_goal t =
+  match find_goal t with
+  | Some p -> let pr,_ = p in  pr
+  | None -> raise GoalNotFound
+
+(** val task_goal_fmla : task -> (term_node term_o) errorM **)
+
+let task_goal_fmla t =
+  match find_goal t with
+  | Some p -> let _,f = p in  f
+  | None -> raise GoalNotFound
+
+(** val task_separate_goal : task -> (tdecl_node tdecl_o*task) errorM **)
+
+let task_separate_goal = function
+| Some t0 ->
+  (match td_node t0.task_decl with
+   | Decl d ->
+     (match d.d_node with
+      | Dprop x ->
+        let p0,_ = (fun (x, y, z) -> ((x, y), z)) x in
+        let k,_ = p0 in
+        (match k with
+         | Pgoal ->  (t0.task_decl,t0.task_prev)
+         | _ -> raise GoalNotFound)
+      | _ -> raise GoalNotFound)
+   | _ -> raise GoalNotFound)
+| None -> raise GoalNotFound
+
+(** val check_task : task -> task errorM **)
+
+let check_task t =
+  match find_goal t with
+  | Some _ -> raise GoalFound
+  | None ->  t
+
+(** val check_decl : decl -> decl errorM **)
+
+let check_decl d =
+  match d.d_node with
+  | Dprop x ->
+    let p,_ = (fun (x, y, z) -> ((x, y), z)) x in
+    let k,_ = p in (match k with
+                    | Plemma -> raise LemmaFound
+                    | _ ->  d)
+  | _ ->  d
+
+(** val new_decl1 :
+    task -> decl -> tdecl_node tdecl_o -> (tdecl_node tdecl_o
+    hashcons_ty*task_hd hashcons_ty, task known_res) errState **)
+
+let new_decl1 t d _ =
+  (@@) (fun d1 ->
+    (@@) (fun o ->
+      match o with
+      | Known i ->  (Known i)
+      | Normal a ->
+        let d2,kn = a in
+        (@@) (fun td1 ->
+          (@@) (fun _ ->
+            (@@) (fun h ->  (Normal h))
+              ( ( (mk_task td1 t kn (task_clone1 t) (task_meta1 t)))))
+            ( (check_task t))) ( ( (create_decl d2))))
+      ( (known_add_decl_informative (task_known1 t) d1))) ( (check_decl d))
+
+(** val new_decl :
+    task -> decl -> tdecl_node tdecl_o -> (tdecl_node tdecl_o
+    hashcons_ty*task_hd hashcons_ty, task) errState **)
+
+let new_decl t d td =
+  (@@) (fun o -> match o with
+                 | Known _ ->  t
+                 | Normal n ->  n) (new_decl1 t d td)
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -190,17 +305,17 @@ end)
 
 
 let mk_tds s =
-  Theory.Stdecl.fold Stdecl.add s Stdecl.empty
+  Theory.Stdecl.fold Stdecl2.add s Stdecl2.empty
 
-let tds_empty = Stdecl.empty
-let tds_singleton td = Stdecl.singleton td
+let tds_empty = Stdecl2.empty
+let tds_singleton td = Stdecl2.singleton td
 
-let tds_add = Stdecl.add
+let tds_add = Stdecl2.add
 
-let tds_equal = Stdecl.equal
+let tds_equal = Stdecl2.equal
 (* let tds_hash = Stdecl.hash 
 JOSH SEE *)
-let tds_compare = Stdecl.compare
+let tds_compare = Stdecl2.compare
 
 (* type clone_map = tdecl_set Mid.t
 type meta_map = tdecl_set Mmeta.t *)
@@ -265,20 +380,20 @@ let mk_task decl prev known clone meta = Some (Hstask.hashcons {
   task_tag   = Weakhtbl.dummy_tag;
 }) *)
 
-let task_known o = Option.fold ~some:(fun t -> t.task_known) ~none:Mid.empty   o
+(* let task_known o = Option.fold ~some:(fun t -> t.task_known) ~none:Mid.empty   o
 let task_clone o = Option.fold ~some:(fun t -> t.task_clone) ~none:Mid.empty   o
-let task_meta  o = Option.fold ~some:(fun t -> t.task_meta)  ~none:Mmeta.empty o
+let task_meta  o = Option.fold ~some:(fun t -> t.task_meta)  ~none:Mmeta.empty o *)
 
-let find_clone_tds task (th : theory) = cm_find (task_clone task) th
-let find_meta_tds task (t : meta) = mm_find (task_meta task) t
+let find_clone_tds task (th : theory) = cm_find (task_clone1 task) th
+let find_meta_tds task (t : meta) = mm_find (task_meta1 task) t
 
 (* constructors with checks *)
 
-exception LemmaFound
+(* exception LemmaFound
 exception GoalFound
-exception GoalNotFound
+exception GoalNotFound *)
 
-let find_goal = function
+(* let find_goal = function
   | Some {task_decl = {td_node = Decl {d_node = Dprop (Pgoal,p,f)}}} ->
       Some(p,f)
   | _ -> None
@@ -310,15 +425,15 @@ let new_decl task d td =
   let td1 = create_decl d1 in
   mk_task td1 (check_task task) kn (task_clone task) (task_meta task)
 
-let new_decl task d td = try new_decl task d td with KnownIdent _ -> task
+let new_decl task d td = try new_decl task d td with KnownIdent _ -> task *)
 
 let new_clone task th td =
-  let cl = cm_add (task_clone task) th td in
-  mk_task td (check_task task) (task_known task) cl (task_meta task)
+  let cl = cm_add (task_clone1 task) th td in
+  mk_task td (check_task task) (task_known1 task) cl (task_meta1 task)
 
 let new_meta task t td =
-  let mt = mm_add (task_meta task) t td in
-  mk_task td (check_task task) (task_known task) (task_clone task) mt
+  let mt = mm_add (task_meta1 task) t td in
+  mk_task td (check_task task) (task_known1 task) (task_clone1 task) mt
 
 (* declaration constructors + add_decl *)
 
@@ -336,7 +451,7 @@ let add_prop_decl tk k p f = add_decl tk (create_prop_decl k p f)
 let add_tdecl task td = match td.td_node with
   | Decl d -> new_decl task d td
   | Use th ->
-      if Stdecl.mem td (find_clone_tds task th) then task else
+      if Stdecl2.mem td (find_clone_tds task th) then task else
       new_clone task th td
   | Clone (th,_) -> new_clone task th td
   | Meta (t,_) -> new_meta task t td
@@ -350,7 +465,7 @@ let rec flat_tdecl task td = match td.td_node with
   | Meta (t,_) -> new_meta task t td
 
 and use_export task th td =
-  if Stdecl.mem td (find_clone_tds task th) then task else
+  if Stdecl2.mem td (find_clone_tds task th) then task else
   let task = List.fold_left flat_tdecl task th.th_decls in
   new_clone task th td
 
@@ -405,16 +520,16 @@ let check_use td = match td.td_node with
   | Clone _ -> false
   | _ -> assert false
 
-let used_theories task =
+let used_theories (task : task) =
   let used s =
-    let th = match (Stdecl.choose s).td_node with
+    let th = match (Stdecl2.choose s).td_node with
       | Use th
       | Clone (th, _) -> th
       | _ -> assert false
     in
-    if Stdecl.exists_ check_use s then Some th else None
+    if Stdecl2.exists_ check_use s then Some th else None
   in
-  Mid.map_filter used (task_clone task)
+  Mid.map_filter used (task_clone1 task)
 
 let used_symbols thmap =
   let dict th = Mid.map (fun () -> th) th.th_local in
@@ -449,7 +564,7 @@ let on_meta t fn acc task =
     | _ -> assert false
   in
   let tds = find_meta_tds task t in
-  Stdecl.fold add tds acc
+  Stdecl2.fold add tds acc
 
 let on_cloned_theory th fn acc task =
   let add td acc = match td.td_node with
@@ -458,7 +573,7 @@ let on_cloned_theory th fn acc task =
     | _ -> assert false
   in
   let tds = find_clone_tds task th in
-  Stdecl.fold add tds acc
+  Stdecl2.fold add tds acc
 
 let on_meta_excl t task =
   if not t.meta_excl then raise (NotExclusiveMeta t);
@@ -467,11 +582,11 @@ let on_meta_excl t task =
     | _ -> assert false
   in
   let tds = find_meta_tds task t in
-  Stdecl.fold add tds None
+  Stdecl2.fold add tds None
 
 let on_used_theory th task =
   let tds = find_clone_tds task th in
-  Stdecl.exists_ check_use tds
+  Stdecl2.exists_ check_use tds
 
 let on_tagged_ty t task =
   begin match t.meta_type with
@@ -483,7 +598,7 @@ let on_tagged_ty t task =
     | _ -> assert false
   in
   let tds = find_meta_tds task t in
-  Stdecl.fold add tds Sty.empty
+  Stdecl2.fold add tds Sty.empty
 
 let on_tagged_ts t task =
   begin match t.meta_type with
@@ -495,7 +610,7 @@ let on_tagged_ts t task =
     | _ -> assert false
   in
   let tds = find_meta_tds task t in
-  Stdecl.fold add tds Sts.empty
+  Stdecl2.fold add tds Sts.empty
 
 let on_tagged_ls t task =
   begin match t.meta_type with
@@ -507,7 +622,7 @@ let on_tagged_ls t task =
     | _ -> assert false
   in
   let tds = find_meta_tds task t in
-  Stdecl.fold add tds Sls.empty
+  Stdecl2.fold add tds Sls.empty
 
 let on_tagged_pr t task =
   begin match t.meta_type with
@@ -519,7 +634,7 @@ let on_tagged_pr t task =
     | _ -> assert false
   in
   let tds = find_meta_tds task t in
-  Stdecl.fold add tds Spr.empty
+  Stdecl2.fold add tds Spr.empty
 
 
 (* Exception reporting *)
