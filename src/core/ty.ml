@@ -271,7 +271,9 @@ module TyHash =
       (match ty_node ty2 with
        | Tyvar _ -> false
        | Tyapp (s2, l2) ->
-         (&&) (ts_equal s1 s2) (forallb (fun x -> x) (map2 ty_equal l1 l2)))
+         (&&) ((fun x y -> x == y || tysymbol_eqb x y) s1 s2)
+           (forallb (fun x -> x)
+             (map2 (fun x y -> x == y || ty_eqb x y) l1 l2)))
 
   (** val hash : ty_node_c ty_o -> BigInt.t **)
 
@@ -573,21 +575,13 @@ let ty_freevars s t0 =
 let ty_closed t0 =
   ty_v_all (fun _ -> false) t0
 
-(** val fold_errorM' :
-    ('a1 -> 'a2 -> 'a1 errorM) -> 'a2 list -> 'a1 -> 'a1 errorM **)
-
-let rec fold_errorM' f l x =
-  match l with
-  | [] ->  x
-  | h::t0 -> (@@) (fun i -> f i h) (fold_errorM' f t0 x)
-
 (** val ty_v_fold_err :
     ('a1 -> tvsymbol -> 'a1 errorM) -> 'a1 -> ty_node_c ty_o -> 'a1 errorM **)
 
 let rec ty_v_fold_err fn acc t0 =
   match ty_node t0 with
   | Tyvar v -> fn acc v
-  | Tyapp (_, tl) -> fold_errorM' (ty_v_fold_err fn) tl acc
+  | Tyapp (_, tl) -> foldr_err (ty_v_fold_err fn) tl acc
 
 (** val ty_v_all_err :
     (tvsymbol -> bool errorM) -> ty_node_c ty_o -> bool errorM **)
@@ -601,7 +595,7 @@ let ty_v_all_err pr t0 =
 
 let create_tysymbol name args d =
   let add0 = fun s v -> Stv.add_new (DuplicateTypeVar v) v s in
-  let s1 = fold_errorM' add0 args Stv.empty in
+  let s1 = foldr_err add0 args Stv.empty in
   let check = fun v ->
     (@@) (fun m -> if Stv.mem v m then  true else raise (UnboundTypeVar v)) s1
   in
@@ -784,14 +778,6 @@ let ts_tuple_ids =
 let tuple_memo =
   TupIds.create Stdlib.Int.one
 
-(** val fold_left_st :
-    ('a2 -> 'a3 -> ('a1, 'a2) st) -> 'a3 list -> 'a2 -> ('a1, 'a2) st **)
-
-let rec fold_left_st f l x =
-  match l with
-  | [] -> (fun x -> x) x
-  | h::t0 -> (@@) (fun j -> fold_left_st f t0 j) (f x h)
-
 (** val ts_tuple :
     BigInt.t -> (BigInt.t*((TupNames.key, TupNames.value)
     hashtbl*(TupIds.key, TupIds.value) hashtbl), (ty_node_c ty_o) tysymbol_o)
@@ -803,7 +789,7 @@ let ts_tuple n =
     | Some v -> (fun x -> x) v
     | None ->
       let vl =
-        fold_left_st (fun l _ ->
+        foldl_st (fun l _ ->
           (@@) (fun h -> (fun x -> x) (h::l))
             (create_tvsymbol (id_fresh1 "a"))) (iota n) []
       in

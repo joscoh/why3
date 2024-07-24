@@ -39,3 +39,79 @@ type 'k hashcons_ty = { hashcons_ctr : BigInt.t; hashcons_hash : 'k hashset }
 
 let get_hashcons h =
   h.hashcons_ctr,h.hashcons_hash
+
+(** val foldr_err :
+    ('a1 -> 'a2 -> 'a1 errorM) -> 'a2 list -> 'a1 -> 'a1 errorM **)
+
+let rec foldr_err f l x =
+  match l with
+  | [] ->  x
+  | h::t -> (@@) (fun i -> f i h) (foldr_err f t x)
+
+(** val foldl_err :
+    ('a1 -> 'a2 -> 'a1 errorM) -> 'a2 list -> 'a1 -> 'a1 errorM **)
+
+let rec foldl_err f l x =
+  match l with
+  | [] ->  x
+  | h::t -> (@@) (fun j -> foldl_err f t j) (f x h)
+
+(** val fold_left2_err :
+    ('a3 -> 'a1 -> 'a2 -> 'a3 errorM) -> 'a3 -> 'a1 list -> 'a2 list -> 'a3
+    option errorM **)
+
+let rec fold_left2_err f accu l1 l2 =
+  match l1 with
+  | [] -> (match l2 with
+           | [] ->  (Some accu)
+           | _::_ ->  None)
+  | a1::l3 ->
+    (match l2 with
+     | [] ->  None
+     | a2::l4 -> (@@) (fun x -> fold_left2_err f x l3 l4) (f accu a1 a2))
+
+(** val iter_err : ('a1 -> unit errorM) -> 'a1 list -> unit errorM **)
+
+let iter_err f l =
+  foldl_err (fun _ -> f) l ()
+
+(** val iter2_err :
+    ('a1 -> 'a2 -> unit errorM) -> 'a1 list -> 'a2 list -> unit errorM **)
+
+let iter2_err f l1 l2 =
+  (@@) (fun o ->
+    match o with
+    | Some x ->  x
+    | None -> raise (Invalid_argument "iter2"))
+    (fold_left2_err (fun _ -> f) () l1 l2)
+
+(** val foldl_st :
+    ('a2 -> 'a3 -> ('a1, 'a2) st) -> 'a3 list -> 'a2 -> ('a1, 'a2) st **)
+
+let rec foldl_st f l x =
+  match l with
+  | [] -> (fun x -> x) x
+  | h::t -> (@@) (fun j -> foldl_st f t j) (f x h)
+
+(** val foldl_errst :
+    ('a2 -> 'a3 -> ('a1, 'a2) errState) -> 'a3 list -> 'a2 -> ('a1, 'a2)
+    errState **)
+
+let rec foldl_errst f l x =
+  match l with
+  | [] ->  x
+  | h::t -> (@@) (fun j -> foldl_errst f t j) (f x h)
+
+(** val fold_left2_errst :
+    ('a3 -> 'a1 -> 'a2 -> ('a4, 'a3) errState) -> 'a3 -> 'a1 list -> 'a2 list
+    -> ('a4, 'a3 option) errState **)
+
+let rec fold_left2_errst f accu l1 l2 =
+  match l1 with
+  | [] -> (match l2 with
+           | [] ->  ( (Some accu))
+           | _::_ ->  ( None))
+  | a1::l3 ->
+    (match l2 with
+     | [] ->  ( None)
+     | a2::l4 -> (@@) (fun x -> fold_left2_errst f x l3 l4) (f accu a1 a2))

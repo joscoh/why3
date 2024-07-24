@@ -449,19 +449,6 @@ let rec map2_opt f l1 l2 =
         | Some l3 -> Some ((f x1 x2)::l3)
         | None -> None))
 
-(** val list_iter2 :
-    ('a1 -> 'a2 -> unit errorM) -> 'a1 list -> 'a2 list -> unit errorM **)
-
-let rec list_iter2 f l1 l2 =
-  match l1 with
-  | [] -> (match l2 with
-           | [] ->  ()
-           | _::_ -> raise (Invalid_argument "iter2"))
-  | x1::t1 ->
-    (match l2 with
-     | [] -> raise (Invalid_argument "iter2")
-     | x2::t2 -> (@@) (fun _ -> list_iter2 f t1 t2) (f x1 x2))
-
 (** val make_ls_defn :
     lsymbol -> vsymbol list -> (term_node term_o) -> (ty_node_c ty_o
     hashcons_ty, lsymbol*ls_defn) errState **)
@@ -478,7 +465,7 @@ let make_ls_defn ls vl t0 =
                  (@@) (fun _ ->
                    (@@) (fun _ ->  (ls,((ls,fd),[])))
                      ( (t_ty_check t0 ls.ls_value)))
-                   ( (list_iter2 check_vl ls.ls_args vl)))
+                   ( (iter2_err check_vl ls.ls_args vl)))
                  ( (check_fvs tforall))) ( (t_forall_close vl [] bd)))
              (TermTFAlt.t_selecti t_equ (fun x y ->  (t_iff x y)) hd t0))
            (t_app ls (map t_var vl) (t_ty t0)))
@@ -915,42 +902,6 @@ let create_ty_decl t0 =
 let is_nodef = function
 | NoDef -> true
 | _ -> false
-
-(** val foldl_errst :
-    ('a1 -> 'a2 -> ('a3, 'a1) errState) -> 'a2 list -> 'a1 -> ('a3, 'a1)
-    errState **)
-
-let rec foldl_errst f l x =
-  match l with
-  | [] ->  x
-  | h::t0 -> (@@) (fun j -> foldl_errst f t0 j) (f x h)
-
-(** val foldl_err :
-    ('a1 -> 'a2 -> 'a1 errorM) -> 'a2 list -> 'a1 -> 'a1 errorM **)
-
-let rec foldl_err f l x =
-  match l with
-  | [] ->  x
-  | h::t0 -> (@@) (fun j -> foldl_err f t0 j) (f x h)
-
-(** val iter_err : ('a1 -> unit errorM) -> 'a1 list -> unit errorM **)
-
-let iter_err f l =
-  foldl_err (fun _ -> f) l ()
-
-(** val fold_left2_err :
-    ('a3 -> 'a1 -> 'a2 -> 'a3 errorM) -> 'a3 -> 'a1 list -> 'a2 list -> 'a3
-    option errorM **)
-
-let rec fold_left2_err f accu l1 l2 =
-  match l1 with
-  | [] -> (match l2 with
-           | [] ->  (Some accu)
-           | _::_ ->  None)
-  | a1::l3 ->
-    (match l2 with
-     | [] ->  None
-     | a2::l4 -> (@@) (fun x -> fold_left2_err f x l3 l4) (f accu a1 a2))
 
 (** val opt_get_exn : exn -> 'a1 option -> 'a1 errorM **)
 
@@ -1537,7 +1488,7 @@ let check_positivity kn d =
                             ((tys,cs),ty0))
                    else  ()
             in
-            (@@) (fun l1 -> list_iter2 check tl l1)
+            (@@) (fun l1 -> iter2_err check tl l1)
               (ts_extract_pos kn Sts.empty ts)
         in check_ty
       in

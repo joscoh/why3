@@ -251,7 +251,7 @@ endif
 #awful hack
 LIB_BIGINT = bigInt
 
-LIB_COQUTIL = ZCompat Datatypes base fin_maps option0 numbers BinNums \
+LIB_COQUTIL = ZCompat Datatypes base fin_maps option0 Nat0 numbers BinNums \
 		Specif pmap Basics zmap BinPos BinInt List0 Bool0 strings0 Byte Common \
 		CoqUtil PmapExtra CoqHashtbl StateMonad Monads path ssrbool State Ctr IntFuncs \
 		Exthtbl2

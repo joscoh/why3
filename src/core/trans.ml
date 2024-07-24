@@ -1,3 +1,60 @@
+open List0
+open Monads
+open Wstdlib
+open Ty
+open Term
+open Decl
+open Theory
+open Task
+open Env
+
+
+
+
+
+
+
+type 'a trans = task -> 'a
+
+type 'a tlist = 'a list trans
+
+(** val task_list : task -> task_hd list **)
+
+let task_list t =
+  let acc = [] in
+  task_rect (fun acc0 -> acc0) (fun thd rec0 acc0 -> rec0 (thd::acc0)) t acc
+
+(** val fold : (task_hd -> 'a1 -> 'a1) -> 'a1 -> 'a1 trans **)
+
+let fold fn v t =
+  fold_left (fun x y -> fn y x) (task_list t) v
+
+(** val fold_errst :
+    (task_hd -> 'a2 -> ('a1, 'a2) errState) -> 'a2 -> task -> ('a1, 'a2)
+    errState **)
+
+let fold_errst fn v t =
+  foldl_errst (fun x y -> fn y x) (task_list t) v
+
+(** val gen_decl1 :
+    (task -> 'a1 -> ('a2*hashcons_full, task) errState) -> (decl ->
+    ('a2*hashcons_full, 'a1 list) errState) -> task -> task ->
+    ('a2*hashcons_full, task) errState **)
+
+let gen_decl1 add fn =
+  let fn0 = fun tsk acc ->
+    match td_node tsk.task_decl with
+    | Decl d -> (@@) (fun l -> foldl_errst add l acc) (fn d)
+    | _ ->  ( (add_tdecl1 acc tsk.task_decl))
+  in
+  fold_errst fn0
+
+(** val decl_errst :
+    (decl -> ('a1*hashcons_full, decl list) errState) -> task -> task ->
+    ('a1*hashcons_full, task) errState **)
+
+let decl_errst f t1 t2 =
+  gen_decl1 (fun t d ->  ( (add_decl t d))) f t1 t2
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -9,12 +66,12 @@
 (*                                                                  *)
 (********************************************************************)
 
-open Wstdlib
-open Ty
-open Term
-open Decl
-open Theory
-open Task
+
+
+
+
+
+
 
 let debug = Debug.register_info_flag "transform"
   ~desc:"Print@ debugging@ messages@ about@ application@ \
@@ -22,8 +79,8 @@ let debug = Debug.register_info_flag "transform"
 
 (** Task transformation *)
 
-type 'a trans = task -> 'a
-type 'a tlist = 'a list trans
+(* type 'a trans = task -> 'a
+type 'a tlist = 'a list trans *)
 
 let apply f x = f x
 
@@ -74,7 +131,7 @@ let trace_goal msg tr =
     end;
     new_task
 
-let fold fn v =
+(* let fold fn v =
   let h = Wtask.create 63 in
   let rewind acc task =
 (*
@@ -98,7 +155,7 @@ let fold fn v =
         | None   -> accum (task::todo) task.task_prev
       end
   in
-  accum []
+  accum [] *)
 
 let fold_l fn v = fold (fun task -> Lists.apply (fn task)) [v]
 
@@ -351,7 +408,7 @@ let create_debugging_trans trans_name (tran : Task.task trans) =
 
 (** register transformations *)
 
-open Env
+
 
 module Wenv = Weakhtbl.Make (struct
   type t = env

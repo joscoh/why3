@@ -1,13 +1,18 @@
 open CoqUtil
 open Weakhtbl
+open Datatypes
 open Decl
 
 open Ident
 open Monads
+open Nat0
 open State
 open Term
 open Theory
+open Ty
 open Hashcons
+
+type hack = tysymbol
 
 module Stdecl2 = Stdecl1
 
@@ -54,6 +59,33 @@ let task_tag t0 =
   t0.task_tag
 
 type task = task_hd option
+
+(** val option_size : ('a1 -> nat) -> 'a1 option -> nat **)
+
+let option_size sz = function
+| Some x -> add (S O) (sz x)
+| None -> S O
+
+(** val task_hd_size : task_hd -> nat **)
+
+let rec task_hd_size t0 =
+  option_size task_hd_size t0.task_prev
+
+(** val task_size : task -> nat **)
+
+let task_size t0 =
+  option_size task_hd_size t0
+
+(** val task_rect_aux : 'a1 -> (task_hd -> 'a1 -> 'a1) -> task -> 'a1 **)
+
+let rec task_rect_aux hnone hsome = function
+| Some t1 -> hsome t1 (task_rect_aux hnone hsome t1.task_prev)
+| None -> hnone
+
+(** val task_rect : 'a1 -> (task_hd -> 'a1 -> 'a1) -> task -> 'a1 **)
+
+let task_rect =
+  task_rect_aux
 
 (** val task_hd_eqb : task_hd -> task_hd -> bool **)
 
@@ -163,6 +195,12 @@ let task_clone1 o =
 
 let task_meta1 o =
   option_fold Mmeta.empty (fun t0 -> t0.task_meta) o
+
+type hashcons_full =
+  ((ty_node_c ty_o hashcons_ty*decl hashcons_ty)*tdecl_node tdecl_o
+  hashcons_ty)*task_hd hashcons_ty
+
+
 exception LemmaFound
 exception GoalFound
 exception GoalNotFound
@@ -317,6 +355,15 @@ let add_ind_decl tk s dl =
 
 let add_prop_decl tk k p f =
   (@@) (fun td ->  ( (add_decl tk td))) ( ( (create_prop_decl k p f)))
+
+(** val add_tdecl1 :
+    task_hd option -> tdecl_node tdecl_o -> (tdecl_node tdecl_o
+    hashcons_ty*task_hd hashcons_ty, task) errState **)
+
+let add_tdecl1 tsk td =
+  match td_node td with
+  | Decl d -> new_decl tsk d td
+  | _ ->  tsk
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)

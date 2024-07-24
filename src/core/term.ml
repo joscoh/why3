@@ -658,21 +658,6 @@ let pat_all pr pat =
 let pat_any pr pat =
   pat_fold (fun x y -> (||) x (pr y)) false pat
 
-(** val fold_left2_errorHashcons :
-    ('a3 -> 'a1 -> 'a2 -> ('a4 hashcons_ty, 'a3) errState) -> 'a3 -> 'a1 list
-    -> 'a2 list -> ('a4 hashcons_ty, 'a3 option) errState **)
-
-let rec fold_left2_errorHashcons f accu l1 l2 =
-  match l1 with
-  | [] -> (match l2 with
-           | [] ->  ( (Some accu))
-           | _::_ ->  ( None))
-  | a1::l3 ->
-    (match l2 with
-     | [] ->  ( None)
-     | a2::l4 ->
-       (@@) (fun x -> fold_left2_errorHashcons f x l3 l4) (f accu a1 a2))
-
 (** val pat_app :
     lsymbol -> (pattern_node pattern_o) list -> ty_node_c ty_o -> (TyHash.t
     hashcons_ty, (pattern_node pattern_o)) errState **)
@@ -688,7 +673,7 @@ let pat_app fs pl t0 =
            then raise (ConstructorExpected fs)
            else pat_app_aux fs pl t0
          | None -> raise (BadArity (fs,(int_length pl)))))
-      (fold_left2_errorHashcons mtch s fs.ls_args pl))
+      (fold_left2_errst mtch s fs.ls_args pl))
     (match fs.ls_value with
      | Some vty -> ty_match Mtv.empty vty t0
      | None ->  (raise (FunctionSymbolExpected fs)))
@@ -2033,7 +2018,7 @@ let ls_arg_inst ls tl =
     match o with
     | Some l ->  l
     | None ->  (raise (BadArity (ls,(int_length tl)))))
-    (fold_left2_errorHashcons mtch Mtv.empty ls.ls_args tl)
+    (fold_left2_errst mtch Mtv.empty ls.ls_args tl)
 
 (** val ls_app_inst :
     lsymbol -> (term_node term_o) list -> ty_node_c ty_o option ->
@@ -2376,21 +2361,12 @@ let t_func_app fn t0 =
 let t_pred_app pr t0 =
   (@@) (fun t1 -> t_equ t1 t_bool_true) (t_func_app pr t0)
 
-(** val fold_left_errst :
-    ('a2 -> 'a3 -> ('a1, 'a2) errState) -> 'a3 list -> 'a2 -> ('a1, 'a2)
-    errState **)
-
-let rec fold_left_errst f l x =
-  match l with
-  | [] ->  x
-  | h::t0 -> (@@) (fun j -> fold_left_errst f t0 j) (f x h)
-
 (** val t_func_app_l :
     (term_node term_o) -> (term_node term_o) list -> (ty_node_c ty_o
     hashcons_ty, (term_node term_o)) errState **)
 
 let t_func_app_l fn tl =
-  fold_left_errst t_func_app tl fn
+  foldl_errst t_func_app tl fn
 
 (** val t_pred_app_l :
     (term_node term_o) -> (term_node term_o) list -> (ty_node_c ty_o
@@ -2418,7 +2394,7 @@ let rec pat_gen_fold fnT fnL acc pat =
 
 let rec t_gen_fold fnT fnL acc t0 =
   let fn = t_gen_fold fnT fnL in
-  let acc0 = CoqUtil.opt_fold fnT acc (t_ty t0) in
+  let acc0 = opt_fold fnT acc (t_ty t0) in
   (match t_node t0 with
    | Tapp (f, tl) -> fold_left fn tl (fnL acc0 f)
    | Tif (f, t1, t2) -> fn (fn (fn acc0 f) t1) t2

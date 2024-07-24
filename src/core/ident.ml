@@ -317,6 +317,11 @@ let id_clone1 loc attrs i =
              | Some _ -> loc
              | None -> i.id_loc in
   create_ident i.id_string aa loc0
+
+(** val id_derive1 : string -> ident -> preid **)
+
+let id_derive1 nm i =
+  create_ident nm i.id_attrs i.id_loc
 module Hsattr = Hashcons.Make (struct
   type t = attribute
   let equal a1 a2 = a1.attr_string = a2.attr_string
