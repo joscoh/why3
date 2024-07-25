@@ -1,18 +1,28 @@
 open CoqUtil
 open Weakhtbl
 open Datatypes
-open Decl
-
-open Ident
 open Monads
 open Nat0
 open State
-open Term
-open Theory
-open Ty
 open Hashcons
 
-type hack = tysymbol
+open Ident
+open Ty
+open Term
+open Decl
+open Theory
+
+
+
+
+
+
+
+
+
+
+
+
 
 module Stdecl2 = Stdecl1
 
@@ -256,13 +266,13 @@ type hashcons_full =
 exception LemmaFound
 exception GoalFound
 exception GoalNotFound
-open CoqUtil
-open Decl
 
-open Monads
 
-open Term
-open Theory
+
+
+
+
+
 
 (** val find_goal : task -> (prsymbol*(term_node term_o)) option **)
 
@@ -450,10 +460,10 @@ let add_tdecl tsk td =
 (*                                                                  *)
 (********************************************************************)
 
-open Ident
-open Ty
-open Term
-open Decl
+
+
+
+
 (* open Theory *)
 
 (** Clone and meta history *)

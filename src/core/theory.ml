@@ -8,19 +8,45 @@ open Wstdlib
 open Datatypes
 open Decl
 
-open Ident
 open Monads
 open PmapExtra
 open Specif
 open State
-open Term
-open Ty
 open Base
 open Fin_maps
 open Hashcons
 open Pmap
 open Strings0
 open Zmap
+
+open Format
+open Ident
+open Ty
+open Term
+open Decl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 (** val pmap_to_mstr : (string*'a1) coq_Pmap -> 'a1 Mstr.t **)
 
@@ -603,12 +629,12 @@ let create_decl d =
 (*                                                                  *)
 (********************************************************************)
 
-open Format
-open Wstdlib
-open Ident
-open Ty
-open Term
-open Decl
+
+
+
+
+
+
 
 let warning_clone_not_abstract =
   Loc.register_warning "clone_not_abstract" "Warn about theories cloned without substituting any abstract symbols"

@@ -16,6 +16,23 @@ open Hashcons
 open Pmap
 open Zmap
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 type tvsymbol = { tv_name : ident }
 
 (** val tv_name : tvsymbol -> ident **)
@@ -329,18 +346,18 @@ exception BadFloatSpec
 exception EmptyRange
 exception UnexpectedProp
 exception TypeMismatch of ty * ty
-open Exthtbl2
-open CoqHashtbl
-open CoqUtil
-open Weakhtbl
-open Wstdlib
-open Datatypes
-open Ident
-open IntFuncs
-open List0
-open Monads
-open Number
-open State
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 (** val ty_var_builtin : tvsymbol -> tag -> ty_node_c ty_o **)

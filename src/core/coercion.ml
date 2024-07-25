@@ -1,6 +1,10 @@
 open CoqUtil
-open Term
+open Ident
 open Ty
+open Term
+
+
+
 
 type coercion_kind =
 | CRCleaf of lsymbol
@@ -98,9 +102,9 @@ let t_eqb t1 t2 =
 (*                                                                  *)
 (********************************************************************)
 
-open Ident
-open Ty
-open Term
+
+
+
 
 (* type coercion_kind =
   | CRCleaf of lsymbol

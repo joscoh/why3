@@ -1,7 +1,13 @@
 open BinNums
 open CoqUtil
 open IntFuncs
+open Mysexplib.Std [@@warning "-33"]
 open Number
+
+
+
+
+
 
 type constant =
 | ConstInt of int_constant
@@ -91,8 +97,8 @@ let string_const s =
 (*                                                                  *)
 (********************************************************************)
 
-open Mysexplib.Std [@@warning "-33"]
-open Number
+
+
 
 (** Construction *)
 

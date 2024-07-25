@@ -1,5 +1,13 @@
 open IntFuncs
 open Hashcons
+open Monads
+open BigInt
+open Mysexplib.Std [@@warning "-33"]
+open Sexplib.Conv
+
+
+
+
 
 type int_range = { ir_lower : BigInt.t; ir_upper : BigInt.t }
 
@@ -261,7 +269,7 @@ let real_value_hash r =
 let real_constant_hash r =
   combine_big (real_literal_kind_hash r.rl_kind) (real_value_hash r.rl_real)
 exception OutOfRange of int_constant
-open Monads
+
 
 
 (** val check_range : int_constant -> int_range -> unit errorM **)
@@ -282,8 +290,8 @@ let check_range c r =
 (*                                                                  *)
 (********************************************************************)
 
-open Mysexplib.Std [@@warning "-33"]
-open Sexplib.Conv
+
+
 
 let debug_float = Debug.register_info_flag "float"
   ~desc:"Avoid@ catching@ exceptions@ in@ order@ to@ get@ \
@@ -773,7 +781,7 @@ let int_range_equal ir1 ir2 =
 
 exception NonRepresentableFloat of real_constant
 
-open BigInt
+
 
 let float_parser c =
   let { rv_sig = i; rv_pow2 = p2; rv_pow5 = p5 } = c.rl_real in

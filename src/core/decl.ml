@@ -9,13 +9,28 @@ open Monads
 open Specif
 open State
 open Term
-
 open Ty
 open Hashcons
 open Pmap
 open Zmap
+open IntFuncs
+open List0
 
-type hack = tysymbol
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 type constructor = lsymbol*lsymbol option list
 
@@ -406,18 +421,18 @@ exception UnknownIdent of ident
 exception RedeclaredIdent of ident
 
 exception NonFoundedTypeDecl of tysymbol
-open Common
-open CoqUtil
-open Weakhtbl
-open Datatypes
 
-open Ident
-open IntFuncs
-open List0
-open Monads
-open Term
 
-open Ty
+
+
+
+
+
+
+
+
+
+
 
 
 (** val check_fvs : (term_node term_o) -> (term_node term_o) errorM **)
@@ -1534,10 +1549,10 @@ let known_add_decl_informative kn d =
 (*                                                                  *)
 (********************************************************************)
 
-open Wstdlib
-open Ident
-open Ty
-open Term
+
+
+
+
 
 let sexp_of_ind_sign (x: ind_sign) : Sexplib0.Sexp.t =
   match x with Ind -> Sexplib0.Sexp.Atom "Ind" | Coind -> Sexplib0.Sexp.Atom "Coind"

@@ -12,9 +12,27 @@ open Loc
 open Monads
 open Specif
 open Ty
-
 open Pmap
 open Zmap
+open Number
+open Hashcons
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 type vsymbol = { vs_name : ident; vs_ty : ty_node_c ty_o }
 
@@ -539,20 +557,20 @@ exception InvalidRealLiteralType of ty
 exception InvalidStringLiteralType of ty
 
 exception EmptyCase
-open Constant
-open CoqUtil
-open Datatypes
-open Ident
-open IntFuncs
-open List0
-open Loc
-open Monads
-open Number
 
 
-open Ty
 
-open Hashcons
+
+
+
+
+
+
+
+
+
+
+
 
 (** val mk_pattern :
     pattern_node -> Svs.t -> ty_node_c ty_o -> (pattern_node pattern_o) **)
@@ -2578,9 +2596,9 @@ let t_and_simp f1 f2 =
 (*                                                                  *)
 (********************************************************************)
 
-open Wstdlib
-open Ident
-open Ty
+
+
+
 
 (** Variable symbols *)
 
