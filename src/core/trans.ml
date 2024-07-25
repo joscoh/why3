@@ -45,7 +45,7 @@ let gen_decl1 add fn =
   let fn0 = fun tsk acc ->
     match td_node tsk.task_decl with
     | Decl d -> (@@) (fun l -> foldl_errst add l acc) (fn d)
-    | _ ->  ( (add_tdecl1 acc tsk.task_decl))
+    | _ ->  ( (add_tdecl acc tsk.task_decl))
   in
   fold_errst fn0
 

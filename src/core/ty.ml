@@ -650,7 +650,7 @@ let ty_app s tl =
 
 let rec ty_s_map fn t0 =
   match ty_node t0 with
-  | Tyvar _ ->  t0
+  | Tyvar _ -> (fun x -> x) t0
   | Tyapp (f, tl) ->
     (@@) (fun l -> ty_app (fn f) l) (errst_list (map (ty_s_map fn) tl))
 
@@ -858,9 +858,10 @@ let oty_match m o1 o2 =
     (match o2 with
      | Some ty2 -> ty_match m ty1 ty2
      | None ->  (raise UnexpectedProp))
-  | None -> (match o2 with
-             | Some _ ->  (raise UnexpectedProp)
-             | None ->  m)
+  | None ->
+    (match o2 with
+     | Some _ ->  (raise UnexpectedProp)
+     | None -> (fun x -> x) m)
 
 (** val oty_inst :
     ty_node_c ty_o Mtv.t -> ty_node_c ty_o option -> (TyHash.t hashcons_ty,

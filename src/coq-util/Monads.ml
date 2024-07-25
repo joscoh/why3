@@ -30,8 +30,9 @@ type ('a, 'b) errState = 'b
 (** val errst_list : ('a1, 'a2) errState list -> ('a1, 'a2 list) errState **)
 
 let errst_list l =
-  fold_right (fun x acc -> (@@) (fun h -> (@@) (fun t ->  (h::t)) acc) x)
-    ( []) l
+  fold_right (fun x acc ->
+    (@@) (fun h -> (@@) (fun t -> (fun x -> x) (h::t)) acc) x)
+    ((fun x -> x) []) l
 
 type 'k hashcons_ty = { hashcons_ctr : BigInt.t; hashcons_hash : 'k hashset }
 
@@ -99,7 +100,7 @@ let rec foldl_st f l x =
 
 let rec foldl_errst f l x =
   match l with
-  | [] ->  x
+  | [] -> (fun x -> x) x
   | h::t -> (@@) (fun j -> foldl_errst f t j) (f x h)
 
 (** val fold_left2_errst :
@@ -115,3 +116,14 @@ let rec fold_left2_errst f accu l1 l2 =
     (match l2 with
      | [] ->  ( None)
      | a2::l4 -> (@@) (fun x -> fold_left2_errst f x l3 l4) (f accu a1 a2))
+
+(** val map_join_left_errst :
+    'a2 -> ('a1 -> ('a3, 'a2) errState) -> ('a2 -> 'a2 -> ('a3, 'a2)
+    errState) -> 'a1 list -> ('a3, 'a2) errState **)
+
+let map_join_left_errst d map join = function
+| [] -> (fun x -> x) d
+| x::xl ->
+  (@@) (fun y ->
+    foldl_errst (fun acc x0 -> (@@) (fun l1 -> join acc l1) (map x0)) xl y)
+    (map x)

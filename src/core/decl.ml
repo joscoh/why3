@@ -463,7 +463,7 @@ let make_ls_defn ls vl t0 =
              (@@) (fun tforall ->
                (@@) (fun fd ->
                  (@@) (fun _ ->
-                   (@@) (fun _ ->  (ls,((ls,fd),[])))
+                   (@@) (fun _ -> (fun x -> x) (ls,((ls,fd),[])))
                      ( (t_ty_check t0 ls.ls_value)))
                    ( (iter2_err check_vl ls.ls_args vl)))
                  ( (check_fvs tforall))) ( (t_forall_close vl [] bd)))

@@ -1565,6 +1565,14 @@ let t_attr_remove l t0 =
   (fun (a, b, c, d) -> build_term_o a b c d) ((t_node t0), (t_ty t0),
     (Sattr.remove l (t_attrs t0)), (t_loc t0))
 
+(** val t_attr_remove_name :
+    string -> (term_node term_o) -> (term_node term_o) **)
+
+let t_attr_remove_name s t0 =
+  (fun (a, b, c, d) -> build_term_o a b c d) ((t_node t0), (t_ty t0),
+    (Sattr.filter (fun a -> negb ((=) a.attr_string s)) (t_attrs t0)),
+    (t_loc t0))
+
 (** val t_attr_copy :
     (term_node term_o) -> (term_node term_o) -> (term_node term_o) **)
 
@@ -2016,7 +2024,7 @@ let ls_arg_inst ls tl =
   in
   (@@) (fun o ->
     match o with
-    | Some l ->  l
+    | Some l -> (fun x -> x) l
     | None ->  (raise (BadArity (ls,(int_length tl)))))
     (fold_left2_errst mtch Mtv.empty ls.ls_args tl)
 
@@ -2034,7 +2042,7 @@ let ls_app_inst ls tl typ =
     | None ->
       (match typ with
        | Some _ ->  (raise (FunctionSymbolExpected ls))
-       | None ->  s)) (ls_arg_inst ls tl)
+       | None -> (fun x -> x) s)) (ls_arg_inst ls tl)
 
 (** val t_app_infer :
     lsymbol -> (term_node term_o) list -> (ty_node_c ty_o hashcons_ty,
@@ -2044,15 +2052,15 @@ let t_app_infer ls tl =
   (@@) (fun s ->
     let o = oty_inst s ls.ls_value in
     (match o with
-     | Some h -> (@@) (fun h1 ->  (t_app1 ls tl (Some h1))) ( h)
-     | None ->  (t_app1 ls tl None))) (ls_arg_inst ls tl)
+     | Some h -> (@@) (fun h1 -> (fun x -> x) (t_app1 ls tl (Some h1))) ( h)
+     | None -> (fun x -> x) (t_app1 ls tl None))) (ls_arg_inst ls tl)
 
 (** val t_app :
     lsymbol -> (term_node term_o) list -> ty_node_c ty_o option ->
     (ty_node_c ty_o hashcons_ty, (term_node term_o)) errState **)
 
 let t_app ls tl typ =
-  (@@) (fun _ ->  (t_app1 ls tl typ)) (ls_app_inst ls tl typ)
+  (@@) (fun _ -> (fun x -> x) (t_app1 ls tl typ)) (ls_app_inst ls tl typ)
 
 (** val fs_app :
     lsymbol -> (term_node term_o) list -> ty_node_c ty_o -> (ty_node_c ty_o
@@ -2335,11 +2343,12 @@ let to_prop t0 =
   match t_ty t0 with
   | Some _ ->
     if t_equal t0 t_bool_true
-    then  t_true
+    then (fun x -> x) t_true
     else if t_equal t0 t_bool_false
-         then  t_false
-         else (@@) (fun t1 ->  (t_attr_copy t0 t1)) (t_equ t0 t_bool_true)
-  | None ->  t0
+         then (fun x -> x) t_false
+         else (@@) (fun t1 -> (fun x -> x) (t_attr_copy t0 t1))
+                (t_equ t0 t_bool_true)
+  | None -> (fun x -> x) t0
 
 (** val fs_func_app : lsymbol **)
 
@@ -2545,6 +2554,19 @@ let rec term_rec var_case const_case app_case if_case let_case match_case eps_ca
         eps_case quant_case binop_case not_case true_case false_case f)
   | Ttrue -> true_case
   | Tfalse -> false_case
+
+(** val t_and_simp :
+    (term_node term_o) -> (term_node term_o) -> (term_node term_o) errorM **)
+
+let t_and_simp f1 f2 =
+  match t_node f1 with
+  | Ttrue ->  f2
+  | Tfalse ->  (t_attr_remove_name "asym_split" f1)
+  | _ ->
+    (match t_node f2 with
+     | Ttrue ->  (t_attr_remove_name "asym_split" f1)
+     | Tfalse ->  f2
+     | _ -> if t_equal f1 f2 then  f1 else t_and f1 f2)
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)

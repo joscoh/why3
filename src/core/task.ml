@@ -20,9 +20,56 @@ module HStdecl = Stdecl2
 
 type tdecl_set = Stdecl2.t
 
+(** val tds_empty : tdecl_set **)
+
+let tds_empty =
+  Stdecl2.empty
+
+(** val tds_singleton : Stdecl2.M.key -> tdecl_set **)
+
+let tds_singleton =
+  Stdecl2.singleton
+
+(** val tds_add : Stdecl2.M.key -> unit Stdecl2.M.t -> unit Stdecl2.M.t **)
+
+let tds_add =
+  Stdecl2.add
+
 type clone_map = tdecl_set Mid.t
 
 type meta_map = tdecl_set Mmeta.t
+
+(** val cm_find : clone_map -> tdecl_node theory_o -> tdecl_set **)
+
+let cm_find cm th =
+  Mid.find_def tds_empty (th_name th) cm
+
+(** val cm_add :
+    unit Stdecl2.M.t Mid.t -> tdecl_node theory_o -> Stdecl2.M.key -> unit
+    Stdecl2.M.t Mid.t **)
+
+let cm_add cm th td =
+  Mid.change (fun o ->
+    match o with
+    | Some tds -> Some (tds_add td tds)
+    | None -> Some (tds_singleton td)) (th_name th) cm
+
+(** val mm_add_aux :
+    unit Stdecl2.M.t Mmeta.t -> Mmeta.key -> Stdecl2.M.key -> unit
+    Stdecl2.M.t Mmeta.t **)
+
+let mm_add_aux mm t0 td =
+  Mmeta.change (fun o ->
+    match o with
+    | Some tds -> Some (tds_add td tds)
+    | None -> Some (tds_singleton td)) t0 mm
+
+(** val mm_add : meta_map -> meta -> tdecl_node tdecl_o -> meta_map **)
+
+let mm_add mm t0 td =
+  if t0.meta_excl
+  then Mmeta.add t0 (tds_singleton td) mm
+  else mm_add_aux mm t0 td
 
 type task_hd = { task_decl : tdecl_node tdecl_o; task_prev : task_hd option;
                  task_known : known_map; task_clone : clone_map;
@@ -176,10 +223,10 @@ module Hstask = Make(TaskHash)
     tdecl_node tdecl_o -> task -> known_map -> clone_map -> meta_map ->
     (task_hd hashcons_ty, task) st **)
 
-let mk_task decl0 prev known clone meta =
+let mk_task decl0 prev known clone meta0 =
   (@@) (fun t0 -> (fun x -> x) (Some t0))
     (Hstask.hashcons { task_decl = decl0; task_prev = prev; task_known =
-      known; task_clone = clone; task_meta = meta; task_tag = dummy_tag })
+      known; task_clone = clone; task_meta = meta0; task_tag = dummy_tag })
 
 (** val task_known1 : task -> decl Mid.t **)
 
@@ -195,6 +242,11 @@ let task_clone1 o =
 
 let task_meta1 o =
   option_fold Mmeta.empty (fun t0 -> t0.task_meta) o
+
+(** val find_clone_tds : task -> tdecl_node theory_o -> tdecl_set **)
+
+let find_clone_tds task0 th =
+  cm_find (task_clone1 task0) th
 
 type hashcons_full =
   ((ty_node_c ty_o hashcons_ty*decl hashcons_ty)*tdecl_node tdecl_o
@@ -284,12 +336,12 @@ let new_decl1 t d _ =
   (@@) (fun d1 ->
     (@@) (fun o ->
       match o with
-      | Known i ->  (Known i)
+      | Known i -> (fun x -> x) (Known i)
       | Normal a ->
         let d2,kn = a in
         (@@) (fun td1 ->
           (@@) (fun _ ->
-            (@@) (fun h ->  (Normal h))
+            (@@) (fun h -> (fun x -> x) (Normal h))
               ( ( (mk_task td1 t kn (task_clone1 t) (task_meta1 t)))))
             ( (check_task t))) ( ( (create_decl d2))))
       ( (known_add_decl_informative (task_known1 t) d1))) ( (check_decl d))
@@ -299,9 +351,27 @@ let new_decl1 t d _ =
     hashcons_ty*task_hd hashcons_ty, task) errState **)
 
 let new_decl t d td =
-  (@@) (fun o -> match o with
-                 | Known _ ->  t
-                 | Normal n ->  n) (new_decl1 t d td)
+  (@@) (fun o ->
+    match o with
+    | Known _ -> (fun x -> x) t
+    | Normal n -> (fun x -> x) n) (new_decl1 t d td)
+
+(** val new_clone :
+    task -> tdecl_node theory_o -> tdecl_node tdecl_o -> (task_hd
+    hashcons_ty, task) errState **)
+
+let new_clone tsk th td =
+  let cl = cm_add (task_clone1 tsk) th td in
+  (@@) (fun t1 ->  (mk_task td t1 (task_known1 tsk) cl (task_meta1 tsk)))
+    ( (check_task tsk))
+
+(** val new_meta :
+    task -> meta -> tdecl_node tdecl_o -> (task_hd hashcons_ty, task) errState **)
+
+let new_meta tsk t td =
+  let mt = mm_add (task_meta1 tsk) t td in
+  (@@) (fun t1 ->  (mk_task td t1 (task_known1 tsk) (task_clone1 tsk) mt))
+    ( (check_task tsk))
 
 (** val add_decl :
     task -> decl -> (tdecl_node tdecl_o hashcons_ty*task_hd hashcons_ty,
@@ -356,14 +426,19 @@ let add_ind_decl tk s dl =
 let add_prop_decl tk k p f =
   (@@) (fun td ->  ( (add_decl tk td))) ( ( (create_prop_decl k p f)))
 
-(** val add_tdecl1 :
+(** val add_tdecl :
     task_hd option -> tdecl_node tdecl_o -> (tdecl_node tdecl_o
     hashcons_ty*task_hd hashcons_ty, task) errState **)
 
-let add_tdecl1 tsk td =
+let add_tdecl tsk td =
   match td_node td with
   | Decl d -> new_decl tsk d td
-  | _ ->  tsk
+  | Use th ->
+    if Stdecl2.mem td (find_clone_tds tsk th)
+    then (fun x -> x) tsk
+    else  (new_clone tsk th td)
+  | Clone (th, _) ->  (new_clone tsk th td)
+  | Meta (t, _) ->  (new_meta tsk t td)
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -407,10 +482,10 @@ end)
 let mk_tds s =
   Theory.Stdecl.fold Stdecl2.add s Stdecl2.empty
 
-let tds_empty = Stdecl2.empty
-let tds_singleton td = Stdecl2.singleton td
+(* let tds_empty = Stdecl2.empty
+let tds_singleton td = Stdecl2.singleton td *)
 
-let tds_add = Stdecl2.add
+(* let tds_add = Stdecl2.add *)
 
 let tds_equal = Stdecl2.equal
 (* let tds_hash = Stdecl.hash 
@@ -420,10 +495,10 @@ let tds_compare = Stdecl2.compare
 (* type clone_map = tdecl_set Mid.t
 type meta_map = tdecl_set Mmeta.t *)
 
-let cm_find cm th = Mid.find_def tds_empty th.th_name cm
+(* let cm_find cm th = Mid.find_def tds_empty th.th_name cm *)
 let mm_find mm t = Mmeta.find_def tds_empty t mm
 
-let cm_add cm th td = Mid.change (function
+(* let cm_add cm th td = Mid.change (function
   | None -> Some (tds_singleton td)
   | Some tds -> Some (tds_add td tds)) th.th_name cm
 
@@ -433,7 +508,7 @@ let mm_add mm t td = Mmeta.change (function
 
 let mm_add mm t td = if t.meta_excl
   then Mmeta.add t (tds_singleton td) mm
-  else mm_add mm t td
+  else mm_add mm t td *)
 
 (** Task *)
 
@@ -484,7 +559,7 @@ let mk_task decl prev known clone meta = Some (Hstask.hashcons {
 let task_clone o = Option.fold ~some:(fun t -> t.task_clone) ~none:Mid.empty   o
 let task_meta  o = Option.fold ~some:(fun t -> t.task_meta)  ~none:Mmeta.empty o *)
 
-let find_clone_tds task (th : theory) = cm_find (task_clone1 task) th
+(* let find_clone_tds task (th : theory) = cm_find (task_clone1 task) th*)
 let find_meta_tds task (t : meta) = mm_find (task_meta1 task) t
 
 (* constructors with checks *)
@@ -527,13 +602,13 @@ let new_decl task d td =
 
 let new_decl task d td = try new_decl task d td with KnownIdent _ -> task *)
 
-let new_clone task th td =
+(* let new_clone task th td =
   let cl = cm_add (task_clone1 task) th td in
   mk_task td (check_task task) (task_known1 task) cl (task_meta1 task)
 
 let new_meta task t td =
   let mt = mm_add (task_meta1 task) t td in
-  mk_task td (check_task task) (task_known1 task) (task_clone1 task) mt
+  mk_task td (check_task task) (task_known1 task) (task_clone1 task) mt *)
 
 (* declaration constructors + add_decl *)
 
@@ -548,13 +623,13 @@ let add_prop_decl tk k p f = add_decl tk (create_prop_decl k p f) *)
 
 (* task constructors *)
 
-let add_tdecl task td = match td.td_node with
+(* let add_tdecl task td = match td.td_node with
   | Decl d -> new_decl task d td
   | Use th ->
       if Stdecl2.mem td (find_clone_tds task th) then task else
       new_clone task th td
   | Clone (th,_) -> new_clone task th td
-  | Meta (t,_) -> new_meta task t td
+  | Meta (t,_) -> new_meta task t td *)
 
 let rec flat_tdecl task td = match td.td_node with
   | Decl { d_node = Dprop (Plemma,pr,f) } -> add_prop_decl task Paxiom pr f
