@@ -37,6 +37,10 @@ val iter2_err :
 val foldl_st :
   ('a2 -> 'a3 -> ('a1, 'a2) st) -> 'a3 list -> 'a2 -> ('a1, 'a2) st
 
+val foldr_errst :
+  ('a3 -> 'a2 -> ('a1, 'a2) errState) -> 'a2 -> 'a3 list -> ('a1, 'a2)
+  errState
+
 val foldl_errst :
   ('a2 -> 'a3 -> ('a1, 'a2) errState) -> 'a3 list -> 'a2 -> ('a1, 'a2)
   errState
@@ -44,6 +48,10 @@ val foldl_errst :
 val fold_left2_errst :
   ('a3 -> 'a1 -> 'a2 -> ('a4, 'a3) errState) -> 'a3 -> 'a1 list -> 'a2 list
   -> ('a4, 'a3 option) errState
+
+val map2_errst :
+  ('a1 -> 'a2 -> ('a4, 'a3) errState) -> 'a1 list -> 'a2 list -> ('a4, 'a3
+  list option) errState
 
 val map_join_left_errst :
   'a2 -> ('a1 -> ('a3, 'a2) errState) -> ('a2 -> 'a2 -> ('a3, 'a2) errState)

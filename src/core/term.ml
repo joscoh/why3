@@ -2573,6 +2573,15 @@ let rec term_rec var_case const_case app_case if_case let_case match_case eps_ca
   | Ttrue -> true_case
   | Tfalse -> false_case
 
+(** val t_not_simp : (term_node term_o) -> (term_node term_o) errorM **)
+
+let t_not_simp f =
+  match t_node f with
+  | Tnot g ->  (t_attr_copy f g)
+  | Ttrue ->  (t_attr_copy f t_false)
+  | Tfalse ->  (t_attr_copy f t_true)
+  | _ -> t_not f
+
 (** val t_and_simp :
     (term_node term_o) -> (term_node term_o) -> (term_node term_o) errorM **)
 
@@ -2585,6 +2594,28 @@ let t_and_simp f1 f2 =
      | Ttrue ->  (t_attr_remove_name "asym_split" f1)
      | Tfalse ->  f2
      | _ -> if t_equal f1 f2 then  f1 else t_and f1 f2)
+
+(** val t_iff_simp :
+    (term_node term_o) -> (term_node term_o) -> (term_node term_o) errorM **)
+
+let t_iff_simp f1 f2 =
+  match t_node f1 with
+  | Ttrue ->  f2
+  | Tfalse -> (match t_node f2 with
+               | Ttrue ->  f1
+               | _ -> t_not_simp f2)
+  | _ ->
+    (match t_node f2 with
+     | Ttrue ->  f1
+     | Tfalse -> t_not_simp f1
+     | _ -> if t_equal f1 f2 then  (t_attr_copy f1 t_true) else t_iff f1 f2)
+
+(** val t_equ_simp :
+    (term_node term_o) -> (term_node term_o) -> (ty_node_c ty_o hashcons_ty,
+    (term_node term_o)) errState **)
+
+let t_equ_simp t1 t2 =
+  if t_equal t1 t2 then (fun x -> x) t_true else t_equ t1 t2
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -4272,19 +4303,19 @@ let t_pred_app_beta lam t = t_pred_app_beta_l lam [t]
 
 (* constructors with propositional simplification *)
 
-let t_not_simp f = match f.t_node with
+(* let t_not_simp f = match f.t_node with
   | Ttrue  -> t_attr_copy f t_false
   | Tfalse -> t_attr_copy f t_true
   | Tnot g -> t_attr_copy f g
-  | _      -> t_not f
+  | _      -> t_not f *)
 
-let t_and_simp f1 f2 = match f1.t_node, f2.t_node with
+(* let t_and_simp f1 f2 = match f1.t_node, f2.t_node with
   | Ttrue, _  -> f2
   | _, Ttrue  -> t_attr_remove asym_split f1
   | Tfalse, _ -> t_attr_remove asym_split f1
   | _, Tfalse -> f2
   | _, _ when t_equal f1 f2 -> f1
-  | _, _ -> t_and f1 f2
+  | _, _ -> t_and f1 f2 *)
 
 let t_and_simp_l l = List.fold_right t_and_simp l t_true
 
@@ -4326,13 +4357,13 @@ let t_implies_simp f1 f2 = match f1.t_node, f2.t_node with
   | _, _ when t_equal f1 f2 -> t_attr_copy f1 t_true
   | _, _ -> t_implies f1 f2
 
-let t_iff_simp f1 f2 = match f1.t_node, f2.t_node with
+(* let t_iff_simp f1 f2 = match f1.t_node, f2.t_node with
   | Ttrue, _  -> f2
   | _, Ttrue  -> f1
   | Tfalse, _ -> t_not_simp f2
   | _, Tfalse -> t_not_simp f1
   | _, _ when t_equal f1 f2 -> t_attr_copy f1 t_true
-  | _, _ -> t_iff f1 f2
+  | _, _ -> t_iff f1 f2 *)
 
 let t_binary_simp op = match op with
   | Tand     -> t_and_simp
@@ -4458,8 +4489,8 @@ let t_exists_simp = t_quant_simp Texists
 let t_forall_close_simp = t_quant_close_simp Tforall
 let t_exists_close_simp = t_quant_close_simp Texists
 
-let t_equ_simp t1 t2 =
-  if t_equal t1 t2 then t_true  else t_equ t1 t2
+(* let t_equ_simp t1 t2 =
+  if t_equal t1 t2 then t_true  else t_equ t1 t2 *)
 
 let t_neq_simp t1 t2 =
   if t_equal t1 t2 then t_false else t_neq t1 t2

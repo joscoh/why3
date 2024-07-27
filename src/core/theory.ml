@@ -6,7 +6,7 @@ open CoqUtil
 open Weakhtbl
 open Wstdlib
 open Datatypes
-open Decl
+open IntFuncs
 
 open Monads
 open PmapExtra
@@ -618,6 +618,64 @@ let mk_tdecl n =
 
 let create_decl d =
   mk_tdecl (Decl d)
+exception BadMetaArity of meta * BigInt.t
+exception MetaTypeMismatch of meta * meta_arg_type * meta_arg_type
+
+
+
+
+
+
+
+(** val get_meta_arg_type : meta_arg -> meta_arg_type **)
+
+let get_meta_arg_type = function
+| MAty _ -> MTty
+| MAts _ -> MTtysymbol
+| MAls _ -> MTlsymbol
+| MApr _ -> MTprsymbol
+| MAstr _ -> MTstring
+| MAint _ -> MTint
+| MAid _ -> MTid
+
+(** val create_meta :
+    meta -> meta_arg list -> (ty_node_c ty_o hashcons_ty*tdecl_node tdecl_o
+    hashcons_ty, tdecl_node tdecl_o) errState **)
+
+let create_meta m al =
+  let get_meta_arg = fun aty a ->
+    (@@) (fun a0 ->
+      let mt = get_meta_arg_type a0 in
+      if meta_arg_type_eqb aty mt
+      then (fun x -> x) a0
+      else 
+             (raise
+               ((fun ((x, y), z) -> MetaTypeMismatch (x, y, z)) ((m,aty),mt))))
+      (match aty with
+       | MTty ->
+         (match a with
+          | MAts ts ->
+            (match ts_args ts with
+             | [] -> (@@) (fun t1 -> (fun x -> x) (MAty t1)) (ty_app ts [])
+             | _::_ -> (fun x -> x) a)
+          | _ -> (fun x -> x) a)
+       | MTtysymbol ->
+         (match a with
+          | MAty t ->
+            (fun x -> x)
+              (match ty_node t with
+               | Tyvar _ -> a
+               | Tyapp (ts, l) -> if null l then MAts ts else a)
+          | _ -> (fun x -> x) a)
+       | _ -> (fun x -> x) a)
+  in
+  if (&&) (null m.meta_type) (list_eqb meta_arg_eqb ((MAstr "")::[]) al)
+  then  ( (mk_tdecl (Meta (m, []))))
+  else (@@) (fun o ->
+         match o with
+         | Some al0 ->  ( (mk_tdecl (Meta (m, al0))))
+         | None ->  (raise (BadMetaArity (m,(int_length al)))))
+         ( (map2_errst get_meta_arg m.meta_type al))
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -747,8 +805,8 @@ let meta_hash m = m.meta_tag *)
 
 exception KnownMeta of meta
 exception UnknownMeta of string
-exception BadMetaArity of meta * int
-exception MetaTypeMismatch of meta * meta_arg_type * meta_arg_type
+(* exception BadMetaArity of meta * int *)
+(* exception MetaTypeMismatch of meta * meta_arg_type * meta_arg_type *)
 exception IllFormedMeta of meta * string
 
 let meta_table = Hstr.create 17
@@ -1593,7 +1651,7 @@ let add_clone_internal =
 
 (** Meta properties *)
 
-let get_meta_arg_type = function
+(* let get_meta_arg_type = function
   | MAty  _ -> MTty
   | MAts  _ -> MTtysymbol
   | MAls  _ -> MTlsymbol
@@ -1621,7 +1679,7 @@ let create_meta m al =
         List.map2 get_meta_arg m.meta_type al
       with Invalid_argument _ ->
         raise (BadMetaArity (m, List.length al)) in
-    mk_tdecl (Meta (m,al))
+    mk_tdecl (Meta (m,al)) *)
 
 let add_meta uc s al = add_tdecl uc (create_meta s al)
 

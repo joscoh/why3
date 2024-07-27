@@ -534,6 +534,11 @@ let open_ls_defn l =
   | Some p ->  p
   | None -> assert_false "open_ls_defn"
 
+(** val ls_defn_decrease_aux : ls_defn -> BigInt.t list **)
+
+let ls_defn_decrease_aux = function
+| _,ls -> ls
+
 type mut_adt = data_decl list
 
 type mut_info = mut_adt list*mut_adt Mts.t

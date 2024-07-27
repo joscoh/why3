@@ -1,3 +1,178 @@
+open CoqUtil
+open Datatypes
+open IntFuncs
+open List0
+open Monads
+open Ident
+open Ty
+open Term
+open Decl
+open Theory
+open Task
+open Trans
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(** val t_insert :
+    (term_node term_o) -> (term_node term_o) -> (ty_node_c ty_o hashcons_ty,
+    (term_node term_o)) errState **)
+
+let rec t_insert hd t0 =
+  match t_node t0 with
+  | Tif (f1, t2, t3) ->
+    (@@) (fun t1 -> (@@) (fun t4 ->  (t_if f1 t1 t4)) (t_insert hd t3))
+      (t_insert hd t2)
+  | Tlet (t1, bt) ->
+    let v,t2 = t_view_bound bt in
+    (@@) (fun t3 ->  (t_let_close v t1 t3)) (t_insert hd t2)
+  | Tcase (tl, bl) ->
+    let br = fun b ->
+      let pl,t1 = t_view_branch b in
+      (@@) (fun t2 -> (fun x -> x) (t_close_branch pl t2)) (t_insert hd t1)
+    in
+    (@@) (fun l ->  (t_case tl l)) (errst_list (map br bl))
+  | _ ->
+    TermTFAlt.t_selecti t_equ_simp (fun t1 t2 ->  (t_iff_simp t1 t2)) hd t0
+
+(** val add_ld :
+    (lsymbol -> bool) -> unit Sls.M.t -> (lsymbol*ls_defn) -> (((decl
+    list*logic_decl list)*decl list)*tdecl_node tdecl_o list) ->
+    (BigInt.t*hashcons_full, ((decl list*logic_decl list)*decl
+    list)*tdecl_node tdecl_o list) errState **)
+
+let add_ld which md x ds =
+  let ls,ld = x in
+  let y,metas = ds in
+  let y0,axl = y in
+  let abst,defn = y0 in
+  if which ls
+  then (@@) (fun y1 ->
+         let vl,e = y1 in
+         let nm = (^) ls.ls_name.id_string "'def" in
+         (@@) (fun pr ->
+           (@@) (fun hd ->
+             (@@) (fun ti ->
+               (@@) (fun ax ->
+                 (@@) (fun ax0 ->
+                   (@@) (fun ld0 ->
+                     (@@) (fun metas0 ->
+                       (fun x -> x) ((((ld0::abst),defn),(ax0::axl)),metas0))
+                       (if Sls.mem ls md
+                        then (@@) (fun m -> (fun x -> x) (m::metas))
+                               (
+                                 (
+                                   (create_meta Compute.meta_rewrite ((MApr
+                                     pr)::[]))))
+                        else (fun x -> x) metas)) ( ( (create_param_decl ls))))
+                   ( ( (create_prop_decl Paxiom pr ax))))
+                 ( (t_forall_close vl [] ti))) ( ( (t_insert hd e))))
+             ( ( (t_app ls (map t_var vl) (t_ty e)))))
+           ( ( (create_prsymbol (id_derive1 nm ls.ls_name)))))
+         ( (open_ls_defn ld))
+  else (fun x -> x) (((abst,((ls,ld)::defn)),axl),metas)
+
+(** val rev_map : ('a1 -> 'a2) -> 'a1 list -> 'a2 list **)
+
+let rev_map f l =
+  let rec rmap_f accu = function
+  | [] -> accu
+  | a::l0 -> rmap_f ((f a)::accu) l0
+  in rmap_f [] l
+
+(** val elim_decl :
+    (lsymbol -> bool) -> unit Sls.M.t -> logic_decl list ->
+    (BigInt.t*hashcons_full, tdecl_node tdecl_o list) errState **)
+
+let elim_decl which meta_rewrite_def l =
+  (@@) (fun x ->
+    let y,metas = x in
+    let y0,axl = y in
+    let abst,defn = y0 in
+    (@@) (fun defn0 ->
+      (@@) (fun r1 -> (fun x -> x) (rev_append r1 metas))
+        ( ( ( (st_list (rev_map create_decl (app abst (app defn0 axl))))))))
+      (
+        (
+          (if null defn
+           then (fun x -> x) []
+           else (@@) (fun l0 -> (fun x -> x) (l0::[]))
+                  (create_logic_decl_nocheck defn)))))
+    (foldr_errst (add_ld which meta_rewrite_def) ((([],[]),[]),[]) l)
+
+(** val create_decl_list :
+    decl -> (BigInt.t*hashcons_full, tdecl_node tdecl_o list) errState **)
+
+let create_decl_list d =
+  (@@) (fun d1 -> (fun x -> x) (d1::[])) ( ( ( (create_decl d))))
+
+(** val elim :
+    (lsymbol -> bool) -> unit Sls.M.t -> decl -> (BigInt.t*hashcons_full,
+    tdecl_node tdecl_o list) errState **)
+
+let elim which meta_rewrite_def d =
+  match d.d_node with
+  | Dlogic l -> elim_decl which meta_rewrite_def l
+  | _ -> create_decl_list d
+
+(** val elim_recursion :
+    decl -> (BigInt.t*hashcons_full, tdecl_node tdecl_o list) errState **)
+
+let elim_recursion d =
+  match d.d_node with
+  | Dlogic l ->
+    if (||)
+         (match l with
+          | [] -> false
+          | l0::l1 ->
+            let s,_ = l0 in
+            (match l1 with
+             | [] -> Sid.mem s.ls_name (get_used_syms_decl d)
+             | _::_ -> false)) (BigInt.lt BigInt.one (int_length l))
+    then elim_decl (fun _ -> true) Sls.empty l
+    else create_decl_list d
+  | _ -> create_decl_list d
+
+(** val is_struct : ('a1*ls_defn) list -> bool **)
+
+let is_struct dl =
+  forallb (fun pat ->
+    let _,ld = pat in
+    BigInt.eq (int_length (ls_defn_decrease_aux ld)) BigInt.one) dl
+
+(** val elim_mutual :
+    decl -> (BigInt.t*hashcons_full, tdecl_node tdecl_o list) errState **)
+
+let elim_mutual d =
+  match d.d_node with
+  | Dlogic l ->
+    if BigInt.lt BigInt.one (int_length l)
+    then elim_decl (fun _ -> true) Sls.empty l
+    else create_decl_list d
+  | _ -> create_decl_list d
+
+(** val eliminate_recursion :
+    task -> (BigInt.t*hashcons_full, task) errState **)
+
+let eliminate_recursion =
+  tdecl_errst elim_recursion None
+
+(** val eliminate_mutual_recursion :
+    task -> (BigInt.t*hashcons_full, task) errState **)
+
+let eliminate_mutual_recursion =
+  tdecl_errst elim_mutual None
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -8,11 +183,6 @@
 (*  on linking described in file LICENSE.                           *)
 (*                                                                  *)
 (********************************************************************)
-
-open Ident
-open Ty
-open Term
-open Decl
 
 (** Discard definitions of built-in symbols *)
 
@@ -81,7 +251,7 @@ let compute_diff =
 
 (** Eliminate definitions of functions and predicates *)
 
-let rec t_insert hd t = match t.t_node with
+(* let rec t_insert hd t = match t.t_node with
   | Tif (f1,t2,t3) ->
       t_if f1 (t_insert hd t2) (t_insert hd t3)
   | Tlet (t1,bt) ->
@@ -131,7 +301,7 @@ let elim_recursion d = match d.d_node with
   | _ -> [Theory.create_decl d]
 
 let is_struct dl = (* FIXME? Shouldn't 0 be allowed too? *)
-  List.for_all (fun (_,ld) -> List.length (ls_defn_decrease ld) = 1) dl
+  List.for_all (fun (_,ld) -> List.length (ls_defn_decrease ld) = 1) dl *)
 
 (* FIXME? We can have non-recursive functions in a group *)
 let elim_non_struct_recursion d = match d.d_node with
@@ -141,9 +311,9 @@ let elim_non_struct_recursion d = match d.d_node with
   | _ ->
       [Theory.create_decl d]
 
-let elim_mutual d = match d.d_node with
+(* let elim_mutual d = match d.d_node with
   | Dlogic l when List.length l > 1 -> elim_decl Util.ttrue Sls.empty l
-  | _ -> [Theory.create_decl d]
+  | _ -> [Theory.create_decl d] *)
 
 let eliminate_definition_gen which =
   Trans.on_tagged_ls Compute.meta_rewrite_def (fun rew ->
@@ -156,9 +326,9 @@ let eliminate_definition_pred  =
 let eliminate_definition       =
   eliminate_definition_gen Util.ttrue
 
-let eliminate_recursion        = Trans.tdecl elim_recursion None
+(* let eliminate_recursion        = Trans.tdecl elim_recursion None *)
 let eliminate_non_struct_recursion = Trans.tdecl elim_non_struct_recursion None
-let eliminate_mutual_recursion = Trans.tdecl elim_mutual None
+(* let eliminate_mutual_recursion = Trans.tdecl elim_mutual None *)
 
 let () =
   Trans.register_transform "eliminate_definition_func"
@@ -218,8 +388,8 @@ let () =
 
 
 
-open Task
-open Theory
+
+
 
 type rem = {
   rem_pr : Decl.Spr.t;

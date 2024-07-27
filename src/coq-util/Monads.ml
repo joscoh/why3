@@ -94,6 +94,14 @@ let rec foldl_st f l x =
   | [] -> (fun x -> x) x
   | h::t -> (@@) (fun j -> foldl_st f t j) (f x h)
 
+(** val foldr_errst :
+    ('a3 -> 'a2 -> ('a1, 'a2) errState) -> 'a2 -> 'a3 list -> ('a1, 'a2)
+    errState **)
+
+let rec foldr_errst f base = function
+| [] -> (fun x -> x) base
+| h::t -> (@@) (fun r -> f h r) (foldr_errst f base t)
+
 (** val foldl_errst :
     ('a2 -> 'a3 -> ('a1, 'a2) errState) -> 'a3 list -> 'a2 -> ('a1, 'a2)
     errState **)
@@ -116,6 +124,26 @@ let rec fold_left2_errst f accu l1 l2 =
     (match l2 with
      | [] ->  ( None)
      | a2::l4 -> (@@) (fun x -> fold_left2_errst f x l3 l4) (f accu a1 a2))
+
+(** val map2_errst :
+    ('a1 -> 'a2 -> ('a4, 'a3) errState) -> 'a1 list -> 'a2 list -> ('a4, 'a3
+    list option) errState **)
+
+let rec map2_errst f l1 l2 =
+  match l1 with
+  | [] ->
+    (match l2 with
+     | [] -> (fun x -> x) (Some [])
+     | _::_ -> (fun x -> x) None)
+  | x1::t1 ->
+    (match l2 with
+     | [] -> (fun x -> x) None
+     | x2::t2 ->
+       (@@) (fun y ->
+         (@@) (fun o ->
+           match o with
+           | Some ys -> (fun x -> x) (Some (y::ys))
+           | None -> (fun x -> x) None) (map2_errst f t1 t2)) (f x1 x2))
 
 (** val map_join_left_errst :
     'a2 -> ('a1 -> ('a3, 'a2) errState) -> ('a2 -> 'a2 -> ('a3, 'a2)

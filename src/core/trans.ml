@@ -55,6 +55,13 @@ let gen_decl1 add fn =
 
 let decl_errst f t1 t2 =
   gen_decl1 (fun t d ->  ( (add_decl t d))) f t1 t2
+
+(** val tdecl_errst :
+    (decl -> ('a1*hashcons_full, tdecl_node tdecl_o list) errState) -> task
+    -> task -> ('a1*hashcons_full, task) errState **)
+
+let tdecl_errst f t1 t2 =
+  gen_decl1 (fun t d ->  ( (add_tdecl t d))) f t1 t2
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
