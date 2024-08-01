@@ -26,6 +26,27 @@ let compile ~get_constructors ~mk_case ~mk_let tl rl =
     | [], (_,a) :: _ -> (* no terms, at least one action *)
         a
     | t :: tl, _ -> (* process the leftmost column *)
+        (*Simplify matches first*)
+        let rec simplify (a: 'a) (p: pattern) : (pattern * 'a) list =
+          begin match p.pat_node with
+          | Pas(p1, x) -> 
+              let l = simplify a p1 in
+              List.map (fun (p2, y) -> (p2, mk_let x t a)) l
+          | Por(p1, p2) ->
+              simplify a p1 @ simplify a p2
+          | Pvar(x) -> [(pat_wild x.vs_ty, mk_let x t a)]
+          | _ -> [(p, a)]
+          end
+        in
+        let rl = List.concat (List.map (fun (ps, a) -> 
+          let p = List.hd ps in
+          let ptl = List.tl ps in
+          let l = simplify a p in
+          List.map (fun (p1, y) -> (p1 :: ptl, y)) l
+          ) rl) in
+
+
+
         let ty = t_type t in
         (* extract the set of constructors *)
         let bare,css = match ty.ty_node with
@@ -66,20 +87,25 @@ let compile ~get_constructors ~mk_case ~mk_let tl rl =
             let join _ wl rl = Some (List.append wl rl) in
             Mls.union join (Mls.map wild types) cases
           in
-          let rec dispatch (pl,a) (cases,wilds) =
+          let dispatch (pl,a) (cases,wilds) =
             let p = List.hd pl in let pl = List.tl pl in
             match p.pat_node with
               | Papp (fs,pl') ->
                   add_case fs (List.rev_append pl' pl) a cases, wilds
-              | Por (p,q) ->
+              | Pwild ->
+                union_cases pl a types cases, (pl,a)::wilds
+              | _ -> failwith "eliminated"
+              (* | Por (p,q) ->
+                  ignore(assert false);
                   dispatch (p::pl, a) (dispatch (q::pl, a) (cases,wilds))
               | Pas (p,x) ->
+                  ignore(assert false);
                   dispatch (p::pl, mk_let x t a) (cases,wilds)
               | Pvar x ->
+                  ignore(assert false);
                   let a = mk_let x t a in
-                  union_cases pl a types cases, (pl,a)::wilds
-              | Pwild ->
-                  union_cases pl a types cases, (pl,a)::wilds
+                  union_cases pl a types cases, (pl,a)::wilds *)
+              
           in
           List.fold_right dispatch rl (Mls.empty,[])
         in
