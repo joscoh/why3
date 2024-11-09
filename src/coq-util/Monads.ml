@@ -111,6 +111,12 @@ let rec foldl_errst f l x =
   | [] -> (fun x -> x) x
   | h::t -> (@@) (fun j -> foldl_errst f t j) (f x h)
 
+(** val iter_errst :
+    ('a2 -> ('a1, unit) errState) -> 'a2 list -> ('a1, unit) errState **)
+
+let iter_errst f l =
+  foldl_errst (fun _ -> f) l ()
+
 (** val fold_left2_errst :
     ('a3 -> 'a1 -> 'a2 -> ('a4, 'a3) errState) -> 'a3 -> 'a1 list -> 'a2 list
     -> ('a4, 'a3 option) errState **)

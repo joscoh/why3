@@ -480,6 +480,12 @@ let ty_var n =
 let ty_app1 s tl =
   Hsty.hashcons (mk_ty (Tyapp (s, tl)))
 
+(** val ty_app_unsafe :
+    (ty_node_c ty_o) tysymbol_o -> ty_node_c ty_o list -> ty_node_c ty_o **)
+
+let ty_app_unsafe s tl =
+  mk_ty (Tyapp (s, tl))
+
 (** val ty_map :
     (ty_node_c ty_o -> ty_node_c ty_o) -> ty_node_c ty_o -> (TyHash.t
     hashcons_ty, ty_node_c ty_o) st **)
@@ -488,6 +494,14 @@ let ty_map fn t0 =
   match ty_node t0 with
   | Tyvar _ -> (fun x -> x) t0
   | Tyapp (f, tl) -> ty_app1 f (map fn tl)
+
+(** val ty_map_unsafe :
+    (ty_node_c ty_o -> ty_node_c ty_o) -> ty_node_c ty_o -> ty_node_c ty_o **)
+
+let ty_map_unsafe fn t0 =
+  match ty_node t0 with
+  | Tyvar _ -> t0
+  | Tyapp (f, tl) -> ty_app_unsafe f (map fn tl)
 
 (** val ty_fold :
     ('a1 -> ty_node_c ty_o -> 'a1) -> 'a1 -> ty_node_c ty_o -> 'a1 **)
@@ -709,6 +723,14 @@ let rec ty_inst s t0 =
   match ty_node t0 with
   | Tyvar n -> (fun x -> x) (Mtv.find_def t0 n s)
   | Tyapp (_, _) -> ty_mapM (ty_inst s) t0
+
+(** val ty_inst_unsafe :
+    ty_node_c ty_o Mtv.t -> ty_node_c ty_o -> ty_node_c ty_o **)
+
+let rec ty_inst_unsafe s t0 =
+  match ty_node t0 with
+  | Tyvar n -> Mtv.find_def t0 n s
+  | Tyapp (_, _) -> ty_map_unsafe (ty_inst_unsafe s) t0
 
 (** val fold_right2_error :
     ('a3 -> 'a1 -> 'a2 -> 'a3 errorM) -> 'a1 list -> 'a2 list -> 'a3 -> 'a3

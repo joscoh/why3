@@ -1839,7 +1839,7 @@ let vl_rename h vl =
     (term_node term_o)) st **)
 
 let rec t_subst_unsafe_aux m t0 =
-  let t_subst = fun t1 -> t_subst_unsafe_aux m t1 in
+  let t_subst0 = fun t1 -> t_subst_unsafe_aux m t1 in
   let t_open_bnd = fun v m0 t1 f ->
     (@@) (fun x ->
       let m1,v0 = x in
@@ -1883,19 +1883,19 @@ let rec t_subst_unsafe_aux m t0 =
      (@@) (fun t1 ->
        (@@) (fun b1 ->
          (fun x -> x) (t_attr_copy t0 (t_let1 t1 b1 (t_ty t0)))) (b_subst1 bt))
-       (t_subst e)
+       (t_subst0 e)
    | Tcase (e, bl) ->
      (@@) (fun d ->
        (@@) (fun bl0 ->
          (fun x -> x) (t_attr_copy t0 (t_case1 d bl0 (t_ty t0))))
-         (st_list (map b_subst2 bl))) (t_subst e)
+         (st_list (map b_subst2 bl))) (t_subst0 e)
    | Teps bf ->
      (@@) (fun bf1 -> (fun x -> x) (t_attr_copy t0 (t_eps1 bf1 (t_ty t0))))
        (b_subst1 bf)
    | Tquant (q, bq) ->
      (@@) (fun bq1 -> (fun x -> x) (t_attr_copy t0 (t_quant1 q bq1)))
        (b_subst3 bq)
-   | _ -> t_map_ctr_unsafe t_subst t0)
+   | _ -> t_map_ctr_unsafe t_subst0 t0)
 
 (** val t_subst_unsafe :
     (term_node term_o) Mvs.t -> (term_node term_o) -> (BigInt.t,
@@ -2484,6 +2484,49 @@ let rec t_v_fold fn acc t0 =
     let p0,_ = p in let p1,_ = p0 in let _,b = p1 in bnd_v_fold fn acc b
   | _ -> t_fold_unsafe (t_v_fold fn) acc t0
 
+(** val bnd_v_count :
+    ('a1 -> vsymbol -> BigInt.t -> 'a1) -> 'a1 -> bind_info -> 'a1 **)
+
+let bnd_v_count fn acc b =
+  Mvs.fold (fun v n acc0 -> fn acc0 v n) b.bv_vars acc
+
+(** val t_v_count :
+    ('a1 -> vsymbol -> BigInt.t -> 'a1) -> 'a1 -> (term_node term_o) -> 'a1 **)
+
+let rec t_v_count fn acc t0 =
+  match t_node t0 with
+  | Tvar v -> fn acc v BigInt.one
+  | Tlet (e, p) ->
+    let p0,_ = p in let _,b = p0 in bnd_v_count fn (t_v_count fn acc e) b
+  | Tcase (e, bl) ->
+    fold_left (bnd_v_count fn) (map (fun x -> snd (fst x)) bl)
+      (t_v_count fn acc e)
+  | Teps p -> let p0,_ = p in let _,b = p0 in bnd_v_count fn acc b
+  | Tquant (_, p) ->
+    let p0,_ = p in let p1,_ = p0 in let _,b = p1 in bnd_v_count fn acc b
+  | _ -> t_fold_unsafe (t_v_count fn) acc t0
+
+(** val t_v_occurs : vsymbol -> (term_node term_o) -> BigInt.t **)
+
+let t_v_occurs v t0 =
+  t_v_count (fun c u n -> if vs_equal u v then BigInt.add c n else c)
+    BigInt.zero t0
+
+(** val t_subst :
+    (term_node term_o) Mvs.t -> (term_node term_o) -> (BigInt.t,
+    (term_node term_o)) errState **)
+
+let t_subst m t0 =
+  (@@) (fun _ ->  (t_subst_unsafe m t0))
+    ( (iter_err (fun x -> vs_check (fst x) (snd x)) (Mvs.bindings m)))
+
+(** val t_subst_single :
+    Mvs.key -> (term_node term_o) -> (term_node term_o) -> (BigInt.t,
+    (term_node term_o)) errState **)
+
+let t_subst_single v t1 t0 =
+  t_subst (Mvs.singleton v t1) t0
+
 module TermTFAlt =
  struct
   (** val t_select :
@@ -2616,6 +2659,26 @@ let t_iff_simp f1 f2 =
 
 let t_equ_simp t1 t2 =
   if t_equal t1 t2 then (fun x -> x) t_true else t_equ t1 t2
+
+(** val small : (term_node term_o) -> bool **)
+
+let small t0 =
+  match t_node t0 with
+  | Tvar _ -> true
+  | Tconst _ -> true
+  | _ -> false
+
+(** val t_let_close_simp :
+    vsymbol -> (term_node term_o) -> (term_node term_o) -> (BigInt.t,
+    (term_node term_o)) errState **)
+
+let t_let_close_simp v e t0 =
+  let n = t_v_occurs v t0 in
+  if BigInt.is_zero n
+  then (fun x -> x) t0
+  else if (||) (BigInt.eq n BigInt.one) (small e)
+       then t_subst_single v e t0
+       else  (t_let_close v e t0)
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -4156,26 +4219,26 @@ let t_v_any pr t = Util.any t_v_fold pr t
 
 let t_closed t = t_v_all Util.ffalse t
 
-let bnd_v_count fn acc b = Mvs.fold (fun v n acc -> fn acc v n) b.bv_vars acc
+(* let bnd_v_count fn acc b = Mvs.fold (fun v n acc -> fn acc v n) b.bv_vars acc
 
-let bound_v_count fn acc ((_,b),_) = bnd_v_count fn acc b
+let bound_v_count fn acc ((_,b),_) = bnd_v_count fn acc b *)
 
-let rec t_v_count fn acc t = match t.t_node with
+(* let rec t_v_count fn acc t = match t.t_node with
   | Tvar v -> fn acc v BigInt.one
   | Tlet (e,b) -> bound_v_count fn (t_v_count fn acc e) b
   | Tcase (e,bl) -> List.fold_left (bound_v_count fn) (t_v_count fn acc e) bl
   | Teps b -> bound_v_count fn acc b
   | Tquant (_,(((_,b),_),_)) -> bnd_v_count fn acc b
-  | _ -> t_fold_unsafe (t_v_count fn) acc t
+  | _ -> t_fold_unsafe (t_v_count fn) acc t *)
 
-let t_v_occurs v t =
-  t_v_count (fun c u n -> if vs_equal u v then BigInt.add c n else c) BigInt.zero t
+(* let t_v_occurs v t =
+  t_v_count (fun c u n -> if vs_equal u v then BigInt.add c n else c) BigInt.zero t *)
 
 (* replaces variables with terms in term [t] using map [m] *)
 
-let t_subst m t = Mvs.iter vs_check m; t_subst_unsafe m t
+(* let t_subst m t = Mvs.iter vs_check m; t_subst_unsafe m t
 
-let t_subst_single v t1 t = t_subst (Mvs.singleton v t1) t
+let t_subst_single v t1 t = t_subst (Mvs.singleton v t1) t *)
 
 (* set of free variables *)
 
@@ -4382,12 +4445,12 @@ let t_if_simp f1 f2 f3 = match f1.t_node, f2.t_node, f3.t_node with
   | _, _, _ -> t_if f1 f2 f3
 
 
-let small t = match t.t_node with
+(* let small t = match t.t_node with
   | Tvar _ | Tconst _ -> true
 (* NOTE: shouldn't we allow this?
   | Tapp (_,[]) -> true
 *)
-  | _ -> false
+  | _ -> false *)
 
 let v_copy_unused v =
   let id = v.vs_name in
@@ -4427,7 +4490,7 @@ let t_let_close_simp_keep_var ~keep v e t =
   else
     t_let_close v e t
 
-let t_let_close_simp = t_let_close_simp_keep_var ~keep:false
+(* let t_let_close_simp = t_let_close_simp_keep_var ~keep:false *)
 
 let t_case_simp t bl =
   let e0,tl = match bl with

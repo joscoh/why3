@@ -45,6 +45,9 @@ val foldl_errst :
   ('a2 -> 'a3 -> ('a1, 'a2) errState) -> 'a3 list -> 'a2 -> ('a1, 'a2)
   errState
 
+val iter_errst :
+  ('a2 -> ('a1, unit) errState) -> 'a2 list -> ('a1, unit) errState
+
 val fold_left2_errst :
   ('a3 -> 'a1 -> 'a2 -> ('a4, 'a3) errState) -> 'a3 -> 'a1 list -> 'a2 list
   -> ('a4, 'a3 option) errState

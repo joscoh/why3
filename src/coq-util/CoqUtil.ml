@@ -131,13 +131,6 @@ let map_fold_left f acc l =
   in
   (fst res),(rev' (snd res))
 
-(** val option_bind : 'a1 option -> ('a1 -> 'a2 option) -> 'a2 option **)
-
-let option_bind x f =
-  match x with
-  | Some y -> f y
-  | None -> None
-
 (** val list_find_opt : ('a1 -> bool) -> 'a1 list -> 'a1 option **)
 
 let list_find_opt p l =
