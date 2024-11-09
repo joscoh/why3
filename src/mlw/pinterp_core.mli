@@ -89,6 +89,8 @@ val field : value -> field
 val field_get : field -> value
 val field_set : field -> value -> unit
 
+val v_inst : value -> Ty.ty Ty.Mtv.t -> value
+
 (** {4 Constructors}
 
     Non defensive API for building [value]s: there are no checks that
@@ -180,7 +182,7 @@ module Log : sig
 
   val sort_log_by_loc : exec_log -> log_entry list Wstdlib.Mint.t Wstdlib.Mstr.t
   val json_log : exec_log -> Json_base.json
-  val print_log : ?verb_lvl:int -> json:bool -> exec_log Pp.pp
+  val print_log : ?verb_lvl:int -> exec_log Pp.pp
 
   (** Used for counterexamples.
       Returns the list of function calls and loops that are executed in the log.
@@ -213,6 +215,8 @@ type env = {
   pmodule  : Pmodule.pmodule;
   funenv   : (Expr.cexp * Expr.rec_defn list option) Expr.Mrs.t;
   (** local functions *)
+  tvenv    : Ty.ty Ty.Mtv.t;
+  (** current instances of type variables *)
   vsenv    : value Term.Mvs.t;
   (** local variables *)
   lsenv    : value Lazy.t Term.Mls.t;
@@ -366,6 +370,12 @@ exception Stuck of cntr_ctx * Loc.position option * string
 exception Cannot_decide of cntr_ctx * Term.term list * string
 (** The check cannot be decided (for example, because the execution is
     incomplete *)
+
+exception FatalRACError of Log.log_uc * string
+(** The RAC couldn't continue execution because of a fatal error *)
+
+val fatal_rac_error : Log.log_uc -> ('a, Format.formatter, unit, 'b) format4 -> 'a
+(** Raise a {!FatalRACError} with a formatted string. *)
 
 val stuck : ?loc:Loc.position -> cntr_ctx ->
   ('a, Format.formatter, unit, 'b) format4 -> 'a

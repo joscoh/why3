@@ -18,6 +18,8 @@ open History
 open Itp_communication
 module GSourceView = GSourceView3
 
+module Main () = struct
+
 let debug = Debug.lookup_flag "ide_info"
 
 let () =
@@ -604,7 +606,7 @@ type pa_status =
   * bool
     (* obsolete or not *)
     (* TODO *)
-  * Call_provers.resource_limit
+  * Call_provers.resource_limits
 
 let node_id_type : node_type Hint.t = Hint.create 17
 let node_id_proved : bool Hint.t = Hint.create 17
@@ -898,6 +900,7 @@ let () = create_colors gconfig task_view
 let why_lang = get_extra_lang "why3" "Why3"
 let why3py_lang = get_extra_lang "why3py" "Why3python"
 let why3c_lang = get_extra_lang "why3c" "Why3c"
+let coma_lang = get_extra_lang "coma" "Coma"
 let rust_lang = get_extra_lang "rust" "Rust"
 let ada_lang = get_extra_lang "ada" "Ada"
 let java_lang = get_extra_lang "java" "Java"
@@ -906,16 +909,18 @@ let c_lang = get_extra_lang "c" "C"
 let change_lang view lang =
   let lang =
     match lang with
-    | "python" -> why3py_lang ()
+    | "python"  -> why3py_lang ()
     | "micro-C" -> why3c_lang ()
-    | ".rs" -> rust_lang ()
-    | ".adb" -> ada_lang ()
-    | ".ads" -> ada_lang ()
-    | ".java" -> java_lang ()
-    | ".c" -> c_lang ()
+    | ".rs"     -> rust_lang ()
+    | ".adb"    -> ada_lang ()
+    | ".ads"    -> ada_lang ()
+    | ".java"   -> java_lang ()
+    | ".c"      -> c_lang ()
+    | "coma"
+    | ".coma"   -> coma_lang ()
     | ".mlw"
     | ".why"
-    | "whyml" ->  why_lang ()
+    | "whyml"   ->  why_lang ()
     | _ ->
         Loc.warning warn_unknown_format "Unrecognized source format `%s`" lang;
         None
@@ -1878,7 +1883,7 @@ let image_of_pa_status ~obsolete pa =
         !image_failure_obs
       else
         !image_failure
-    | Call_provers.HighFailure ->
+    | Call_provers.HighFailure _ ->
       if obsolete then
         !image_failure_obs
       else
@@ -3193,3 +3198,7 @@ let () =
     ()
   | None -> ());
   GMain.main ()
+
+end
+
+let () = Whyconf.register_command "ide" (module Main)

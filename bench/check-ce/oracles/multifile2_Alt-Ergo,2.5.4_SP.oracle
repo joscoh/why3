@@ -1,7 +1,7 @@
 <check_ce:categorization>Categorizations of models:
 - Checked model 0: INCOMPLETE
   - Concrete RAC: NORMAL
-  - Abstract RAC: INCOMPLETE (terminated because missing value for return value of call to incr at "bench/check-ce/multifile2.mlw", line 9, characters 2-8)
+  - Abstract RAC: INCOMPLETE (fatal rac error: missing value for return value of call to incr at "bench/check-ce/multifile2.mlw", line 9, characters 2-8)
 - Selected model 1: SW
   - Concrete RAC: NORMAL
   - Abstract RAC: FAILURE (postcondition at "bench/check-ce/multifile2.mlw", line 8, characters 12-26)
@@ -10,7 +10,7 @@
   - Abstract RAC: FAILURE (postcondition at "bench/check-ce/multifile2.mlw", line 8, characters 12-26)
 File "bench/check-ce/multifile2.mlw", line 8, characters 12-26:
 Sub-goal Postcondition of goal f'vc.
-Prover result is: Unknown (unknown) (10 steps).
+Prover result is: Unknown (unknown) (7 steps).
 The contracts of the following functions/loops are too weak :
   - Function 'incr' at "bench/check-ce/multifile2.mlw", line 9, characters 2-8
 , for example during the following execution:
@@ -41,7 +41,7 @@ File multifile2.mlw:
 <check_ce:categorization>Categorizations of models:
 - Selected model 0: NC
   - Concrete RAC: FAILURE (postcondition at "bench/check-ce/multifile2.mlw", line 13, characters 12-26)
-  - Abstract RAC: INCOMPLETE (terminated because missing value for return value of call to incr at "bench/check-ce/multifile2.mlw", line 14, characters 2-8)
+  - Abstract RAC: INCOMPLETE (fatal rac error: missing value for return value of call to incr at "bench/check-ce/multifile2.mlw", line 14, characters 2-8)
 - Checked model 1: NC
   - Concrete RAC: FAILURE (postcondition at "bench/check-ce/multifile2.mlw", line 13, characters 12-26)
   - Abstract RAC: FAILURE (postcondition at "bench/check-ce/multifile2.mlw", line 13, characters 12-26)
@@ -50,7 +50,7 @@ File multifile2.mlw:
   - Abstract RAC: FAILURE (postcondition at "bench/check-ce/multifile2.mlw", line 13, characters 12-26)
 File "bench/check-ce/multifile2.mlw", line 13, characters 12-26:
 Sub-goal Postcondition of goal g'vc.
-Prover result is: Unknown (unknown) (10 steps).
+Prover result is: Unknown (unknown) (8 steps).
 The program does not comply to the verification goal, for example during the
   following execution:
 File int.mlw:
@@ -99,8 +99,8 @@ File multifile2.mlw:
 
 <check_ce:categorization>Categorizations of models:
 - Checked model 0: INCOMPLETE
-  - Concrete RAC: INCOMPLETE (terminated because missing value for return value of call to incr_val at "bench/check-ce/multifile2.mlw", line 19, characters 2-12)
-  - Abstract RAC: INCOMPLETE (terminated because missing value for return value of call to incr_val at "bench/check-ce/multifile2.mlw", line 19, characters 2-12)
+  - Concrete RAC: INCOMPLETE (fatal rac error: missing value for return value of call to incr_val at "bench/check-ce/multifile2.mlw", line 19, characters 2-12)
+  - Abstract RAC: INCOMPLETE (fatal rac error: missing value for return value of call to incr_val at "bench/check-ce/multifile2.mlw", line 19, characters 2-12)
 - Selected model 1: NC
   - Concrete RAC: FAILURE (postcondition at "bench/check-ce/multifile2.mlw", line 18, characters 12-26)
   - Abstract RAC: FAILURE (postcondition at "bench/check-ce/multifile2.mlw", line 18, characters 12-26)
@@ -109,7 +109,7 @@ File multifile2.mlw:
   - Abstract RAC: FAILURE (postcondition at "bench/check-ce/multifile2.mlw", line 18, characters 12-26)
 File "bench/check-ce/multifile2.mlw", line 18, characters 12-26:
 Sub-goal Postcondition of goal h'vc.
-Prover result is: Unknown (unknown) (10 steps).
+Prover result is: Unknown (unknown) (8 steps).
 The program does not comply to the verification goal, for example during the
   following execution:
 File int.mlw:

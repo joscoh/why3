@@ -106,14 +106,12 @@ val report_verdict : ?check_ce:bool -> Env.env -> classification Pp.pp
 (** Describe a verdict in a short sentence. *)
 
 val print_classification_log_or_model :
-  ?verb_lvl:int -> ?json:[< `All | `Values ] ->
+  ?verb_lvl:int -> json:bool ->
   print_attrs:bool -> (model * classification) Pp.pp
-(** Print classification log or the model, when the model is bad or incomplete
-    (When the prover model is printed and [~json:`Values] is given, only the
-    values are printed as JSON.) *)
+(** Print classification log or the model when the model is bad or incomplete *)
 
 val print_model_classification :
-  ?verb_lvl:int -> ?json:[< `All | `Values ] -> ?check_ce:bool -> Env.env ->
+  ?verb_lvl:int -> json:bool -> ?check_ce:bool -> Env.env ->
   (model * classification) Pp.pp
 (** Print the classification with the classification log or model. *)
 
@@ -152,7 +150,7 @@ val last_non_empty_model : strategy_from_rac
 (** Select the last non empty model. *)
 
 val get_rac_results :
-  ?timelimit:float -> ?steplimit:int -> ?verb_lvl:int ->
+  limits:Call_provers.resource_limits -> ?verb_lvl:int ->
   ?compute_term:compute_term ->
   ?only_giant_step:bool ->
   rac -> Env.env -> Pmodule.pmodule ->
@@ -177,7 +175,7 @@ val select_model_from_giant_step_rac_results :
     By default, the strategy is [last_non_empty_model]. *)
 
 val select_model :
-  ?timelimit:float -> ?steplimit:int -> ?verb_lvl:int ->
+  limits:Call_provers.resource_limits -> ?verb_lvl:int ->
   ?compute_term:compute_term ->
   check_ce:bool ->
   rac -> Env.env -> Pmodule.pmodule ->

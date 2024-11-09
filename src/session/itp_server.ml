@@ -456,8 +456,6 @@ let () =
 
 (* This section is used to get colored source as a function of the task *)
 
-exception No_loc_on_goal
-
 let get_locations (task: Task.task) =
   let list = ref [] in
   let goal_loc = ref None in
@@ -532,9 +530,10 @@ let get_locations (task: Task.task) =
     | None ->
       (* This case can happen when after some transformations: for example, in
          an assert, the new goal asserted is not tagged with locations *)
-      (* This error is harmless but we want to detect it when debugging. *)
-      if Debug.test_flag Debug.stack_trace then
-        raise No_loc_on_goal
+        (* This error is harmless but we want to detect it when debugging. *)
+        (* UPDATE: this is an annoying behavior when stack_trace is enabled *)
+      () (* if Debug.test_flag Debug.stack_trace then
+            raise No_loc_on_goal *)
     | Some loc -> color_loc ~color:Goal_color ~loc in
   let goal_id : Ident.ident = (Task.task_goal task).Decl.pr_name in
   color_goal goal_id.Ident.id_loc;
@@ -762,14 +761,14 @@ end
       let obs = pa.proof_obsolete in
       let detached = get_node_detached node in
       let appear_obs = obs || detached in
-      let limit = pa.limit in
+      let limits = pa.limits in
       let res =
         match pa.Session_itp.proof_state with
         | Some pa -> Done pa
         | _ -> Undone
       in
       P.notify (Node_change (new_id,
-                             Proof_status_change(res, appear_obs, limit)))
+                             Proof_status_change(res, appear_obs, limits)))
 
 
 (*
@@ -1041,7 +1040,7 @@ match pa.proof_state with
      let selected_model = Option.value ~default:Model_parser.empty_model
          (Check_ce.select_model_last_non_empty res.pr_models) in
      let ce_result =
-       Pp.string_of (Model_parser.print_model_human ~filter_similar:true ~print_attrs)
+       Pp.string_of (Model_parser.print_model ~print_attrs)
          selected_model in
      if ce_result = "" then
        let result_pr =
@@ -1197,7 +1196,7 @@ match pa.proof_state with
       end;
       let pa = get_proof_attempt_node ses panid in
       let new_status =
-        Proof_status_change (pa_status, pa.proof_obsolete, pa.limit)
+        Proof_status_change (pa_status, pa.proof_obsolete, pa.limits)
       in
       Debug.dprintf debug "callback_update_tree_proof: pa_status=%a@."
         Controller_itp.print_status pa_status;
@@ -1219,14 +1218,14 @@ match pa.proof_state with
          let obs = pa.proof_obsolete in
          Debug.dprintf debug
                        "[Itp_server.notify_change_proved: obsolete = %b@." obs;
-         let limit = pa.limit in
-         P.notify (Node_change (node_ID, Proof_status_change(res, obs, limit)))
+         let limits = pa.limits in
+         P.notify (Node_change (node_ID, Proof_status_change(res, obs, limits)))
       | _ -> ()
     with Not_found when not (Debug.test_flag Debug.stack_trace)->
       Format.eprintf "Fatal anomaly in Itp_server.notify_change_proved@.";
       exit 1
 
-  let schedule_proof_attempt nid (p: Whyconf.config_prover) limit =
+  let schedule_proof_attempt nid (p: Whyconf.config_prover) limits =
     let d = get_server_data () in
     let prover = p.Whyconf.prover in
     let callback = callback_update_tree_proof d.cont in
@@ -1236,7 +1235,7 @@ match pa.proof_state with
     | Some any ->
         let unproven_goals = unproven_goals_below_id d.cont any in
         List.iter (fun id -> C.schedule_proof_attempt d.cont id
-            prover ~limit ~callback ~notification:(notify_change_proved d.cont))
+            prover ~limits ~callback ~notification:(notify_change_proved d.cont))
           unproven_goals
 
   let schedule_edition (nid: node_ID) (prover: Whyconf.prover) =
@@ -1543,7 +1542,7 @@ match pa.proof_state with
         let parent_pn = Session_itp.get_proof_attempt_parent session panid in
         let nid' = node_ID_from_pn parent_pn in
         remove_node nid;
-        schedule_proof_attempt nid' config_prover pan.limit
+        schedule_proof_attempt nid' config_prover pan.limits
       | exception Whyconf.ProverNotFound (_, fp) ->
         let msg = Format.asprintf "Counterexamples alternative for prover does \
                                    not exists: %a"

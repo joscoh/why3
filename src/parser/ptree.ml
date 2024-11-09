@@ -432,16 +432,16 @@ type decl =
   | Dprop of Decl.prop_kind * ident * term
   (** Propositions: "lemma" or "goal" or "axiom" *)
   | Dlet of ident * ghost * Expr.rs_kind * expr
-  (** Global program variable *)
+  (** Global program variable or function *)
   | Drec of fundef list
-  (** Program functions, mutually recursively defined *)
+  (** set of program functions, defined mutually recursively *)
   | Dexn of ident * pty * Ity.mask
   (** Declaration of global exceptions *)
   | Dmeta of ident * metarg list
   (** Declaration of a "meta" *)
   | Dcloneexport of Loc.position * qualid * clone_subst list
   (** "clone export" *)
-  | Duseexport of qualid
+  | Duseexport of Loc.position * qualid
   (** "use export" *)
   | Dcloneimport of Loc.position * bool * qualid * ident option * clone_subst list
   (** "clone import ... as ..." *)

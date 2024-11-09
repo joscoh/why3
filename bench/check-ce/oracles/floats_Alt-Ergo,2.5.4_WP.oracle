@@ -38,26 +38,34 @@ File bv.mlw:
             11 => 2048; 10 => 1024; 9 => 512; 8 => 256; 7 => 128; 6 => 64;
             5 => 32; 4 => 16; 3 => 8; 2 => 4; 1 => 2; 128 => 0; _ => 1|]
 File ieee_float.mlw:
-  Line 661:
+  Line 678:
     is_int : t -> bool = [|_ => true|]
-  Line 869:
-    t'isFinite : t -> bool = [|_ => true|]
-  Line 875:
-    is_positive : t -> bool = [|_ => true|]
-    is_zero : t -> bool = [|_ => true|]
+  Line 892:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 5:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
-- Checked model 0: INCOMPLETE
+- Selected model 0: INCOMPLETE
   - Concrete RAC: INCOMPLETE (terminated because Precondition of `g2'goal` cannot be evaluated)
   - Abstract RAC: INCOMPLETE (terminated because Precondition of `g2'goal` cannot be evaluated)
-- Selected model 1: BAD_CE
+- Checked model 1: BAD_CE
   - Concrete RAC: NORMAL
   - Abstract RAC: NORMAL
 File "bench/check-ce/floats.mlw", line 7, characters 40-53:
 Goal g2.
 Prover result is: Step limit exceeded (81 steps).
-Sorry, we don't have a good counterexample for you :(
-
+The following counterexample model could not be verified
+  (both RAC terminated because Precondition of `g2'goal` cannot be evaluated):
+File ieee_float.mlw:
+  Line 892:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 7:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
 - Checked model 0: INCOMPLETE
@@ -99,40 +107,54 @@ File bv.mlw:
             11 => 2048; 10 => 1024; 9 => 512; 8 => 256; 7 => 128; 6 => 64;
             5 => 32; 4 => 16; 3 => 8; 2 => 4; 1 => 2; 128 => 0; _ => 1|]
 File ieee_float.mlw:
-  Line 661:
+  Line 678:
     is_int : t -> bool = [|_ => true|]
-  Line 869:
-    t'isFinite : t -> bool = [|_ => true|]
-  Line 875:
-    eq : t -> t -> bool = fun arg_021 arg_12 -> true
-    is_positive : t -> bool = [|_ => true|]
-    is_zero : t -> bool = [|_ => true|]
+  Line 892:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 9:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
-- Checked model 0: INCOMPLETE
+- Selected model 0: INCOMPLETE
   - Concrete RAC: INCOMPLETE (terminated because Postcondition of `g4'goal` cannot be evaluated)
   - Abstract RAC: INCOMPLETE (terminated because Postcondition of `g4'goal` cannot be evaluated)
-- Selected model 1: BAD_CE
+- Checked model 1: BAD_CE
   - Concrete RAC: NORMAL
   - Abstract RAC: NORMAL
 File "bench/check-ce/floats.mlw", line 11, characters 24-43:
 Goal g4.
 Prover result is: Step limit exceeded (81 steps).
-Sorry, we don't have a good counterexample for you :(
-
+The following counterexample model could not be verified
+  (both RAC terminated because Postcondition of `g4'goal` cannot be evaluated):
+File ieee_float.mlw:
+  Line 892:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 11:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
-- Checked model 0: INCOMPLETE
+- Selected model 0: INCOMPLETE
   - Concrete RAC: INCOMPLETE (terminated because Postcondition of `g5'goal` cannot be evaluated)
   - Abstract RAC: INCOMPLETE (terminated because Postcondition of `g5'goal` cannot be evaluated)
-- Selected model 1: BAD_CE
+- Checked model 1: BAD_CE
   - Concrete RAC: NORMAL
   - Abstract RAC: NORMAL
 File "bench/check-ce/floats.mlw", line 13, characters 24-43:
 Goal g5.
 Prover result is: Step limit exceeded (81 steps).
-Sorry, we don't have a good counterexample for you :(
-
+The following counterexample model could not be verified
+  (both RAC terminated because Postcondition of `g5'goal` cannot be evaluated):
+File ieee_float.mlw:
+  Line 892:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 13:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
 - Checked model 0: INCOMPLETE
@@ -174,11 +196,14 @@ File bv.mlw:
             11 => 2048; 10 => 1024; 9 => 512; 8 => 256; 7 => 128; 6 => 64;
             5 => 32; 4 => 16; 3 => 8; 2 => 4; 1 => 2; 128 => 0; _ => 1|]
 File ieee_float.mlw:
-  Line 661:
+  Line 678:
     is_int : t -> bool = [|_ => true|]
-  Line 875:
-    is_positive : t -> bool = [|_ => true|]
-    is_zero : t -> bool = [|_ => true|]
+  Line 892:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 15:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
 - Checked model 0: INCOMPLETE
@@ -220,15 +245,14 @@ File bv.mlw:
             11 => 2048; 10 => 1024; 9 => 512; 8 => 256; 7 => 128; 6 => 64;
             5 => 32; 4 => 16; 3 => 8; 2 => 4; 1 => 2; 128 => 0; _ => 1|]
 File ieee_float.mlw:
-  Line 661:
+  Line 678:
     is_int : t -> bool = [|_ => true|]
-  Line 869:
-    t'isFinite : t -> bool = [|_ => true|]
-  Line 875:
-    eq : t -> t -> bool = fun arg_052 arg_18 -> true
-    is_positive : t -> bool = [|_ => true|]
-    is_zero : t -> bool = [|_ => true|]
-    lt : t -> t -> bool = fun arg_048 arg_17 -> false
+  Line 892:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 17:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
 - Checked model 0: INCOMPLETE
@@ -270,14 +294,14 @@ File bv.mlw:
             11 => 2048; 10 => 1024; 9 => 512; 8 => 256; 7 => 128; 6 => 64;
             5 => 32; 4 => 16; 3 => 8; 2 => 4; 1 => 2; 128 => 0; _ => 1|]
 File ieee_float.mlw:
-  Line 661:
+  Line 678:
     is_int : t -> bool = [|_ => true|]
-  Line 869:
-    t'isFinite : t -> bool = [|_ => true|]
-  Line 875:
-    eq : t -> t -> bool = fun arg_061 arg_110 -> true
-    is_positive : t -> bool = [|_ => true|]
-    is_zero : t -> bool = [|_ => true|]
+  Line 892:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 19:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
 - Checked model 0: INCOMPLETE
@@ -319,14 +343,14 @@ File bv.mlw:
             11 => 2048; 10 => 1024; 9 => 512; 8 => 256; 7 => 128; 6 => 64;
             5 => 32; 4 => 16; 3 => 8; 2 => 4; 1 => 2; 128 => 0; _ => 1|]
 File ieee_float.mlw:
-  Line 661:
+  Line 678:
     is_int : t -> bool = [|_ => true|]
-  Line 869:
-    t'isFinite : t -> bool = [|_ => true|]
-  Line 875:
-    eq : t -> t -> bool = fun arg_071 arg_113 -> true
-    is_positive : t -> bool = [|_ => true|]
-    is_zero : t -> bool = [|_ => true|]
+  Line 892:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 21:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
 - Checked model 0: INCOMPLETE
@@ -368,54 +392,74 @@ File bv.mlw:
             11 => 2048; 10 => 1024; 9 => 512; 8 => 256; 7 => 128; 6 => 64;
             5 => 32; 4 => 16; 3 => 8; 2 => 4; 1 => 2; 128 => 0; _ => 1|]
 File ieee_float.mlw:
-  Line 661:
+  Line 678:
     is_int : t -> bool = [|_ => true|]
-  Line 869:
-    t'isFinite : t -> bool = [|_ => true|]
-  Line 875:
-    eq : t -> t -> bool = fun arg_082 arg_117 -> true
-    is_positive : t -> bool = [|_ => true|]
-    is_zero : t -> bool = [|_ => true|]
-    le : t -> t -> bool = fun arg_078 arg_116 -> true
+  Line 892:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 24:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
-- Checked model 0: INCOMPLETE
+- Selected model 0: INCOMPLETE
   - Concrete RAC: INCOMPLETE (terminated because Postcondition of `g11'goal` cannot be evaluated)
   - Abstract RAC: INCOMPLETE (terminated because Postcondition of `g11'goal` cannot be evaluated)
-- Selected model 1: BAD_CE
+- Checked model 1: BAD_CE
   - Concrete RAC: NORMAL
   - Abstract RAC: NORMAL
 File "bench/check-ce/floats.mlw", line 26, characters 24-47:
 Goal g11.
 Prover result is: Step limit exceeded (81 steps).
-Sorry, we don't have a good counterexample for you :(
-
+The following counterexample model could not be verified
+  (both RAC terminated because Postcondition of `g11'goal` cannot be evaluated):
+File ieee_float.mlw:
+  Line 892:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 26:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
-- Checked model 0: INCOMPLETE
+- Selected model 0: INCOMPLETE
   - Concrete RAC: INCOMPLETE (terminated because Postcondition of `g12'goal` cannot be evaluated)
   - Abstract RAC: INCOMPLETE (terminated because Postcondition of `g12'goal` cannot be evaluated)
-- Selected model 1: BAD_CE
+- Checked model 1: BAD_CE
   - Concrete RAC: NORMAL
   - Abstract RAC: NORMAL
 File "bench/check-ce/floats.mlw", line 29, characters 24-54:
 Goal g12.
 Prover result is: Step limit exceeded (81 steps).
-Sorry, we don't have a good counterexample for you :(
-
+The following counterexample model could not be verified
+  (both RAC terminated because Postcondition of `g12'goal` cannot be evaluated):
+File ieee_float.mlw:
+  Line 892:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 29:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
-- Checked model 0: INCOMPLETE
+- Selected model 0: INCOMPLETE
   - Concrete RAC: INCOMPLETE (terminated because Postcondition of `g13'goal` cannot be evaluated)
   - Abstract RAC: INCOMPLETE (terminated because Postcondition of `g13'goal` cannot be evaluated)
-- Selected model 1: BAD_CE
+- Checked model 1: BAD_CE
   - Concrete RAC: NORMAL
   - Abstract RAC: NORMAL
 File "bench/check-ce/floats.mlw", line 32, characters 24-47:
 Goal g13.
 Prover result is: Step limit exceeded (81 steps).
-Sorry, we don't have a good counterexample for you :(
-
+The following counterexample model could not be verified
+  (both RAC terminated because Postcondition of `g13'goal` cannot be evaluated):
+File ieee_float.mlw:
+  Line 892:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 32:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
 - Checked model 0: INCOMPLETE
@@ -458,26 +502,34 @@ File bv.mlw:
             11 => 2048; 10 => 1024; 9 => 512; 8 => 256; 7 => 128; 6 => 64;
             5 => 32; 4 => 16; 3 => 8; 2 => 4; 1 => 2; 1024 => 0; _ => 1|]
 File ieee_float.mlw:
-  Line 661:
+  Line 678:
     is_int : t1 -> bool = [|_ => true|]
-  Line 911:
-    t'isFinite : t1 -> bool = [|_ => true|]
-  Line 917:
-    is_positive : t1 -> bool = [|_ => true|]
-    is_zero : t1 -> bool = [|_ => true|]
+  Line 934:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 41:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
-- Checked model 0: INCOMPLETE
+- Selected model 0: INCOMPLETE
   - Concrete RAC: INCOMPLETE (terminated because Precondition of `g2'goal2` cannot be evaluated)
   - Abstract RAC: INCOMPLETE (terminated because Precondition of `g2'goal2` cannot be evaluated)
-- Selected model 1: BAD_CE
+- Checked model 1: BAD_CE
   - Concrete RAC: NORMAL
   - Abstract RAC: NORMAL
 File "bench/check-ce/floats.mlw", line 43, characters 40-53:
 Goal g2.
 Prover result is: Step limit exceeded (81 steps).
-Sorry, we don't have a good counterexample for you :(
-
+The following counterexample model could not be verified
+  (both RAC terminated because Precondition of `g2'goal2` cannot be evaluated):
+File ieee_float.mlw:
+  Line 934:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 43:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
 - Checked model 0: INCOMPLETE
@@ -520,40 +572,54 @@ File bv.mlw:
             11 => 2048; 10 => 1024; 9 => 512; 8 => 256; 7 => 128; 6 => 64;
             5 => 32; 4 => 16; 3 => 8; 2 => 4; 1 => 2; 1024 => 0; _ => 1|]
 File ieee_float.mlw:
-  Line 661:
+  Line 678:
     is_int : t1 -> bool = [|_ => true|]
-  Line 911:
-    t'isFinite : t1 -> bool = [|_ => true|]
-  Line 917:
-    eq : t1 -> t1 -> bool = fun arg_0128 arg_123 -> true
-    is_positive : t1 -> bool = [|_ => true|]
-    is_zero : t1 -> bool = [|_ => true|]
+  Line 934:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 45:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
-- Checked model 0: INCOMPLETE
+- Selected model 0: INCOMPLETE
   - Concrete RAC: INCOMPLETE (terminated because Postcondition of `g4'goal2` cannot be evaluated)
   - Abstract RAC: INCOMPLETE (terminated because Postcondition of `g4'goal2` cannot be evaluated)
-- Selected model 1: BAD_CE
+- Checked model 1: BAD_CE
   - Concrete RAC: NORMAL
   - Abstract RAC: NORMAL
 File "bench/check-ce/floats.mlw", line 47, characters 24-43:
 Goal g4.
 Prover result is: Step limit exceeded (81 steps).
-Sorry, we don't have a good counterexample for you :(
-
+The following counterexample model could not be verified
+  (both RAC terminated because Postcondition of `g4'goal2` cannot be evaluated):
+File ieee_float.mlw:
+  Line 934:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 47:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
-- Checked model 0: INCOMPLETE
+- Selected model 0: INCOMPLETE
   - Concrete RAC: INCOMPLETE (terminated because Postcondition of `g5'goal2` cannot be evaluated)
   - Abstract RAC: INCOMPLETE (terminated because Postcondition of `g5'goal2` cannot be evaluated)
-- Selected model 1: BAD_CE
+- Checked model 1: BAD_CE
   - Concrete RAC: NORMAL
   - Abstract RAC: NORMAL
 File "bench/check-ce/floats.mlw", line 49, characters 24-43:
 Goal g5.
 Prover result is: Step limit exceeded (81 steps).
-Sorry, we don't have a good counterexample for you :(
-
+The following counterexample model could not be verified
+  (both RAC terminated because Postcondition of `g5'goal2` cannot be evaluated):
+File ieee_float.mlw:
+  Line 934:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 49:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
 - Checked model 0: INCOMPLETE
@@ -596,11 +662,14 @@ File bv.mlw:
             11 => 2048; 10 => 1024; 9 => 512; 8 => 256; 7 => 128; 6 => 64;
             5 => 32; 4 => 16; 3 => 8; 2 => 4; 1 => 2; 1024 => 0; _ => 1|]
 File ieee_float.mlw:
-  Line 661:
+  Line 678:
     is_int : t1 -> bool = [|_ => true|]
-  Line 917:
-    is_positive : t1 -> bool = [|_ => true|]
-    is_zero : t1 -> bool = [|_ => true|]
+  Line 934:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 51:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
 - Checked model 0: INCOMPLETE
@@ -643,15 +712,14 @@ File bv.mlw:
             11 => 2048; 10 => 1024; 9 => 512; 8 => 256; 7 => 128; 6 => 64;
             5 => 32; 4 => 16; 3 => 8; 2 => 4; 1 => 2; 1024 => 0; _ => 1|]
 File ieee_float.mlw:
-  Line 661:
+  Line 678:
     is_int : t1 -> bool = [|_ => true|]
-  Line 911:
-    t'isFinite : t1 -> bool = [|_ => true|]
-  Line 917:
-    eq : t1 -> t1 -> bool = fun arg_0159 arg_129 -> true
-    is_positive : t1 -> bool = [|_ => true|]
-    is_zero : t1 -> bool = [|_ => true|]
-    lt : t1 -> t1 -> bool = fun arg_0155 arg_128 -> false
+  Line 934:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 53:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
 - Checked model 0: INCOMPLETE
@@ -694,14 +762,14 @@ File bv.mlw:
             11 => 2048; 10 => 1024; 9 => 512; 8 => 256; 7 => 128; 6 => 64;
             5 => 32; 4 => 16; 3 => 8; 2 => 4; 1 => 2; 1024 => 0; _ => 1|]
 File ieee_float.mlw:
-  Line 661:
+  Line 678:
     is_int : t1 -> bool = [|_ => true|]
-  Line 911:
-    t'isFinite : t1 -> bool = [|_ => true|]
-  Line 917:
-    eq : t1 -> t1 -> bool = fun arg_0168 arg_131 -> true
-    is_positive : t1 -> bool = [|_ => true|]
-    is_zero : t1 -> bool = [|_ => true|]
+  Line 934:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 55:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
 - Checked model 0: INCOMPLETE
@@ -744,14 +812,14 @@ File bv.mlw:
             11 => 2048; 10 => 1024; 9 => 512; 8 => 256; 7 => 128; 6 => 64;
             5 => 32; 4 => 16; 3 => 8; 2 => 4; 1 => 2; 1024 => 0; _ => 1|]
 File ieee_float.mlw:
-  Line 661:
+  Line 678:
     is_int : t1 -> bool = [|_ => true|]
-  Line 911:
-    t'isFinite : t1 -> bool = [|_ => true|]
-  Line 917:
-    eq : t1 -> t1 -> bool = fun arg_0178 arg_134 -> true
-    is_positive : t1 -> bool = [|_ => true|]
-    is_zero : t1 -> bool = [|_ => true|]
+  Line 934:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 57:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
 - Checked model 0: INCOMPLETE
@@ -794,52 +862,72 @@ File bv.mlw:
             11 => 2048; 10 => 1024; 9 => 512; 8 => 256; 7 => 128; 6 => 64;
             5 => 32; 4 => 16; 3 => 8; 2 => 4; 1 => 2; 1024 => 0; _ => 1|]
 File ieee_float.mlw:
-  Line 661:
+  Line 678:
     is_int : t1 -> bool = [|_ => true|]
-  Line 911:
-    t'isFinite : t1 -> bool = [|_ => true|]
-  Line 917:
-    eq : t1 -> t1 -> bool = fun arg_0189 arg_138 -> true
-    is_positive : t1 -> bool = [|_ => true|]
-    is_zero : t1 -> bool = [|_ => true|]
-    le : t1 -> t1 -> bool = fun arg_0185 arg_137 -> true
+  Line 934:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 60:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
-- Checked model 0: INCOMPLETE
+- Selected model 0: INCOMPLETE
   - Concrete RAC: INCOMPLETE (terminated because Postcondition of `g11'goal2` cannot be evaluated)
   - Abstract RAC: INCOMPLETE (terminated because Postcondition of `g11'goal2` cannot be evaluated)
-- Selected model 1: BAD_CE
+- Checked model 1: BAD_CE
   - Concrete RAC: NORMAL
   - Abstract RAC: NORMAL
 File "bench/check-ce/floats.mlw", line 62, characters 24-48:
 Goal g11.
 Prover result is: Step limit exceeded (81 steps).
-Sorry, we don't have a good counterexample for you :(
-
+The following counterexample model could not be verified
+  (both RAC terminated because Postcondition of `g11'goal2` cannot be evaluated):
+File ieee_float.mlw:
+  Line 934:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 62:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
-- Checked model 0: INCOMPLETE
+- Selected model 0: INCOMPLETE
   - Concrete RAC: INCOMPLETE (terminated because Postcondition of `g12'goal2` cannot be evaluated)
   - Abstract RAC: INCOMPLETE (terminated because Postcondition of `g12'goal2` cannot be evaluated)
-- Selected model 1: BAD_CE
+- Checked model 1: BAD_CE
   - Concrete RAC: NORMAL
   - Abstract RAC: NORMAL
 File "bench/check-ce/floats.mlw", line 65, characters 24-62:
 Goal g12.
 Prover result is: Step limit exceeded (81 steps).
-Sorry, we don't have a good counterexample for you :(
-
+The following counterexample model could not be verified
+  (both RAC terminated because Postcondition of `g12'goal2` cannot be evaluated):
+File ieee_float.mlw:
+  Line 934:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 65:
+    x :  = "undefined"
+    x :  = "undefined"
 
 <check_ce:categorization>Categorizations of models:
-- Checked model 0: INCOMPLETE
+- Selected model 0: INCOMPLETE
   - Concrete RAC: INCOMPLETE (terminated because Postcondition of `g13'goal2` cannot be evaluated)
   - Abstract RAC: INCOMPLETE (terminated because Postcondition of `g13'goal2` cannot be evaluated)
-- Selected model 1: BAD_CE
+- Checked model 1: BAD_CE
   - Concrete RAC: NORMAL
   - Abstract RAC: NORMAL
 File "bench/check-ce/floats.mlw", line 68, characters 24-48:
 Goal g13.
 Prover result is: Step limit exceeded (81 steps).
-Sorry, we don't have a good counterexample for you :(
-
+The following counterexample model could not be verified
+  (both RAC terminated because Postcondition of `g13'goal2` cannot be evaluated):
+File ieee_float.mlw:
+  Line 934:
+    zeroF :  = "undefined"
+File floats.mlw:
+  Line 68:
+    x :  = "undefined"
+    x :  = "undefined"
 

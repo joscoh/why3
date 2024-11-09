@@ -115,17 +115,17 @@ let print_result_prov s proofs prov fmt=
                   fprintf fmt "& \\invalid{%.2f} " res.Call_provers.pr_time
 		| Call_provers.Timeout ->
                   fprintf fmt "& \\timeout{%.2fs} "
-                    pr.limit.Call_provers.limit_time
+                    pr.limits.Call_provers.limit_time
 		| Call_provers.OutOfMemory ->
                   fprintf fmt "& \\outofmemory{%dM} "
-                    pr.limit.Call_provers.limit_mem
+                    pr.limits.Call_provers.limit_mem
 		| Call_provers.StepLimitExceeded ->
                   pp_print_string fmt "& \\steplimitexceeded "
 		| Call_provers.Unknown _ ->
                   fprintf fmt "& \\unknown{%.2f} " res.Call_provers.pr_time
 		| Call_provers.Failure _ ->
                   pp_print_string fmt "& \\failure "
-		| Call_provers.HighFailure ->
+		| Call_provers.HighFailure _ ->
                   pp_print_string fmt "& \\highfailure "
 
 	    end
