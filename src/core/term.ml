@@ -1835,74 +1835,59 @@ let vl_rename h vl =
     (vl_rename_aux vl ((fun x -> x) (h,[])))
 
 (** val t_subst_unsafe_aux :
-    (term_node term_o) Mvs.t -> (term_node term_o) -> (BigInt.t,
-    (term_node term_o)) st **)
+    (term_node term_o) Mvs.t -> (term_node term_o) -> (term_node term_o) **)
 
 let rec t_subst_unsafe_aux m t0 =
-  let t_subst0 = fun t1 -> t_subst_unsafe_aux m t1 in
-  let t_open_bnd = fun v m0 t1 f ->
-    (@@) (fun x ->
-      let m1,v0 = x in
-      (@@) (fun t2 -> (fun x -> x) (v0,t2)) (t_subst_unsafe_aux m1 t1))
-      (f m0 v)
-  in
-  let t_open_quant = fun vl m0 tl f ->
-    (@@) (fun x ->
-      let m1,vl0 = x in
-      (@@) (fun tl0 ->
-        (@@) (fun f1 -> (fun x -> x) ((vl0,tl0),f1)) (t_subst_unsafe_aux m1 f))
-        (st_tr (tr_map (t_subst_unsafe_aux m1) tl))) (vl_rename m0 vl)
-  in
-  let b_subst = fun bv f cl ->
-    let y,e = bv in
-    let u,b = y in
-    if Mvs.set_disjoint m b.bv_vars
-    then (fun x -> x) bv
-    else let m1 = Mvs.set_inter m b.bv_vars in
-         (@@) (fun y0 -> let v,t1 = y0 in let x = cl v t1 in (fun x -> x) x)
-           (t_open_bnd u m1 e f)
-  in
-  let b_subst1 = fun bv -> b_subst bv vs_rename t_close_bound in
-  let b_subst2 = fun bv -> b_subst bv pat_rename t_close_branch in
-  let b_subst3 = fun bq ->
-    let y,f1 = bq in
-    let y0,tl = y in
-    let vl,b = y0 in
-    if Mvs.set_disjoint m b.bv_vars
-    then (fun x -> x) bq
-    else let m1 = Mvs.set_inter m b.bv_vars in
-         (@@) (fun y1 ->
-           let y2,t1 = y1 in
-           let vs,tr = y2 in
-           let x = t_close_quant_unsafe vs tr t1 in (fun x -> x) x)
-           (t_open_quant vl m1 tl f1)
-  in
-  (match t_node t0 with
-   | Tvar u -> (fun x -> x) (t_attr_copy t0 (Mvs.find_def t0 u m))
-   | Tlet (e, bt) ->
-     (@@) (fun t1 ->
-       (@@) (fun b1 ->
-         (fun x -> x) (t_attr_copy t0 (t_let1 t1 b1 (t_ty t0)))) (b_subst1 bt))
-       (t_subst0 e)
-   | Tcase (e, bl) ->
-     (@@) (fun d ->
-       (@@) (fun bl0 ->
-         (fun x -> x) (t_attr_copy t0 (t_case1 d bl0 (t_ty t0))))
-         (st_list (map b_subst2 bl))) (t_subst0 e)
-   | Teps bf ->
-     (@@) (fun bf1 -> (fun x -> x) (t_attr_copy t0 (t_eps1 bf1 (t_ty t0))))
-       (b_subst1 bf)
-   | Tquant (q, bq) ->
-     (@@) (fun bq1 -> (fun x -> x) (t_attr_copy t0 (t_quant1 q bq1)))
-       (b_subst3 bq)
-   | _ -> t_map_ctr_unsafe t_subst0 t0)
+  match t_node t0 with
+  | Tvar u -> t_attr_copy t0 (Mvs.find_def t0 u m)
+  | Tlet (e, p) ->
+    let p0,t2 = p in
+    let v,b = p0 in
+    let e1 = t_subst_unsafe_aux m e in
+    let m' = Mvs.remove v m in
+    let m1 = Mvs.set_inter m' b.bv_vars in
+    let e2 = if Mvs.is_empty m1 then t2 else t_subst_unsafe_aux m1 t2 in
+    let b1 = bnd_new (Mvs.remove v (t_vars e2)) in
+    t_attr_copy t0 (t_let1 e1 ((v,b1),e2) (t_ty t0))
+  | Tcase (e, bl) ->
+    let e1 = t_subst_unsafe_aux m e in
+    let bl2 =
+      map (fun x ->
+        let m' = Mvs.set_diff m (pat_vars (fst (fst x))) in
+        let m1 = Mvs.set_inter m' (snd (fst x)).bv_vars in
+        let e2 =
+          if Mvs.is_empty m1 then snd x else t_subst_unsafe_aux m1 (snd x)
+        in
+        let b1 = bnd_new (Mvs.set_diff (t_vars e2) (pat_vars (fst (fst x))))
+        in
+        ((fst (fst x)),b1),e2) bl
+    in
+    t_attr_copy t0 (t_case1 e1 bl2 (t_ty t0))
+  | Teps p ->
+    let p0,t1 = p in
+    let v,b = p0 in
+    let m' = Mvs.remove v m in
+    let m1 = Mvs.set_inter m' b.bv_vars in
+    let e2 = if Mvs.is_empty m1 then t1 else t_subst_unsafe_aux m1 t1 in
+    let b1 = bnd_new (Mvs.remove v (t_vars e2)) in
+    t_attr_copy t0 (t_eps1 ((v,b1),e2) (t_ty t0))
+  | Tquant (q, p) ->
+    let p0,t1 = p in
+    let p1,tr = p0 in
+    let vs,b = p1 in
+    let m' = Mvs.set_diff m (Svs.of_list vs) in
+    let m1 = Mvs.set_inter m' b.bv_vars in
+    let e2 = if Mvs.is_empty m1 then t1 else t_subst_unsafe_aux m1 t1 in
+    let b1 = bnd_new (Mvs.set_diff (t_vars e2) (Svs.of_list vs)) in
+    let tr2 = tr_map (t_subst_unsafe_aux m) tr in
+    t_attr_copy t0 (t_quant1 q (((vs,b1),tr2),e2))
+  | _ -> t_map_unsafe (t_subst_unsafe_aux m) t0
 
 (** val t_subst_unsafe :
-    (term_node term_o) Mvs.t -> (term_node term_o) -> (BigInt.t,
-    (term_node term_o)) st **)
+    (term_node term_o) Mvs.t -> (term_node term_o) -> (term_node term_o) **)
 
 let t_subst_unsafe m t0 =
-  if Mvs.is_empty m then (fun x -> x) t0 else t_subst_unsafe_aux m t0
+  if Mvs.is_empty m then t0 else t_subst_unsafe_aux m t0
 
 (** val t_view_bound : term_bound -> vsymbol*(term_node term_o) **)
 
@@ -1915,9 +1900,7 @@ let t_view_bound x =
 let t_open_bound = function
 | p,t0 ->
   let v,_ = p in
-  (@@) (fun y ->
-    let m,v0 = y in
-    (@@) (fun t1 -> (fun x -> x) (v0,t1)) (t_subst_unsafe m t0))
+  (@@) (fun y -> let m,v0 = y in (fun x -> x) (v0,(t_subst_unsafe m t0)))
     (vs_rename Mvs.empty v)
 
 (** val t_view_branch :
@@ -1932,9 +1915,7 @@ let t_view_branch x =
 let t_open_branch = function
 | p0,t0 ->
   let p,_ = p0 in
-  (@@) (fun y ->
-    let m,p1 = y in
-    (@@) (fun t1 -> (fun x -> x) (p1,t1)) (t_subst_unsafe m t0))
+  (@@) (fun y -> let m,p1 = y in (fun x -> x) (p1,(t_subst_unsafe m t0)))
     (pat_rename Mvs.empty p)
 
 (** val t_open_quant1 :
@@ -1946,9 +1927,8 @@ let t_open_quant1 = function
   let vl,_ = p0 in
   (@@) (fun y ->
     let m,vl0 = y in
-    (@@) (fun tl0 ->
-      (@@) (fun t1 -> (fun x -> x) ((vl0,tl0),t1)) (t_subst_unsafe m f))
-      (st_tr (tr_map (t_subst_unsafe m) tl))) (vl_rename Mvs.empty vl)
+    (fun x -> x) ((vl0,(tr_map (t_subst_unsafe m) tl)),(t_subst_unsafe m f)))
+    (vl_rename Mvs.empty vl)
 
 (** val t_view_quant :
     term_quant -> (vsymbol list*trigger)*(term_node term_o) **)
@@ -1957,14 +1937,13 @@ let t_view_quant x =
   ((fst (fst (fst x))),(snd (fst x))),(snd x)
 
 (** val t_open_bound_with :
-    (term_node term_o) -> term_bound -> (BigInt.t, (term_node term_o))
-    errState **)
+    (term_node term_o) -> term_bound -> (term_node term_o) errorM **)
 
 let t_open_bound_with e = function
 | p,t0 ->
   let v,_ = p in
   (@@) (fun _ -> let m = Mvs.singleton v e in  (t_subst_unsafe m t0))
-    ( (vs_check v e))
+    (vs_check v e)
 
 (** val t_open_bound_cb1 :
     term_bound -> (BigInt.t, (vsymbol*(term_node term_o))*(vsymbol ->
@@ -2513,16 +2492,16 @@ let t_v_occurs v t0 =
     BigInt.zero t0
 
 (** val t_subst :
-    (term_node term_o) Mvs.t -> (term_node term_o) -> (BigInt.t,
-    (term_node term_o)) errState **)
+    (term_node term_o) Mvs.t -> (term_node term_o) -> (term_node term_o)
+    errorM **)
 
 let t_subst m t0 =
   (@@) (fun _ ->  (t_subst_unsafe m t0))
-    ( (iter_err (fun x -> vs_check (fst x) (snd x)) (Mvs.bindings m)))
+    (iter_err (fun x -> vs_check (fst x) (snd x)) (Mvs.bindings m))
 
 (** val t_subst_single :
-    Mvs.key -> (term_node term_o) -> (term_node term_o) -> (BigInt.t,
-    (term_node term_o)) errState **)
+    Mvs.key -> (term_node term_o) -> (term_node term_o) -> (term_node term_o)
+    errorM **)
 
 let t_subst_single v t1 t0 =
   t_subst (Mvs.singleton v t1) t0
@@ -2669,16 +2648,16 @@ let small t0 =
   | _ -> false
 
 (** val t_let_close_simp :
-    vsymbol -> (term_node term_o) -> (term_node term_o) -> (BigInt.t,
-    (term_node term_o)) errState **)
+    vsymbol -> (term_node term_o) -> (term_node term_o) -> (term_node term_o)
+    errorM **)
 
 let t_let_close_simp v e t0 =
   let n = t_v_occurs v t0 in
   if BigInt.is_zero n
-  then (fun x -> x) t0
+  then  t0
   else if (||) (BigInt.eq n BigInt.one) (small e)
        then t_subst_single v e t0
-       else  (t_let_close v e t0)
+       else t_let_close v e t0
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)

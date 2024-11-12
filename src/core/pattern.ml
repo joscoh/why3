@@ -93,28 +93,26 @@ let union_cases pl a types cases =
   Mls.union join (Mls.map wild types) cases
 
 (** val dispatch_aux :
-    (vsymbol -> (term_node term_o) -> 'a1 -> (BigInt.t, 'a1) errState) ->
+    (vsymbol -> (term_node term_o) -> 'a1 -> 'a1 errorM) ->
     (term_node term_o) -> (pattern_node pattern_o) list Mls.t ->
     ((pattern_node pattern_o) list*'a1) -> (((pattern_node pattern_o)
     list*'a1) list Mls.t*((pattern_node pattern_o) list*'a1) list) ->
-    (BigInt.t, ((pattern_node pattern_o) list*'a1) list
-    Mls.t*((pattern_node pattern_o) list*'a1) list) errState **)
+    (((pattern_node pattern_o) list*'a1) list Mls.t*((pattern_node pattern_o)
+    list*'a1) list) errorM **)
 
 let rec dispatch_aux mk_let t0 types pla casewild =
   match fst pla with
-  | [] ->  (raise (Failure "hd"))
+  | [] -> raise (Failure "hd")
   | p::pl ->
     let cases = fst casewild in
     let wilds = snd casewild in
     let a = snd pla in
     (match pat_node p with
-     | Pwild -> (fun x -> x) ((union_cases pl a types cases),((pl,a)::wilds))
+     | Pwild ->  ((union_cases pl a types cases),((pl,a)::wilds))
      | Pvar x ->
-       (@@) (fun a0 ->
-         (fun x -> x) ((union_cases pl a0 types cases),((pl,a0)::wilds)))
+       (@@) (fun a0 ->  ((union_cases pl a0 types cases),((pl,a0)::wilds)))
          (mk_let x t0 a)
-     | Papp (fs, pl') ->
-       (fun x -> x) ((add_case fs (rev_append pl' pl) a cases),wilds)
+     | Papp (fs, pl') ->  ((add_case fs (rev_append pl' pl) a cases),wilds)
      | Por (p1, q1) ->
        (@@) (fun d1 -> dispatch_aux mk_let t0 types ((p1::pl),a) d1)
          (dispatch_aux mk_let t0 types ((q1::pl),a) (cases,wilds))
@@ -124,25 +122,24 @@ let rec dispatch_aux mk_let t0 types pla casewild =
          (mk_let x t0 a))
 
 (** val dispatch_aux' :
-    (vsymbol -> (term_node term_o) -> 'a1 -> (BigInt.t, 'a1) errState) ->
+    (vsymbol -> (term_node term_o) -> 'a1 -> 'a1 errorM) ->
     (term_node term_o) -> (pattern_node pattern_o) list Mls.t ->
     ((pattern_node pattern_o) list*'a1) -> (((pattern_node pattern_o)
     list*'a1) list Mls.t*((pattern_node pattern_o) list*'a1) list) ->
-    (BigInt.t, ((pattern_node pattern_o) list*'a1) list
-    Mls.t*((pattern_node pattern_o) list*'a1) list) errState **)
+    (((pattern_node pattern_o) list*'a1) list Mls.t*((pattern_node pattern_o)
+    list*'a1) list) errorM **)
 
 let dispatch_aux' =
   dispatch_aux
 
 (** val dispatch :
-    (vsymbol -> (term_node term_o) -> 'a1 -> (BigInt.t, 'a1) errState) ->
+    (vsymbol -> (term_node term_o) -> 'a1 -> 'a1 errorM) ->
     (term_node term_o) -> (pattern_node pattern_o) list Mls.t ->
-    ((pattern_node pattern_o) list*'a1) list -> (BigInt.t,
-    ((pattern_node pattern_o) list*'a1) list Mls.t*((pattern_node pattern_o)
-    list*'a1) list) errState **)
+    ((pattern_node pattern_o) list*'a1) list -> (((pattern_node pattern_o)
+    list*'a1) list Mls.t*((pattern_node pattern_o) list*'a1) list) errorM **)
 
 let dispatch mk_let t0 types rl =
-  foldr_errst (dispatch_aux' mk_let t0 types) (Mls.empty,[]) rl
+  foldr_err (fun x y -> dispatch_aux' mk_let t0 types y x) rl (Mls.empty,[])
 
 type 'a compile_result =
 | Succ of 'a
@@ -259,7 +256,7 @@ let comp_full mk_case bare comp_wilds0 comp_cases0 types css cslist t0 ty _ =
 (** val compile_aux :
     ((ty_node_c ty_o) tysymbol_o -> lsymbol list) -> ((term_node term_o) ->
     ((pattern_node pattern_o)*'a1) list -> 'a1 errorM) -> (vsymbol ->
-    (term_node term_o) -> 'a1 -> (BigInt.t, 'a1) errState) -> bool -> bool ->
+    (term_node term_o) -> 'a1 -> 'a1 errorM) -> bool -> bool ->
     (term_node term_o) list -> ((pattern_node pattern_o) list*'a1) list ->
     (BigInt.t*ty_node_c ty_o hashcons_ty, 'a1 compile_result) errState **)
 
@@ -528,7 +525,7 @@ let rec compile_aux get_constructors mk_case mk_let bare simpl_constr tl0 rl =
 (** val compile_aux' :
     ((ty_node_c ty_o) tysymbol_o -> lsymbol list) -> ((term_node term_o) ->
     ((pattern_node pattern_o)*'a1) list -> 'a1 errorM) -> (vsymbol ->
-    (term_node term_o) -> 'a1 -> (BigInt.t, 'a1) errState) -> bool -> bool ->
+    (term_node term_o) -> 'a1 -> 'a1 errorM) -> bool -> bool ->
     (term_node term_o) list -> ((pattern_node pattern_o) list*'a1) list ->
     (BigInt.t*ty_node_c ty_o hashcons_ty, 'a1) errState **)
 
@@ -541,7 +538,7 @@ let compile_aux' get_constructors mk_case mk_let bare simpl_constr tl0 rl =
 
 (** val compile_bare_aux :
     ((term_node term_o) -> ((pattern_node pattern_o)*'a1) list -> 'a1 errorM)
-    -> (vsymbol -> (term_node term_o) -> 'a1 -> (BigInt.t, 'a1) errState) ->
+    -> (vsymbol -> (term_node term_o) -> 'a1 -> 'a1 errorM) ->
     (term_node term_o) list -> ((pattern_node pattern_o) list*'a1) list ->
     (BigInt.t*ty_node_c ty_o hashcons_ty, 'a1) errState **)
 

@@ -249,6 +249,7 @@ struct
   module W = Weakhtbl.Make(X)
 end
 
+
 let fold_of_iter iter f k e =
   let r = ref k in iter (fun v -> r := f !r v) e; !r
 
