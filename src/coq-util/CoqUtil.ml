@@ -1,5 +1,6 @@
 open BinNums
 open Byte
+open Common
 open Datatypes
 open List0
 
@@ -71,12 +72,8 @@ let option_eqb eq o1 o2 =
 
 (** val map2 : ('a1 -> 'a2 -> 'a3) -> 'a1 list -> 'a2 list -> 'a3 list **)
 
-let rec map2 f l1 l2 =
-  match l1 with
-  | [] -> []
-  | x1::t1 -> (match l2 with
-               | [] -> []
-               | x2::t2 -> (f x1 x2)::(map2 f t1 t2))
+let map2 =
+  map2
 
 (** val fold_right2 :
     ('a1 -> 'a2 -> 'a3 -> 'a3) -> 'a1 list -> 'a2 list -> 'a3 -> 'a3 option **)
@@ -106,9 +103,8 @@ let rec fold_left2 f l1 l2 accu =
 
 (** val null : 'a1 list -> bool **)
 
-let null = function
-| [] -> true
-| _::_ -> false
+let null =
+  null
 
 (** val opt_fold : ('a2 -> 'a1 -> 'a2) -> 'a2 -> 'a1 option -> 'a2 **)
 

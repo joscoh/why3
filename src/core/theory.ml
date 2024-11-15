@@ -47,7 +47,6 @@ open Decl
 
 
 
-
 (** val pmap_to_mstr : (string*'a1) coq_Pmap -> 'a1 Mstr.t **)
 
 let pmap_to_mstr z =
@@ -442,17 +441,32 @@ let meta_hash m =
 
 module MetaTag =
  struct
-  type t = meta
+  module MetaTagDec =
+   struct
+    type t = meta
 
-  (** val tag : meta -> BigInt.t **)
+    (** val tag : meta -> BigInt.t **)
 
-  let tag m =
-    m.meta_tag
+    let tag m =
+      m.meta_tag
 
-  (** val equal : meta -> meta -> bool **)
+    (** val equal : meta -> meta -> bool **)
+
+    let equal =
+      (fun x y -> x == y || meta_eqb x y)
+   end
+
+  type t = MetaTagDec.t
+
+  (** val tag : MetaTagDec.t -> BigInt.t **)
+
+  let tag =
+    MetaTagDec.tag
+
+  (** val equal : MetaTagDec.t -> MetaTagDec.t -> bool **)
 
   let equal =
-    (fun x y -> x == y || meta_eqb x y)
+    MetaTagDec.equal
  end
 
 module SMmeta1 = MakeMS(MetaTag)
@@ -463,17 +477,32 @@ module Mmeta = SMmeta1.M
 
 module TdeclTag =
  struct
-  type t = tdecl_node tdecl_o
+  module TdeclTagDec =
+   struct
+    type t = tdecl_node tdecl_o
 
-  (** val tag : tdecl_node tdecl_o -> BigInt.t **)
+    (** val tag : tdecl_node tdecl_o -> BigInt.t **)
+
+    let tag =
+      td_tag
+
+    (** val equal : tdecl_node tdecl_o -> tdecl_node tdecl_o -> bool **)
+
+    let equal =
+      tdecl_eqb
+   end
+
+  type t = TdeclTagDec.t
+
+  (** val tag : TdeclTagDec.t -> BigInt.t **)
 
   let tag =
-    td_tag
+    TdeclTagDec.tag
 
-  (** val equal : tdecl_node tdecl_o -> tdecl_node tdecl_o -> bool **)
+  (** val equal : TdeclTagDec.t -> TdeclTagDec.t -> bool **)
 
   let equal =
-    tdecl_eqb
+    TdeclTagDec.equal
  end
 
 module Tdecl1 = MakeMS(TdeclTag)

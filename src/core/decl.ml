@@ -31,7 +31,6 @@ open List0
 
 
 
-
 type constructor = lsymbol*lsymbol option list
 
 type data_decl = (ty_node_c ty_o) tysymbol_o*constructor list

@@ -1,7 +1,6 @@
 open BinNums
 open CoqUtil
 open Weakhtbl
-open Datatypes
 open Monads
 open Specif
 open Extmap
@@ -9,34 +8,89 @@ open Extset
 open Pmap
 open Zmap
 
-module BigIntTag =
+module type EqDecTag =
+ sig
+  type t
+
+  val tag : t -> BigInt.t
+
+  val equal : t -> t -> bool
+ end
+
+module MakeDecTag =
+ functor (E:EqDecTag) ->
  struct
-  type t = BigInt.t
+  type t = E.t
 
-  (** val tag : t -> t **)
+  (** val tag : E.t -> BigInt.t **)
 
-  let tag x =
-    x
+  let tag =
+    E.tag
 
-  (** val equal : BigInt.t -> BigInt.t -> bool **)
+  (** val equal : E.t -> E.t -> bool **)
 
   let equal =
-    BigInt.eq
+    E.equal
+ end
+
+module BigIntTag =
+ struct
+  module BigIntDecTag =
+   struct
+    type t = BigInt.t
+
+    (** val tag : t -> t **)
+
+    let tag x =
+      x
+
+    (** val equal : BigInt.t -> BigInt.t -> bool **)
+
+    let equal =
+      BigInt.eq
+   end
+
+  type t = BigIntDecTag.t
+
+  (** val tag : BigIntDecTag.t -> BigInt.t **)
+
+  let tag =
+    BigIntDecTag.tag
+
+  (** val equal : BigIntDecTag.t -> BigIntDecTag.t -> bool **)
+
+  let equal =
+    BigIntDecTag.equal
  end
 
 module Str =
  struct
-  type t = string
+  module StrDec =
+   struct
+    type t = string
 
-  (** val tag : string -> BigInt.t **)
+    (** val tag : string -> BigInt.t **)
+
+    let tag =
+      (fun s -> (BigInt.of_int (Hashtbl.hash s)))
+
+    (** val equal : string -> string -> bool **)
+
+    let equal =
+      (=)
+   end
+
+  type t = StrDec.t
+
+  (** val tag : StrDec.t -> BigInt.t **)
 
   let tag =
-    (fun s -> (BigInt.of_int (Hashtbl.hash s)))
+    StrDec.tag
 
-  (** val equal : string -> string -> bool **)
+  (** val equal : StrDec.t -> StrDec.t -> bool **)
 
   let equal =
-    (=)
+    StrDec.equal
  end
 
 module Mstr = Extmap.Make(Str)
@@ -45,17 +99,32 @@ module Sstr = MakeOfMap(Mstr)
 
 module Str2 =
  struct
-  type t = string
+  module Str2Dec =
+   struct
+    type t = string
 
-  (** val tag : string -> BigInt.t **)
+    (** val tag : string -> BigInt.t **)
 
-  let tag s =
-    ZCompat.of_Z_big (Zpos (str_to_pos s))
+    let tag s =
+      ZCompat.of_Z_big (Zpos (str_to_pos s))
 
-  (** val equal : string -> string -> bool **)
+    (** val equal : string -> string -> bool **)
+
+    let equal =
+      (=)
+   end
+
+  type t = Str2Dec.t
+
+  (** val tag : Str2Dec.t -> BigInt.t **)
+
+  let tag =
+    Str2Dec.tag
+
+  (** val equal : Str2Dec.t -> Str2Dec.t -> bool **)
 
   let equal =
-    (=)
+    Str2Dec.equal
  end
 
 module type OrderedHashedType =
@@ -103,17 +172,32 @@ module MakeMS =
 module MakeTagged =
  functor (X:Weakey) ->
  struct
-  type t = X.t
+  module MakeDec =
+   struct
+    type t = X.t
 
-  (** val tag : X.t -> tag **)
+    (** val tag : X.t -> tag **)
 
-  let tag x =
-    tag_hash (X.tag x)
+    let tag x =
+      tag_hash (X.tag x)
 
-  (** val equal : X.t -> X.t -> bool **)
+    (** val equal : X.t -> X.t -> bool **)
+
+    let equal =
+      X.equal
+   end
+
+  type t = MakeDec.t
+
+  (** val tag : MakeDec.t -> BigInt.t **)
+
+  let tag =
+    MakeDec.tag
+
+  (** val equal : MakeDec.t -> MakeDec.t -> bool **)
 
   let equal =
-    X.equal
+    MakeDec.equal
  end
 
 module MakeMSWeak =

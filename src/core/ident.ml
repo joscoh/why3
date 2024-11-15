@@ -20,7 +20,6 @@ open Zmap
 
 
 
-
 type attribute = { attr_string : string; attr_tag : BigInt.t }
 
 (** val attr_string : attribute -> string **)
@@ -40,17 +39,32 @@ let attr_eqb a1 a2 =
 
 module AttrTag =
  struct
-  type t = attribute
+  module AttrDecTag =
+   struct
+    type t = attribute
 
-  (** val tag : attribute -> BigInt.t **)
+    (** val tag : attribute -> BigInt.t **)
 
-  let tag x =
-    x.attr_tag
+    let tag x =
+      x.attr_tag
 
-  (** val equal : attribute -> attribute -> bool **)
+    (** val equal : attribute -> attribute -> bool **)
+
+    let equal =
+      attr_eqb
+   end
+
+  type t = AttrDecTag.t
+
+  (** val tag : AttrDecTag.t -> BigInt.t **)
+
+  let tag =
+    AttrDecTag.tag
+
+  (** val equal : AttrDecTag.t -> AttrDecTag.t -> bool **)
 
   let equal =
-    attr_eqb
+    AttrDecTag.equal
  end
 
 module Attr = MakeMS(AttrTag)
