@@ -16,6 +16,7 @@ open Pmap
 open Zmap
 open Number
 open Hashcons
+open Common
 
 
 
@@ -374,11 +375,6 @@ type term = term_node term_o
 
 let build_term_o t0 o a l =
   { t_node = t0; t_ty = o; t_attrs = a; t_loc = l }
-
-(** val trd : (('a1*'a2)*'a3) -> 'a3 **)
-
-let trd = function
-| _,y -> y
 
 (** val bind_info_eqb : bind_info -> bind_info -> bool **)
 
@@ -2658,6 +2654,110 @@ let t_let_close_simp v e t0 =
   else if (||) (BigInt.eq n BigInt.one) (small e)
        then t_subst_single v e t0
        else t_let_close v e t0
+
+
+
+
+
+
+(** val term_traverse :
+    (vsymbol -> (BigInt.t*'a1, 'a2) errState) -> (constant -> (BigInt.t*'a1,
+    'a2) errState) -> ((term_node term_o) -> vsymbol -> (term_node term_o) ->
+    'a2 -> 'a2 -> (BigInt.t*'a1, 'a2) errState) -> ((term_node term_o) ->
+    (term_node term_o) -> (term_node term_o) -> 'a2 -> 'a2 -> 'a2 ->
+    (BigInt.t*'a1, 'a2) errState) -> (lsymbol -> (term_node term_o) list ->
+    'a2 list -> (BigInt.t*'a1, 'a2) errState) -> ((term_node term_o) -> 'a2
+    -> (((pattern_node pattern_o)*(term_node term_o))*'a2) list ->
+    (BigInt.t*'a1, 'a2) errState) -> (vsymbol -> (term_node term_o) -> 'a2 ->
+    (BigInt.t*'a1, 'a2) errState) -> (quant -> vsymbol list ->
+    (term_node term_o) list list -> 'a2 list list -> (term_node term_o) ->
+    'a2 -> (BigInt.t*'a1, 'a2) errState) -> (binop -> (term_node term_o) ->
+    (term_node term_o) -> 'a2 -> 'a2 -> (BigInt.t*'a1, 'a2) errState) ->
+    ((term_node term_o) -> 'a2 -> (BigInt.t*'a1, 'a2) errState) ->
+    (BigInt.t*'a1, 'a2) errState -> (BigInt.t*'a1, 'a2) errState ->
+    (term_node term_o) -> (BigInt.t*'a1, 'a2) errState **)
+
+let rec term_traverse var_case const_case let_case if_case app_case match_case eps_case quant_case binop_case not_case true_case false_case tm1 =
+  match t_node tm1 with
+  | Tvar x -> var_case x
+  | Tconst c -> const_case c
+  | Tapp (l, ts) ->
+    (@@) (fun recs -> app_case l ts recs)
+      (errst_list
+        (dep_map (fun t1 _ ->
+          term_traverse var_case const_case let_case if_case app_case
+            match_case eps_case quant_case binop_case not_case true_case
+            false_case t1) ts))
+  | Tif (t1, t2, t3) ->
+    (@@) (fun v1 ->
+      (@@) (fun v2 ->
+        (@@) (fun v3 -> if_case t1 t2 t3 v1 v2 v3)
+          (term_traverse var_case const_case let_case if_case app_case
+            match_case eps_case quant_case binop_case not_case true_case
+            false_case t3))
+        (term_traverse var_case const_case let_case if_case app_case
+          match_case eps_case quant_case binop_case not_case true_case
+          false_case t2))
+      (term_traverse var_case const_case let_case if_case app_case match_case
+        eps_case quant_case binop_case not_case true_case false_case t1)
+  | Tlet (t1, b) ->
+    (@@) (fun v1 ->
+      (fun x y -> y x () ()) ( ( (t_open_bound b))) (fun y _ _ ->
+        (@@) (fun v2 -> let_case t1 (fst y) (snd y) v1 v2)
+          (term_traverse var_case const_case let_case if_case app_case
+            match_case eps_case quant_case binop_case not_case true_case
+            false_case (snd y))))
+      (term_traverse var_case const_case let_case if_case app_case match_case
+        eps_case quant_case binop_case not_case true_case false_case t1)
+  | Tcase (t1, tbs) ->
+    (@@) (fun r1 ->
+      (@@) (fun tbs2 -> match_case t1 r1 tbs2)
+        (errst_list
+          (dep_map (fun b _ ->
+            (fun x y -> y x () ()) ( ( (t_open_branch b))) (fun y _ _ ->
+              (@@) (fun t2 -> (fun x -> x) (y,t2))
+                (term_traverse var_case const_case let_case if_case app_case
+                  match_case eps_case quant_case binop_case not_case
+                  true_case false_case (snd y)))) tbs)))
+      (term_traverse var_case const_case let_case if_case app_case match_case
+        eps_case quant_case binop_case not_case true_case false_case t1)
+  | Teps b ->
+    (fun x y -> y x () ()) ( ( (t_open_bound b))) (fun y _ _ ->
+      (@@) (fun v -> eps_case (fst y) (snd y) v)
+        (term_traverse var_case const_case let_case if_case app_case
+          match_case eps_case quant_case binop_case not_case true_case
+          false_case (snd y)))
+  | Tquant (q, tq) ->
+    (fun x y -> y x () ()) ( ( (t_open_quant1 tq))) (fun y _ _ ->
+      (@@) (fun v ->
+        let vs = fst (fst y) in
+        let tr = snd (fst y) in
+        let t = snd y in
+        (@@) (fun v2 -> quant_case q vs tr v2 t v)
+          (errst_list
+            (dep_map (fun l1 _ ->
+              errst_list
+                (dep_map (fun tr1 _ ->
+                  term_traverse var_case const_case let_case if_case app_case
+                    match_case eps_case quant_case binop_case not_case
+                    true_case false_case tr1) l1)) tr)))
+        (term_traverse var_case const_case let_case if_case app_case
+          match_case eps_case quant_case binop_case not_case true_case
+          false_case (snd y)))
+  | Tbinop (b, t1, t2) ->
+    (@@) (fun r1 ->
+      (@@) (fun r2 -> binop_case b t1 t1 r1 r2)
+        (term_traverse var_case const_case let_case if_case app_case
+          match_case eps_case quant_case binop_case not_case true_case
+          false_case t2))
+      (term_traverse var_case const_case let_case if_case app_case match_case
+        eps_case quant_case binop_case not_case true_case false_case t1)
+  | Tnot t1 ->
+    (@@) (fun r1 -> not_case t1 r1)
+      (term_traverse var_case const_case let_case if_case app_case match_case
+        eps_case quant_case binop_case not_case true_case false_case t1)
+  | Ttrue -> true_case
+  | Tfalse -> false_case
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)

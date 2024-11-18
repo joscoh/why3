@@ -1,5 +1,8 @@
 open List0
 
+type __ = Obj.t
+let __ = let rec f _ = Obj.repr f in Obj.repr f
+
 (** val null : 'a1 list -> bool **)
 
 let null = function
@@ -35,3 +38,9 @@ let omap f l =
 
 let tuple_eqb eq1 eq2 x y =
   (&&) (eq1 (fst x) (fst y)) (eq2 (snd x) (snd y))
+
+(** val dep_map : ('a1 -> __ -> 'a2) -> 'a1 list -> 'a2 list **)
+
+let rec dep_map f = function
+| [] -> []
+| x::tl -> (f x __)::(dep_map f tl)

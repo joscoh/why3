@@ -2,6 +2,7 @@ open CoqHashtbl
 open List0
 
 type __ = Obj.t
+let __ = let rec f _ = Obj.repr f in Obj.repr f
 
 type 'a errorM = 'a
 
