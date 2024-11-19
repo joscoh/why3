@@ -2660,6 +2660,7 @@ let t_let_close_simp v e t0 =
 
 
 
+
 (** val term_traverse :
     (vsymbol -> (BigInt.t*'a1, 'a2) errState) -> (constant -> (BigInt.t*'a1,
     'a2) errState) -> ((term_node term_o) -> vsymbol -> (term_node term_o) ->
@@ -2758,6 +2759,202 @@ let rec term_traverse var_case const_case let_case if_case app_case match_case e
         eps_case quant_case binop_case not_case true_case false_case t1)
   | Ttrue -> true_case
   | Tfalse -> false_case
+
+(** val tm_traverse :
+    (vsymbol -> (BigInt.t*'a1, 'a2) errState) -> (constant -> (BigInt.t*'a1,
+    'a2) errState) -> ((term_node term_o) -> vsymbol -> (term_node term_o) ->
+    'a2 -> 'a2 -> (BigInt.t*'a1, 'a2) errState) -> ((term_node term_o) ->
+    (term_node term_o) -> (term_node term_o) -> 'a2 -> 'a2 -> 'a2 ->
+    (BigInt.t*'a1, 'a2) errState) -> (lsymbol -> (term_node term_o) list ->
+    'a2 list -> (BigInt.t*'a1, 'a2) errState) -> ((term_node term_o) -> 'a2
+    -> (((pattern_node pattern_o)*(term_node term_o))*'a2) list ->
+    (BigInt.t*'a1, 'a2) errState) -> (vsymbol -> (term_node term_o) -> 'a2 ->
+    (BigInt.t*'a1, 'a2) errState) -> (quant -> vsymbol list ->
+    (term_node term_o) list list -> 'a2 list list -> (term_node term_o) ->
+    'a2 -> (BigInt.t*'a1, 'a2) errState) -> (binop -> (term_node term_o) ->
+    (term_node term_o) -> 'a2 -> 'a2 -> (BigInt.t*'a1, 'a2) errState) ->
+    ((term_node term_o) -> 'a2 -> (BigInt.t*'a1, 'a2) errState) ->
+    (BigInt.t*'a1, 'a2) errState -> (BigInt.t*'a1, 'a2) errState ->
+    (term_node term_o) -> (BigInt.t*'a1, 'a2) errState **)
+
+let tm_traverse =
+  term_traverse
+
+(** val term_map_rec :
+    ((term_node term_o) -> (term_node term_o) -> vsymbol ->
+    (term_node term_o) -> (term_node term_o) -> (BigInt.t*'a1,
+    (term_node term_o)) errState) -> ((term_node term_o) ->
+    (term_node term_o) -> (term_node term_o) -> (term_node term_o) ->
+    (term_node term_o) -> (term_node term_o) -> (BigInt.t*'a1,
+    (term_node term_o)) errState) -> (lsymbol -> (term_node term_o) list ->
+    ty_node_c ty_o option -> (term_node term_o) list -> (BigInt.t*'a1,
+    (term_node term_o)) errState) -> ((term_node term_o) ->
+    (term_node term_o) ->
+    (((pattern_node pattern_o)*(term_node term_o))*(term_node term_o)) list
+    -> (BigInt.t*'a1, (term_node term_o)) errState) -> (vsymbol ->
+    (term_node term_o) -> (term_node term_o) -> (BigInt.t*'a1,
+    (term_node term_o)) errState) -> (quant -> vsymbol list ->
+    (term_node term_o) list list -> (term_node term_o) list list ->
+    (term_node term_o) -> (term_node term_o) -> (BigInt.t*'a1,
+    (term_node term_o)) errState) -> (binop -> (term_node term_o) ->
+    (term_node term_o) -> (term_node term_o) -> (term_node term_o) ->
+    (BigInt.t*'a1, (term_node term_o)) errState) -> ((term_node term_o) ->
+    (term_node term_o) -> (BigInt.t*'a1, (term_node term_o)) errState) ->
+    (term_node term_o) -> (BigInt.t*'a1, (term_node term_o)) errState **)
+
+let rec term_map_rec let_case if_case app_case match_case eps_case quant_case binop_case not_case tm1 =
+  match t_node tm1 with
+  | Tapp (l, ts) ->
+    (@@) (fun recs -> app_case l ts (t_ty tm1) recs)
+      (errst_list
+        (dep_map (fun t1 _ ->
+          term_map_rec let_case if_case app_case match_case eps_case
+            quant_case binop_case not_case t1) ts))
+  | Tif (t1, t2, t3) ->
+    (@@) (fun v1 ->
+      (@@) (fun v2 ->
+        (@@) (fun v3 -> if_case t1 t2 t3 v1 v2 v3)
+          (term_map_rec let_case if_case app_case match_case eps_case
+            quant_case binop_case not_case t3))
+        (term_map_rec let_case if_case app_case match_case eps_case
+          quant_case binop_case not_case t2))
+      (term_map_rec let_case if_case app_case match_case eps_case quant_case
+        binop_case not_case t1)
+  | Tlet (t1, b) ->
+    (@@) (fun v1 ->
+      (fun x y -> y x () ()) ( ( (t_open_bound b))) (fun y _ _ ->
+        (@@) (fun v2 -> let_case t1 v1 (fst y) (snd y) v2)
+          (term_map_rec let_case if_case app_case match_case eps_case
+            quant_case binop_case not_case (snd y))))
+      (term_map_rec let_case if_case app_case match_case eps_case quant_case
+        binop_case not_case t1)
+  | Tcase (t1, tbs) ->
+    (@@) (fun r1 ->
+      (@@) (fun tbs2 -> match_case t1 r1 tbs2)
+        (errst_list
+          (dep_map (fun b _ ->
+            (fun x y -> y x () ()) ( ( (t_open_branch b))) (fun y _ _ ->
+              (@@) (fun t2 -> (fun x -> x) (y,t2))
+                (term_map_rec let_case if_case app_case match_case eps_case
+                  quant_case binop_case not_case (snd y)))) tbs)))
+      (term_map_rec let_case if_case app_case match_case eps_case quant_case
+        binop_case not_case t1)
+  | Teps b ->
+    (fun x y -> y x () ()) ( ( (t_open_bound b))) (fun y _ _ ->
+      (@@) (fun v -> eps_case (fst y) (snd y) v)
+        (term_map_rec let_case if_case app_case match_case eps_case
+          quant_case binop_case not_case (snd y)))
+  | Tquant (q, tq) ->
+    (fun x y -> y x () ()) ( ( (t_open_quant1 tq))) (fun y _ _ ->
+      (@@) (fun v ->
+        let vs = fst (fst y) in
+        let tr = snd (fst y) in
+        let t = snd y in
+        (@@) (fun v2 -> quant_case q vs tr v2 t v)
+          (errst_list
+            (dep_map (fun l1 _ ->
+              errst_list
+                (dep_map (fun tr1 _ ->
+                  term_map_rec let_case if_case app_case match_case eps_case
+                    quant_case binop_case not_case tr1) l1)) tr)))
+        (term_map_rec let_case if_case app_case match_case eps_case
+          quant_case binop_case not_case (snd y)))
+  | Tbinop (b, t1, t2) ->
+    (@@) (fun r1 ->
+      (@@) (fun r2 -> binop_case b t1 t1 r1 r2)
+        (term_map_rec let_case if_case app_case match_case eps_case
+          quant_case binop_case not_case t2))
+      (term_map_rec let_case if_case app_case match_case eps_case quant_case
+        binop_case not_case t1)
+  | Tnot t1 ->
+    (@@) (fun r1 -> not_case t1 r1)
+      (term_map_rec let_case if_case app_case match_case eps_case quant_case
+        binop_case not_case t1)
+  | _ -> (fun x -> x) tm1
+
+(** val term_map :
+    ((term_node term_o) -> (term_node term_o) -> vsymbol ->
+    (term_node term_o) -> (term_node term_o) -> (BigInt.t*'a1,
+    (term_node term_o)) errState) -> ((term_node term_o) ->
+    (term_node term_o) -> (term_node term_o) -> (term_node term_o) ->
+    (term_node term_o) -> (term_node term_o) -> (BigInt.t*'a1,
+    (term_node term_o)) errState) -> (lsymbol -> (term_node term_o) list ->
+    ty_node_c ty_o option -> (term_node term_o) list -> (BigInt.t*'a1,
+    (term_node term_o)) errState) -> ((term_node term_o) ->
+    (term_node term_o) ->
+    (((pattern_node pattern_o)*(term_node term_o))*(term_node term_o)) list
+    -> (BigInt.t*'a1, (term_node term_o)) errState) -> (vsymbol ->
+    (term_node term_o) -> (term_node term_o) -> (BigInt.t*'a1,
+    (term_node term_o)) errState) -> (quant -> vsymbol list ->
+    (term_node term_o) list list -> (term_node term_o) list list ->
+    (term_node term_o) -> (term_node term_o) -> (BigInt.t*'a1,
+    (term_node term_o)) errState) -> (binop -> (term_node term_o) ->
+    (term_node term_o) -> (term_node term_o) -> (term_node term_o) ->
+    (BigInt.t*'a1, (term_node term_o)) errState) -> ((term_node term_o) ->
+    (term_node term_o) -> (BigInt.t*'a1, (term_node term_o)) errState) ->
+    (term_node term_o) -> (BigInt.t*'a1, (term_node term_o)) errState **)
+
+let term_map =
+  term_map_rec
+
+(** val tmap_let_default :
+    (term_node term_o) -> (term_node term_o) -> vsymbol -> (term_node term_o)
+    -> (term_node term_o) -> (BigInt.t*'a1, (term_node term_o)) errState **)
+
+let tmap_let_default _ r1 v _ r2 =
+   (t_let_close v r1 r2)
+
+(** val tmap_if_default :
+    (term_node term_o) -> (term_node term_o) -> (term_node term_o) ->
+    (term_node term_o) -> (term_node term_o) -> (term_node term_o) ->
+    (BigInt.t*'a1, (term_node term_o)) errState **)
+
+let tmap_if_default _ _ _ r1 r2 r3 =
+   (t_if r1 r2 r3)
+
+(** val tmap_app_default :
+    lsymbol -> (term_node term_o) list -> ty_node_c ty_o option ->
+    (term_node term_o) list -> (BigInt.t*'a1, (term_node term_o)) errState **)
+
+let tmap_app_default l _ o rs =
+  (fun x -> x) (t_app1 l rs o)
+
+(** val tmap_match_default :
+    (term_node term_o) -> (term_node term_o) ->
+    (((pattern_node pattern_o)*(term_node term_o))*(term_node term_o)) list
+    -> (BigInt.t*'a1, (term_node term_o)) errState **)
+
+let tmap_match_default _ r1 tb =
+   (t_case_close r1 (map (fun x -> (fst (fst x)),(snd x)) tb))
+
+(** val tmap_eps_default :
+    vsymbol -> (term_node term_o) -> (term_node term_o) -> (BigInt.t*'a1,
+    (term_node term_o)) errState **)
+
+let tmap_eps_default v _ r =
+   (t_eps_close v r)
+
+(** val tmap_quant_default :
+    quant -> vsymbol list -> (term_node term_o) list list ->
+    (term_node term_o) list list -> (term_node term_o) -> (term_node term_o)
+    -> (BigInt.t*'a1, (term_node term_o)) errState **)
+
+let tmap_quant_default q vs _ rr _ r =
+   (t_quant_close q vs rr r)
+
+(** val tmap_binop_default :
+    binop -> (term_node term_o) -> (term_node term_o) -> (term_node term_o)
+    -> (term_node term_o) -> (BigInt.t*'a1, (term_node term_o)) errState **)
+
+let tmap_binop_default b _ _ r1 r2 =
+   (t_binary b r1 r2)
+
+(** val tmap_not_default :
+    (term_node term_o) -> (term_node term_o) -> (BigInt.t*'a1,
+    (term_node term_o)) errState **)
+
+let tmap_not_default _ r =
+   (t_not r)
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)

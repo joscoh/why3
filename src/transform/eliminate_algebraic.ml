@@ -1,3 +1,27 @@
+open Ident
+open Ty
+open Term
+open Decl
+open Theory
+open Task
+open Pattern
+open List0
+
+
+
+
+
+
+(** val rewriteT :
+    (term_node term_o) -> (BigInt.t*ty_node_c ty_o hashcons_ty,
+    (term_node term_o)) errState **)
+
+let rewriteT t =
+  term_map tmap_let_default tmap_if_default tmap_app_default (fun _ r1 tb ->
+    (@@) (fun res -> (fun x -> x) (t_attr_copy t res))
+      (compile_bare_aux t_case_close t_let_close_simp (r1::[])
+        (map (fun x -> ((fst (fst x))::[]),(snd x)) tb))) tmap_eps_default
+    tmap_quant_default tmap_binop_default tmap_not_default t
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -9,12 +33,7 @@
 (*                                                                  *)
 (********************************************************************)
 
-open Ident
-open Ty
-open Term
-open Decl
-open Theory
-open Task
+
 
 (* a type constructor generates an infinite type if either it is tagged by
    meta_infinite or one of its "material" arguments is an infinite type *)
@@ -56,14 +75,14 @@ let is_infinite_ty inf_ts ma_map =
 
 (** Compile match patterns *)
 
-let rec rewriteT t0 = match t0.t_node with
+(* let rec rewriteT t0 = match t0.t_node with
   | Tcase (t,bl) ->
       let t = rewriteT t in
       let mk_b b = let p,t = t_open_branch b in [p], rewriteT t in
       let mk_case = t_case_close and mk_let = t_let_close_simp in
       let res = Pattern.compile_bare ~mk_case ~mk_let [t] (List.map mk_b bl) in
       t_attr_copy t0 res
-  | _ -> t_map rewriteT t0
+  | _ -> t_map rewriteT t0 *)
 
 let compile_match = Trans.decl (fun d -> [decl_map rewriteT d]) None
 
