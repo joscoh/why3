@@ -206,7 +206,7 @@ let fold alg_kept taskpre (tenv,task) =
         | Dlogic ll ->
           let conv_def tenv (ls,def) =
             let tenv,ls = conv_ls tenv ls ls.ls_args ls.ls_value in
-            let vl,t,close = open_ls_defn_cb def in
+            let (vl,t),close = open_ls_defn_cb def in
             let add (tenv,m) v =
               let tenv,v' = conv_vs tenv v in (tenv,Mvs.add v (t_var v') m), v'
             in

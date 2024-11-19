@@ -189,7 +189,7 @@ let rec lift_f el acc t0 =
       t_map_fold (lift_f el) acc t0
 
 let lift_l el (acc,dl) (ls,ld) =
-  let vl, t, close = open_ls_defn_cb ld in
+  let (vl, t), close = open_ls_defn_cb ld in
   match t.t_node with
   | Teps fb when to_elim el t ->
       let vs, f = t_open_bound fb in

@@ -536,6 +536,24 @@ let open_ls_defn l =
   | Some p ->  p
   | None -> assert_false "open_ls_defn"
 
+(** val open_ls_defn_cb :
+    ls_defn -> ((vsymbol list*(term_node term_o))*(lsymbol -> vsymbol list ->
+    (term_node term_o) -> (ty_node_c ty_o hashcons_ty, logic_decl) errState))
+    errorM **)
+
+let open_ls_defn_cb ld = match ld with
+| p,_ ->
+  let ls,_ = p in
+  (@@) (fun x ->
+    let vl,t0 = x in
+    let close = fun ls' vl' t' ->
+      if (&&) ((&&) (t_equal_strict t0 t') (list_eqb vs_equal vl vl'))
+           (ls_equal ls ls')
+      then (fun x -> x) (ls,ld)
+      else make_ls_defn ls' vl' t'
+    in
+     ((vl,t0),close)) (open_ls_defn ld)
+
 (** val ls_defn_decrease_aux : ls_defn -> BigInt.t list **)
 
 let ls_defn_decrease_aux = function
@@ -1259,6 +1277,42 @@ let get_used_syms_decl d =
   | Dind i -> let _,idl = i in syms_ind_decl idl
   | Dprop x -> let _,f = (fun (x, y, z) -> ((x, y), z)) x in syms_prop_decl f
 
+(** val is_recursive : Sid.t -> logic_decl list -> bool **)
+
+let is_recursive s l =
+  existsb (fun x -> Sid.mem (fst x).ls_name s) l
+
+(** val decl_map :
+    ((term_node term_o) -> (('a1*ty_node_c ty_o hashcons_ty)*decl
+    hashcons_ty, (term_node term_o)) errState) -> decl ->
+    (('a1*ty_node_c ty_o hashcons_ty)*decl hashcons_ty, decl) errState **)
+
+let decl_map fn d =
+  match d.d_node with
+  | Dlogic l ->
+    let fn0 = fun x ->
+      let ls,ld = x in
+      (@@) (fun y ->
+        let y0,close = y in
+        let vl,e = y0 in (@@) (fun t1 ->  ( (close ls vl t1))) (fn e))
+        ( (open_ls_defn_cb ld))
+    in
+    (@@) (fun l1 ->  (create_logic_decl_nocheck l1)) (errst_list (map fn0 l))
+  | Dind i ->
+    let s,l = i in
+    (@@) (fun l2 ->  (create_ind_decl s l2))
+      (errst_list
+        (map (fun x ->
+          (@@) (fun l1 -> (fun x -> x) ((fst x),l1))
+            (errst_list
+              (map (fun y ->
+                (@@) (fun z -> (fun x -> x) ((fst y),z)) (fn (snd y)))
+                (snd x)))) l))
+  | Dprop x ->
+    let p,f = (fun (x, y, z) -> ((x, y), z)) x in
+    let k,pr = p in (@@) (fun f1 ->  (create_prop_decl k pr f1)) (fn f)
+  | _ -> (fun x -> x) d
+
 type known_map = decl Mid.t
 
 (** val known_id : known_map -> ident -> unit errorM **)
@@ -1685,14 +1739,14 @@ let check_tl ty t = ty_equal_check ty (t_type t)
     | Tbinop (_, _, f) -> vl,f
     | _ -> assert false *)
 
-let open_ls_defn_cb ld =
+(* let open_ls_defn_cb ld =
   let (ls,_),_ = ld in
   let vl,t = open_ls_defn ld in
   let close ls' vl' t' =
     if t_equal_strict t t' && Lists.equal vs_equal vl vl' && ls_equal ls ls'
     then ls,ld else make_ls_defn ls' vl' t'
   in
-  vl,t,close
+  vl,t,close *)
 
   let ls_defn_decrease ((_,_),l) = List.map BigInt.to_int l (*JOSH to_int*)
 
@@ -2313,7 +2367,7 @@ let decl_map fn d = match d.d_node with
   | Dtype _ | Ddata _ | Dparam _ -> d
   | Dlogic l ->
       let fn (ls,ld) =
-        let vl,e,close = open_ls_defn_cb ld in
+        let (vl,e),close = open_ls_defn_cb ld in
         close ls vl (fn e)
       in
       create_logic_decl (List.map fn l)
@@ -2348,7 +2402,7 @@ let decl_map_fold fn acc d = match d.d_node with
   | Dtype _ | Ddata _ | Dparam _ -> acc, d
   | Dlogic l ->
       let fn acc (ls,ld) =
-        let vl,e,close = open_ls_defn_cb ld in
+        let (vl,e),close = open_ls_defn_cb ld in
         let acc,e = fn acc e in
         acc, close ls vl e
       in

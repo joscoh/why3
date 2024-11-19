@@ -195,7 +195,7 @@ let d_monomorph ty_base kept lsmap d =
     | Dlogic ldl ->
         let conv (ls,ld) =
           let ls = if ls_equal ls ps_equ then ls else lsmap ls in
-          let ul,e,close = open_ls_defn_cb ld in
+          let (ul,e),close = open_ls_defn_cb ld in
           let vl = List.map (vs_monomorph ty_base kept) ul in
           let add acc u v = Mvs.add u (t_var v) acc in
           let vmap = List.fold_left2 add Mvs.empty ul vl in

@@ -79,7 +79,7 @@ let elim_f f = elim_f (fun f -> f) f
 let rec elim_t t = TermTF.t_map elim_t elim_f t
 
 let add_ld (ls,ld) (abst,defn,axl) =
-  let vl,e,close = open_ls_defn_cb ld in
+  let (vl,e),close = open_ls_defn_cb ld in
   match e.t_ty with
     | Some _ when has_if e ->
         let nm = ls.ls_name.id_string ^ "'def" in

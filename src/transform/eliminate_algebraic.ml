@@ -6,6 +6,11 @@ open Theory
 open Task
 open Pattern
 open List0
+open Trans
+open Monads
+
+
+
 
 
 
@@ -22,6 +27,13 @@ let rewriteT t =
       (compile_bare_aux t_case_close t_let_close_simp (r1::[])
         (map (fun x -> ((fst (fst x))::[]),(snd x)) tb))) tmap_eps_default
     tmap_quant_default tmap_binop_default tmap_not_default t
+
+(** val compile_match : task -> (BigInt.t*hashcons_full, task) errState **)
+
+let compile_match =
+  decl_errst (fun d ->
+    (@@) (fun x -> x)
+      ( ( ( (errst_list ((decl_map (fun t ->  (rewriteT t)) d)::[])))))) None
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -84,7 +96,7 @@ let is_infinite_ty inf_ts ma_map =
       t_attr_copy t0 res
   | _ -> t_map rewriteT t0 *)
 
-let compile_match = Trans.decl (fun d -> [decl_map rewriteT d]) None
+(* let compile_match = Trans.decl (fun d -> [decl_map rewriteT d]) None *)
 
 (** Eliminate algebraic types and match statements *)
 
