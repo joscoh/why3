@@ -15,6 +15,7 @@ open Pmap
 open Zmap
 open IntFuncs
 open List0
+open Pattern
 
 
 
@@ -420,6 +421,8 @@ exception UnknownIdent of ident
 exception RedeclaredIdent of ident
 
 exception NonFoundedTypeDecl of tysymbol
+
+
 
 
 
@@ -972,8 +975,8 @@ let create_data_decl tdl =
                  else if negb (BigInt.eq fs.ls_constr cll)
                       then raise (BadConstructor fs)
                       else let vs = ty_freevars Stv.empty ty in
-                           let check =
-                             let rec check seen ty0 =
+                           let check0 =
+                             let rec check0 seen ty0 =
                                match ty_node ty0 with
                                | Tyvar v ->
                                  if Stv.mem v vs
@@ -985,11 +988,11 @@ let create_data_decl tdl =
                                  then raise
                                         ((fun ((x, y), z) -> NonPositiveTypeDecl(x, y, z))
                                           ((tys,fs),ty0))
-                                 else iter_err (check ((||) seen now1)) tl
-                             in check
+                                 else iter_err (check0 ((||) seen now1)) tl
+                             in check0
                            in
                            (@@) (fun _ -> news_id news fs.ls_name)
-                             (iter_err (check false) fs.ls_args)
+                             (iter_err (check0 false) fs.ls_args)
                | None -> raise (BadConstructor fs))
                (fold_left2_err (check_proj ty) Sls.empty fs.ls_args pl))
              (ty_equal_check ty ty1))
@@ -1366,6 +1369,44 @@ let find_prop_decl kn pr =
       let p0,f = (fun (x, y, z) -> ((x, y), z)) p in let k,_ = p0 in  (k,f)
     | _ -> assert_false "find_prop_decl") (Mid.find pr.pr_name kn)
 
+(** val decl_fold_errst :
+    ('a2 -> (term_node term_o) -> ('a1, 'a2) errState) -> 'a2 -> decl ->
+    ('a1, 'a2) errState **)
+
+let decl_fold_errst fn acc d =
+  match d.d_node with
+  | Dlogic l ->
+    foldl_errst (fun acc0 x ->
+      (@@) (fun y -> fn acc0 (snd y)) ( (open_ls_defn (snd x)))) l acc
+  | Dind i ->
+    let _,l = i in
+    foldl_errst (fun acc0 x ->
+      foldl_errst (fun acc1 y -> fn acc1 (snd y)) (snd x) acc0) l acc
+  | Dprop p -> fn acc (snd ((fun (x, y, z) -> ((x, y), z)) p))
+  | _ -> (fun x -> x) acc
+
+(** val check :
+    known_map -> unit -> (term_node term_o) -> (BigInt.t*ty_node_c ty_o
+    hashcons_ty, unit) errState **)
+
+let check kn _ t0 =
+  tm_traverse (fun _ -> (fun x -> x) ()) (fun _ -> (fun x -> x) ())
+    (fun _ _ _ _ _ -> (fun x -> x) ()) (fun _ _ _ _ _ _ -> (fun x -> x) ())
+    (fun _ _ _ -> (fun x -> x) ()) (fun t1 _ tb ->
+    let get_constructors = fun ts -> map fst (find_constructors kn ts) in
+    let pl = map (fun b -> (fst (fst b))::[]) tb in
+    (@@) (fun _ -> (fun x -> x) ())
+      (check_compile_aux get_constructors (t1::[]) pl)) (fun _ _ _ ->
+    (fun x -> x) ()) (fun _ _ _ _ _ _ -> (fun x -> x) ()) (fun _ _ _ _ _ ->
+    (fun x -> x) ()) (fun _ _ -> (fun x -> x) ()) ((fun x -> x) ())
+    ((fun x -> x) ()) t0
+
+(** val check_match :
+    known_map -> decl -> (BigInt.t*ty_node_c ty_o hashcons_ty, unit) errState **)
+
+let check_match kn d =
+  decl_fold_errst (check kn) () d
+
 (** val all_tysymbols : known_map -> Sts.t **)
 
 let all_tysymbols kn =
@@ -1498,7 +1539,7 @@ let check_positivity kn d =
           match ty_node ty with
           | Tyvar _ ->  ()
           | Tyapp (ts, tl) ->
-            let check = fun ty0 pos ->
+            let check0 = fun ty0 pos ->
               if pos
               then check_ty ty0
               else if ty_s_any (Sts.contains tss) ty0
@@ -1507,7 +1548,7 @@ let check_positivity kn d =
                             ((tys,cs),ty0))
                    else  ()
             in
-            (@@) (fun l1 -> iter2_err check tl l1)
+            (@@) (fun l1 -> iter2_err check0 tl l1)
               (ts_extract_pos kn Sts.empty ts)
         in check_ty
       in
@@ -1516,32 +1557,39 @@ let check_positivity kn d =
     iter_err (fun x -> iter_err (check_constr (fst x)) (snd x)) tdl
   | _ ->  ()
 
-(** val known_add_decl : known_map -> decl -> (decl*decl Mid.t) errorM **)
+(** val known_add_decl :
+    known_map -> decl -> (BigInt.t*ty_node_c ty_o hashcons_ty, decl*decl
+    Mid.t) errState **)
 
 let known_add_decl kn d =
   (@@) (fun o ->
     match o with
-    | Known i -> raise (KnownIdent i)
+    | Known i ->  (raise (KnownIdent i))
     | Normal kn0 ->
       (@@) (fun _ ->
         (@@) (fun _ ->
-          (@@) (fun d0 ->  (d0,kn0)) (check_termination_strict kn0 d))
-          (check_foundness kn0 d)) (check_positivity kn0 d))
-    (known_add_decl_aux kn d)
+          (@@) (fun _ ->
+            (@@) (fun d0 -> (fun x -> x) (d0,kn0))
+              ( (check_termination_strict kn0 d))) (check_match kn0 d))
+          ( (check_foundness kn0 d))) ( (check_positivity kn0 d)))
+    ( (known_add_decl_aux kn d))
 
 (** val known_add_decl_informative :
-    known_map -> decl -> (decl*decl Mid.t) known_res errorM **)
+    known_map -> decl -> (BigInt.t*ty_node_c ty_o hashcons_ty, (decl*decl
+    Mid.t) known_res) errState **)
 
 let known_add_decl_informative kn d =
   (@@) (fun o ->
     match o with
-    | Known i ->  (Known i)
+    | Known i -> (fun x -> x) (Known i)
     | Normal kn0 ->
       (@@) (fun _ ->
         (@@) (fun _ ->
-          (@@) (fun d0 ->  (Normal (d0,kn0))) (check_termination_strict kn0 d))
-          (check_foundness kn0 d)) (check_positivity kn0 d))
-    (known_add_decl_aux kn d)
+          (@@) (fun _ ->
+            (@@) (fun d0 -> (fun x -> x) (Normal (d0,kn0)))
+              ( (check_termination_strict kn0 d))) (check_match kn0 d))
+          ( (check_foundness kn0 d))) ( (check_positivity kn0 d)))
+    ( (known_add_decl_aux kn d))
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -2383,7 +2431,7 @@ let find_prop_decl kn pr =
   | Dprop (k,_,f) -> k,f
   | Dtype _ | Ddata _ | Dparam _ | Dlogic _ -> assert false *)
 
-let check_match kn d =
+(* let check_match kn d =
   let rec check () t = match t.t_node with
     | Tcase (t1,bl) ->
         let get_constructors ts = List.map fst (find_constructors kn ts) in
@@ -2392,7 +2440,7 @@ let check_match kn d =
         t_fold check () t
     | _ -> t_fold check () t
   in
-  decl_fold check () d
+  decl_fold check () d *)
 (* 
 exception NonFoundedTypeDecl of tysymbol
 

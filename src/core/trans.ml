@@ -37,31 +37,31 @@ let fold_errst fn v t =
   foldl_errst (fun x y -> fn y x) (task_list t) v
 
 (** val gen_decl1 :
-    (task -> 'a1 -> ('a2*hashcons_full, task) errState) -> (decl ->
-    ('a2*hashcons_full, 'a1 list) errState) -> task -> task ->
-    ('a2*hashcons_full, task) errState **)
+    (task -> 'a1 -> (BigInt.t*hashcons_full, task) errState) -> (decl ->
+    (BigInt.t*hashcons_full, 'a1 list) errState) -> task -> task ->
+    (BigInt.t*hashcons_full, task) errState **)
 
 let gen_decl1 add fn =
   let fn0 = fun tsk acc ->
     match td_node tsk.task_decl with
     | Decl d -> (@@) (fun l -> foldl_errst add l acc) (fn d)
-    | _ ->  ( (add_tdecl acc tsk.task_decl))
+    | _ -> add_tdecl acc tsk.task_decl
   in
   fold_errst fn0
 
 (** val decl_errst :
-    (decl -> ('a1*hashcons_full, decl list) errState) -> task -> task ->
-    ('a1*hashcons_full, task) errState **)
+    (decl -> (BigInt.t*hashcons_full, decl list) errState) -> task -> task ->
+    (BigInt.t*hashcons_full, task) errState **)
 
 let decl_errst f t1 t2 =
-  gen_decl1 (fun t d ->  ( (add_decl t d))) f t1 t2
+  gen_decl1 add_decl f t1 t2
 
 (** val tdecl_errst :
-    (decl -> ('a1*hashcons_full, tdecl_node tdecl_o list) errState) -> task
-    -> task -> ('a1*hashcons_full, task) errState **)
+    (decl -> (BigInt.t*hashcons_full, tdecl_node tdecl_o list) errState) ->
+    task -> task -> (BigInt.t*hashcons_full, task) errState **)
 
 let tdecl_errst f t1 t2 =
-  gen_decl1 (fun t d ->  ( (add_tdecl t d))) f t1 t2
+  gen_decl1 add_tdecl f t1 t2
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)

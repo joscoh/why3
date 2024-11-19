@@ -340,8 +340,8 @@ let check_decl d =
   | _ ->  d
 
 (** val new_decl1 :
-    task -> decl -> tdecl_node tdecl_o -> (tdecl_node tdecl_o
-    hashcons_ty*task_hd hashcons_ty, task known_res) errState **)
+    task -> decl -> tdecl_node tdecl_o -> (BigInt.t*hashcons_full, task
+    known_res) errState **)
 
 let new_decl1 t d _ =
   (@@) (fun d1 ->
@@ -353,13 +353,14 @@ let new_decl1 t d _ =
         (@@) (fun td1 ->
           (@@) (fun _ ->
             (@@) (fun h -> (fun x -> x) (Normal h))
-              ( ( (mk_task td1 t kn (task_clone1 t) (task_meta1 t)))))
-            ( (check_task t))) ( ( (create_decl d2))))
-      ( (known_add_decl_informative (task_known1 t) d1))) ( (check_decl d))
+              ( ( ( (mk_task td1 t kn (task_clone1 t) (task_meta1 t))))))
+            ( (check_task t))) ( ( ( (create_decl d2)))))
+      ( ( ( ( (known_add_decl_informative (task_known1 t) d1))))))
+    ( (check_decl d))
 
 (** val new_decl :
-    task -> decl -> tdecl_node tdecl_o -> (tdecl_node tdecl_o
-    hashcons_ty*task_hd hashcons_ty, task) errState **)
+    task -> decl -> tdecl_node tdecl_o -> (BigInt.t*hashcons_full, task)
+    errState **)
 
 let new_decl t d td =
   (@@) (fun o ->
@@ -384,62 +385,53 @@ let new_meta tsk t td =
   (@@) (fun t1 ->  (mk_task td t1 (task_known1 tsk) (task_clone1 tsk) mt))
     ( (check_task tsk))
 
-(** val add_decl :
-    task -> decl -> (tdecl_node tdecl_o hashcons_ty*task_hd hashcons_ty,
-    task) errState **)
+(** val add_decl : task -> decl -> (BigInt.t*hashcons_full, task) errState **)
 
 let add_decl t d =
-  (@@) (fun td -> new_decl t d td) ( ( (create_decl d)))
+  (@@) (fun td -> new_decl t d td) ( ( ( (create_decl d))))
 
 (** val add_ty_decl :
-    task -> (ty_node_c ty_o) tysymbol_o -> ((decl
-    hashcons_ty*tdecl_node tdecl_o hashcons_ty)*task_hd hashcons_ty, task)
+    task -> (ty_node_c ty_o) tysymbol_o -> (BigInt.t*hashcons_full, task)
     errState **)
 
 let add_ty_decl tk ts =
-  (@@) (fun td ->  ( (add_decl tk td))) ( ( ( (create_ty_decl ts))))
+  (@@) (fun td -> add_decl tk td) ( ( ( (create_ty_decl ts))))
 
 (** val add_data_decl :
-    task -> data_decl list -> (((ty_node_c ty_o hashcons_ty*decl
-    hashcons_ty)*tdecl_node tdecl_o hashcons_ty)*task_hd hashcons_ty, task)
-    errState **)
+    task -> data_decl list -> (BigInt.t*hashcons_full, task) errState **)
 
 let add_data_decl tk dl =
-  (@@) (fun td ->  ( (add_decl tk td))) ( ( (create_data_decl dl)))
+  (@@) (fun td -> add_decl tk td) ( ( (create_data_decl dl)))
 
 (** val add_param_decl :
-    task -> lsymbol -> ((decl hashcons_ty*tdecl_node tdecl_o
-    hashcons_ty)*task_hd hashcons_ty, task) errState **)
+    task -> lsymbol -> (BigInt.t*hashcons_full, task) errState **)
 
 let add_param_decl tk ls =
-  (@@) (fun td ->  ( (add_decl tk td))) ( ( (create_param_decl ls)))
+  (@@) (fun td -> add_decl tk td) ( ( (create_param_decl ls)))
 
 (** val add_logic_decl :
-    task -> logic_decl list -> ((decl hashcons_ty*tdecl_node tdecl_o
-    hashcons_ty)*task_hd hashcons_ty, task) errState **)
+    task -> logic_decl list -> (BigInt.t*hashcons_full, task) errState **)
 
 let add_logic_decl tk dl =
-  (@@) (fun td ->  ( (add_decl tk td))) ( ( (create_logic_decl_nocheck dl)))
+  (@@) (fun td -> add_decl tk td) ( ( (create_logic_decl_nocheck dl)))
 
 (** val add_ind_decl :
-    task -> ind_sign -> ind_decl list -> ((decl
-    hashcons_ty*tdecl_node tdecl_o hashcons_ty)*task_hd hashcons_ty, task)
+    task -> ind_sign -> ind_decl list -> (BigInt.t*hashcons_full, task)
     errState **)
 
 let add_ind_decl tk s dl =
-  (@@) (fun td ->  ( (add_decl tk td))) ( ( (create_ind_decl s dl)))
+  (@@) (fun td -> add_decl tk td) ( ( (create_ind_decl s dl)))
 
 (** val add_prop_decl :
-    task -> prop_kind -> prsymbol -> (term_node term_o) -> ((decl
-    hashcons_ty*tdecl_node tdecl_o hashcons_ty)*task_hd hashcons_ty, task)
-    errState **)
+    task -> prop_kind -> prsymbol -> (term_node term_o) ->
+    (BigInt.t*hashcons_full, task) errState **)
 
 let add_prop_decl tk k p f =
-  (@@) (fun td ->  ( (add_decl tk td))) ( ( (create_prop_decl k p f)))
+  (@@) (fun td -> add_decl tk td) ( ( (create_prop_decl k p f)))
 
 (** val add_tdecl :
-    task_hd option -> tdecl_node tdecl_o -> (tdecl_node tdecl_o
-    hashcons_ty*task_hd hashcons_ty, task) errState **)
+    task_hd option -> tdecl_node tdecl_o -> (BigInt.t*hashcons_full, task)
+    errState **)
 
 let add_tdecl tsk td =
   match td_node td with
@@ -447,9 +439,9 @@ let add_tdecl tsk td =
   | Use th ->
     if Stdecl2.mem td (find_clone_tds tsk th)
     then (fun x -> x) tsk
-    else  (new_clone tsk th td)
-  | Clone (th, _) ->  (new_clone tsk th td)
-  | Meta (t, _) ->  (new_meta tsk t td)
+    else  ( (new_clone tsk th td))
+  | Clone (th, _) ->  ( (new_clone tsk th td))
+  | Meta (t, _) ->  ( (new_meta tsk t td))
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
