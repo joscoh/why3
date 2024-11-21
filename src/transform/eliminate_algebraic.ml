@@ -10,6 +10,8 @@ open Trans
 open Monads
 open Datatypes
 open CoqUtil
+open IntFuncs
+
 
 
 
@@ -399,11 +401,11 @@ and rewriteF' kn s av sign f =
     TermTFAlt.t_map_sign_errst_unsafe (fun _ -> rewriteT' kn s)
       (rewriteF' kn s Svs.empty) sign f
 
-(** val add_selector :
+(** val add_selector_aux :
     (state*task) -> (ty_node_c ty_o) tysymbol_o -> ty_node_c ty_o ->
     (lsymbol*'a1) list -> (BigInt.t*hashcons_full, state*task) errState **)
 
-let add_selector st ts ty csl =
+let add_selector_aux st ts ty csl =
   let s = fst st in
   let tsk = snd st in
   if s.no_sel
@@ -456,6 +458,94 @@ let add_selector st ts ty csl =
                (add_param_decl tsk mt_ls))
              ( ( (create_fsymbol1 mt_id mt_al mt_ty)))) ( ( ( (ty_var v)))))
          ( ( (create_tvsymbol (id_fresh1 "a"))))
+
+(** val add_selector :
+    (state*task) -> (ty_node_c ty_o) tysymbol_o -> ty_node_c ty_o ->
+    (lsymbol*'a1) list -> (BigInt.t*hashcons_full, state*task) errState **)
+
+let add_selector acc ts ty x = match x with
+| [] -> add_selector_aux acc ts ty x
+| _::l ->
+  (match l with
+   | [] -> (fun x -> x) acc
+   | _::_ -> add_selector_aux acc ts ty x)
+
+(** val add_indexer :
+    (state*task) -> (ty_node_c ty_o) tysymbol_o -> ty_node_c ty_o ->
+    (lsymbol*'a1) list -> (BigInt.t*hashcons_full, state*task) errState **)
+
+let add_indexer st ts ty csl =
+  let s = fst st in
+  let tsk = snd st in
+  let mt_id = id_derive1 ((^) "index_" (ts_name ts).id_string) (ts_name ts) in
+  (@@) (fun mt_ls ->
+    (@@) (fun task0 ->
+      let mt_add = fun tsk0 x index ->
+        let cs = fst x in
+        let id = (^) mt_ls.ls_name.id_string ((^) "_" cs.ls_name.id_string) in
+        (@@) (fun pr ->
+          (@@) (fun vl ->
+            (@@) (fun newcs ->
+              (@@) (fun o ->
+                (@@) (fun hd ->
+                  (@@) (fun t1 ->
+                    (@@) (fun ax ->
+                      (@@) (fun ax0 -> add_prop_decl tsk0 Paxiom pr ax0)
+                        ( (t_forall_close (rev vl) ((hd::[])::[]) ax)))
+                      ( ( (t_equ t1 (t_int_const index)))))
+                    ( ( (fs_app mt_ls (hd::[]) ty_int))))
+                  ( ( (fs_app newcs (rev_map t_var vl) o))))
+                ( (option_get cs.ls_value))) ( (Mls.find cs s.cc_map)))
+            (
+              (
+                (st_list
+                  (rev_map (create_vsymbol (id_fresh1 "u")) cs.ls_args)))))
+          ( ( (create_prsymbol (id_derive1 id cs.ls_name))))
+      in
+      (@@) (fun task1 -> (fun x -> x) (s,task1))
+        (fold_left2_errst' mt_add task0 csl (iota2 (int_length csl))))
+      (add_param_decl tsk mt_ls))
+    ( ( (create_fsymbol1 mt_id (ty::[]) ty_int)))
+
+(** val add_discriminator :
+    (state*task) -> (ty_node_c ty_o) tysymbol_o -> ty_node_c ty_o ->
+    (lsymbol*'a1) list -> (BigInt.t*hashcons_full, state*task) errState **)
+
+let add_discriminator st ts ty csl =
+  let s = fst st in
+  let tsk = snd st in
+  let d_add = fun x task0 y ->
+    let c1 = fst x in
+    let c2 = fst y in
+    let id = (^) c1.ls_name.id_string ((^) "_" c2.ls_name.id_string) in
+    (@@) (fun pr ->
+      (@@) (fun ul ->
+        (@@) (fun vl ->
+          (@@) (fun newc1 ->
+            (@@) (fun newc2 ->
+              (@@) (fun t1 ->
+                (@@) (fun t2 ->
+                  (@@) (fun ax ->
+                    (@@) (fun ax0 ->
+                      (@@) (fun ax1 -> add_prop_decl task0 Paxiom pr ax1)
+                        ( (t_forall_close (rev ul) ((t1::[])::[]) ax0)))
+                      ( (t_forall_close (rev vl) ((t2::[])::[]) ax)))
+                    ( ( (t_neq t1 t2))))
+                  ( ( (fs_app newc2 (rev_map t_var vl) ty))))
+                ( ( (fs_app newc1 (rev_map t_var ul) ty))))
+              ( (Mls.find c2 s.cc_map))) ( (Mls.find c1 s.cc_map)))
+          (
+            ( (st_list (rev_map (create_vsymbol (id_fresh1 "v")) c2.ls_args)))))
+        ( ( (st_list (rev_map (create_vsymbol (id_fresh1 "u")) c1.ls_args)))))
+      ( ( (create_prsymbol (id_derive1 id (ts_name ts)))))
+  in
+  let dl_add =
+    let rec dl_add tsk0 = function
+    | [] -> (fun x -> x) tsk0
+    | c::cl -> (@@) (fun t0 -> dl_add t0 cl) (foldl_errst (d_add c) cl tsk0)
+    in dl_add
+  in
+  (@@) (fun t' -> (fun x -> x) (s,t')) (dl_add tsk csl)
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -682,7 +772,7 @@ and rewriteF kn state av sign f =
   let task = List.fold_left2 mt_add task csl mt_tl in
   { state with mt_map }, task *)
 
-let add_selector acc ts ty = function
+(* let add_selector acc ts ty = function
   | [_] -> acc
   | csl -> add_selector acc ts ty csl
 
@@ -705,9 +795,9 @@ let add_indexer (state,task) ts ty csl =
     add_prop_decl tsk Paxiom pr ax
   in
   let task = List.fold_left mt_add task csl in
-  state, task
+  state, task *)
 
-let add_discriminator (state,task) ts ty csl =
+(* let add_discriminator (state,task) ts ty csl =
   let d_add (c1,_) task (c2,_) =
     let id = c1.ls_name.id_string ^ "_" ^ c2.ls_name.id_string in
     let pr = create_prsymbol (id_derive id ts.ts_name) in
@@ -726,7 +816,7 @@ let add_discriminator (state,task) ts ty csl =
     | c :: cl -> dl_add (List.fold_left (d_add c) task cl) cl
     | _ -> task
   in
-  state, dl_add task csl
+  state, dl_add task csl *)
 
 let add_indexer acc ts ty = function
   | [_] -> acc
