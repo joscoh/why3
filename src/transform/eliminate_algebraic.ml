@@ -8,6 +8,14 @@ open Pattern
 open List0
 open Trans
 open Monads
+open Datatypes
+open CoqUtil
+
+
+
+
+
+
 
 
 
@@ -21,19 +29,364 @@ open Monads
     (term_node term_o) -> (BigInt.t*ty_node_c ty_o hashcons_ty,
     (term_node term_o)) errState **)
 
-let rewriteT t =
-  term_map tmap_let_default tmap_if_default tmap_app_default (fun _ r1 tb ->
-    (@@) (fun res -> (fun x -> x) (t_attr_copy t res))
+let rewriteT t0 =
+  term_map tmap_let_default tmap_if_default tmap_app_default
+    (fun _ _ r1 tb ->
+    (@@) (fun res -> (fun x -> x) (t_attr_copy t0 res))
       (compile_bare_aux t_case_close t_let_close_simp (r1::[])
         (map (fun x -> ((fst (fst x))::[]),(snd x)) tb))) tmap_eps_default
-    tmap_quant_default tmap_binop_default tmap_not_default t
+    tmap_quant_default tmap_binop_default tmap_not_default t0
 
 (** val compile_match : task -> (BigInt.t*hashcons_full, task) errState **)
 
 let compile_match =
   decl_errst (fun d ->
     (@@) (fun x -> x)
-      ( ( ( (errst_list ((decl_map (fun t ->  (rewriteT t)) d)::[])))))) None
+      ( ( ( (errst_list ((decl_map (fun t0 ->  (rewriteT t0)) d)::[]))))))
+    None
+
+type state = { mt_map : lsymbol Mts.t; cc_map : lsymbol Mls.t;
+               cp_map : lsymbol list Mls.t; pp_map : lsymbol Mls.t;
+               kept_m : Sty.t Mts.t; tp_map : (decl*theory) Mid.t;
+               inf_ts : Sts.t; ma_map : bool list Mts.t; keep_e : bool;
+               keep_r : bool; keep_m : bool; no_ind : bool; no_inv : 
+               bool; no_sel : bool }
+
+(** val mt_map : state -> lsymbol Mts.t **)
+
+let mt_map s =
+  s.mt_map
+
+(** val cc_map : state -> lsymbol Mls.t **)
+
+let cc_map s =
+  s.cc_map
+
+(** val cp_map : state -> lsymbol list Mls.t **)
+
+let cp_map s =
+  s.cp_map
+
+(** val pp_map : state -> lsymbol Mls.t **)
+
+let pp_map s =
+  s.pp_map
+
+(** val kept_m : state -> Sty.t Mts.t **)
+
+let kept_m s =
+  s.kept_m
+
+(** val tp_map : state -> (decl*theory) Mid.t **)
+
+let tp_map s =
+  s.tp_map
+
+(** val inf_ts : state -> Sts.t **)
+
+let inf_ts s =
+  s.inf_ts
+
+(** val ma_map : state -> bool list Mts.t **)
+
+let ma_map s =
+  s.ma_map
+
+(** val keep_e : state -> bool **)
+
+let keep_e s =
+  s.keep_e
+
+(** val keep_r : state -> bool **)
+
+let keep_r s =
+  s.keep_r
+
+(** val keep_m : state -> bool **)
+
+let keep_m s =
+  s.keep_m
+
+(** val no_ind : state -> bool **)
+
+let no_ind s =
+  s.no_ind
+
+(** val no_inv : state -> bool **)
+
+let no_inv s =
+  s.no_inv
+
+(** val no_sel : state -> bool **)
+
+let no_sel s =
+  s.no_sel
+
+(** val enc_ty : state -> ty_node_c ty_o option -> bool **)
+
+let enc_ty s = function
+| Some ty ->
+  (match ty_node ty with
+   | Tyvar _ -> false
+   | Tyapp (ts, _) -> negb (Sty.mem ty (Mts.find_def Sty.empty ts s.kept_m)))
+| None -> false
+
+(** val uncompiled : string **)
+
+let uncompiled =
+  "eliminate_algebraic: compile_match required"
+
+(** val option_get : 'a1 option -> 'a1 errorM **)
+
+let option_get = function
+| Some x ->  x
+| None -> raise (Invalid_argument "option is None")
+
+(** val is_forall : quant -> bool **)
+
+let is_forall = function
+| Tforall -> true
+| Texists -> false
+
+(** val is_exists : quant -> bool **)
+
+let is_exists q =
+  negb (is_forall q)
+
+(** val is_and : binop -> bool **)
+
+let is_and = function
+| Tand -> true
+| _ -> false
+
+(** val is_or : binop -> bool **)
+
+let is_or = function
+| Tor -> true
+| _ -> false
+
+(** val rewriteT' :
+    known_map -> state -> (term_node term_o) -> (BigInt.t*ty_node_c ty_o
+    hashcons_ty, (term_node term_o)) errState **)
+
+let rec rewriteT' kn s t0 =
+  match t_node t0 with
+  | Tapp (ls, args) ->
+    if (&&) (BigInt.pos ls.ls_constr) (enc_ty s (t_ty t0))
+    then (@@) (fun args0 ->
+           (@@) (fun cc ->
+             (@@) (fun t1 -> (fun x -> x) (t_attr_copy t0 t1))
+               ( (t_app cc args0 (t_ty t0)))) ( (Mls.find ls s.cc_map)))
+           (errst_list (map (rewriteT' kn s) args))
+    else (match args with
+          | [] ->
+            TermTFAlt.t_map_errst_unsafe (rewriteT' kn s)
+              (rewriteF' kn s Svs.empty true) t0
+          | arg::l ->
+            (match l with
+             | [] ->
+               if (&&) ls.ls_proj (enc_ty s (t_ty t0))
+               then (@@) (fun arg0 ->
+                      (@@) (fun pp ->
+                        (@@) (fun t1 -> (fun x -> x) (t_attr_copy t0 t1))
+                          ( (t_app pp (arg0::[]) (t_ty t0))))
+                        ( (Mls.find ls s.pp_map))) (rewriteT' kn s arg)
+               else TermTFAlt.t_map_errst_unsafe (rewriteT' kn s)
+                      (rewriteF' kn s Svs.empty true) t0
+             | _::_ ->
+               TermTFAlt.t_map_errst_unsafe (rewriteT' kn s)
+                 (rewriteF' kn s Svs.empty true) t0))
+  | Tcase (t1, bl) ->
+    if negb (enc_ty s (t_ty t1))
+    then TermTFAlt.t_map_errst_unsafe (rewriteT' kn s)
+           (rewriteF' kn s Svs.empty true) t0
+    else (@@) (fun t2 ->
+           let mk_br = fun x br ->
+             let w,m = x in
+             let b1 = t_view_branch br in
+             let p = fst b1 in
+             let e = snd b1 in
+             (@@) (fun e0 ->
+               match pat_node p with
+               | Pwild -> (fun x -> x) ((Some e0),m)
+               | Papp (cs, pl) ->
+                 let add_var = fun e1 p0 pj ->
+                   match pat_node p0 with
+                   | Pvar v ->
+                     (@@) (fun a1 ->  (t_let_close_simp v a1 e1))
+                       ( (fs_app pj (t2::[]) v.vs_ty))
+                   | _ ->  (raise (Printer.UnsupportedTerm (t0,uncompiled)))
+                 in
+                 (@@) (fun pjl ->
+                   (@@) (fun e1 ->
+                     match e1 with
+                     | Some e2 -> (fun x -> x) (w,(Mls.add cs e2 m))
+                     | None ->  (raise (Invalid_argument "List.fold_left2")))
+                     (fold_left2_errst add_var e0 pl pjl))
+                   ( (Mls.find cs s.cp_map))
+               | _ ->  (raise (Printer.UnsupportedTerm (t0,uncompiled))))
+               (rewriteT' kn s e)
+           in
+           (@@) (fun wm ->
+             let w,m = wm in
+             let find0 = fun x ->
+               match Mls.find_opt (fst x) m with
+               | Some y ->  y
+               | None -> option_get w
+             in
+             (@@) (fun ts ->
+               (@@) (fun res -> (fun x -> x) (t_attr_copy t0 res))
+                 ((@@) (fun l ->
+                   match l with
+                   | [] ->
+                     (@@) (fun l0 ->  (t_app l0 (t2::l) (t_ty t0)))
+                       ( (Mts.find ts s.mt_map))
+                   | t3::l0 ->
+                     (match l0 with
+                      | [] -> (fun x -> x) t3
+                      | _::_ ->
+                        (@@) (fun l1 ->  (t_app l1 (t2::l) (t_ty t0)))
+                          ( (Mts.find ts s.mt_map))))
+                   ( (errorM_list (map find0 (find_constructors kn ts))))))
+               (match t_ty t2 with
+                | Some ty ->
+                  (match ty_node ty with
+                   | Tyvar _ ->
+                      (raise (Printer.UnsupportedTerm (t0,uncompiled)))
+                   | Tyapp (ts, _) -> (fun x -> x) ts)
+                | None ->  (raise (Printer.UnsupportedTerm (t0,uncompiled)))))
+             (foldl_errst mk_br bl (None,Mls.empty))) (rewriteT' kn s t1)
+  | _ ->
+    TermTFAlt.t_map_errst_unsafe (rewriteT' kn s)
+      (rewriteF' kn s Svs.empty true) t0
+
+(** val rewriteF' :
+    known_map -> state -> Svs.t -> bool -> (term_node term_o) ->
+    (BigInt.t*ty_node_c ty_o hashcons_ty, (term_node term_o)) errState **)
+
+and rewriteF' kn s av sign f =
+  match t_node f with
+  | Tlet (t1, _) ->
+    let av0 = Mvs.set_diff av (t_vars t1) in
+    TermTFAlt.t_map_sign_errst_unsafe (fun _ -> rewriteT' kn s)
+      (rewriteF' kn s av0) sign f
+  | Tcase (t1, bl) ->
+    if negb (enc_ty s (t_ty t1))
+    then TermTFAlt.t_map_sign_errst_unsafe (fun _ -> rewriteT' kn s)
+           (rewriteF' kn s av) sign f
+    else (@@) (fun t2 ->
+           let av' = Mvs.set_diff av (t_vars t2) in
+           let mk_br = fun x br ->
+             let w,m = x in
+             let b1 = t_view_branch br in
+             let p = fst b1 in
+             let e = snd b1 in
+             (@@) (fun e0 ->
+               match pat_node p with
+               | Pwild -> (fun x -> x) ((Some e0),m)
+               | Papp (cs, pl) ->
+                 let get_var = fun p0 ->
+                   match pat_node p0 with
+                   | Pvar v ->  v
+                   | _ -> raise (Printer.UnsupportedTerm (f,uncompiled))
+                 in
+                 (@@) (fun vs -> (fun x -> x) (w,(Mls.add cs (vs,e0) m)))
+                   ( (errorM_list (map get_var pl)))
+               | _ ->  (raise (Printer.UnsupportedTerm (f,uncompiled))))
+               (rewriteF' kn s av' sign e)
+           in
+           (@@) (fun wm ->
+             let w,m = wm in
+             let find0 = fun x ->
+               let cs = fst x in
+               (@@) (fun vle ->
+                 let vl,e = vle in
+                 (@@) (fun ls ->
+                   (@@) (fun hd ->
+                     match t_node t2 with
+                     | Tvar v ->
+                       if Svs.mem v av
+                       then 
+                              ((@@) (fun hd0 ->
+                                if sign
+                                then t_forall_close_simp vl [] hd0
+                                else t_exists_close_simp vl [] hd0)
+                                (t_let_close_simp v hd e))
+                       else (@@) (fun hd0 ->
+                              
+                                (if sign
+                                 then (@@) (fun t3 ->
+                                        t_forall_close_simp vl [] t3)
+                                        (t_implies_simp hd0 e)
+                                 else (@@) (fun t3 ->
+                                        t_exists_close_simp vl [] t3)
+                                        (t_and_simp hd0 e))) ( (t_equ t2 hd))
+                     | _ ->
+                       (@@) (fun hd0 ->
+                         
+                           (if sign
+                            then (@@) (fun t3 ->
+                                   t_forall_close_simp vl [] t3)
+                                   (t_implies_simp hd0 e)
+                            else (@@) (fun t3 ->
+                                   t_exists_close_simp vl [] t3)
+                                   (t_and_simp hd0 e))) ( (t_equ t2 hd)))
+                     ( (t_app ls (map t_var vl) (t_ty t2))))
+                   ( (Mls.find cs s.cc_map)))
+                 (match Mls.find_opt cs m with
+                  | Some x0 -> (fun x -> x) x0
+                  | None ->
+                    let get_var = fun pj ->
+                      (@@) (fun t3 ->
+                        (@@) (fun ty ->
+                           ( (create_vsymbol (id_fresh1 "w") ty)))
+                          ( (t_type t3))) ( (t_app_infer pj (t2::[])))
+                    in
+                    (@@) (fun vs ->
+                      (@@) (fun l ->
+                        (@@) (fun w1 -> (fun x -> x) (l,w1)) ( (option_get w)))
+                        (errst_list (map get_var vs)))
+                      ( (Mls.find cs s.cp_map)))
+             in
+             (@@) (fun ts ->
+               let op = if sign then t_and_simp else t_or_simp in
+               (@@) (fun res -> (fun x -> x) (t_attr_copy f res))
+                 (map_join_left_errst t_true find0 (fun x y ->  (op x y))
+                   (find_constructors kn ts)))
+               (
+                 (match t_ty t2 with
+                  | Some ty ->
+                    (match ty_node ty with
+                     | Tyvar _ ->
+                       raise (Printer.UnsupportedTerm (f,uncompiled))
+                     | Tyapp (ts, _) ->  ts)
+                  | None -> raise (Printer.UnsupportedTerm (f,uncompiled)))))
+             (foldl_errst mk_br bl (None,Mls.empty))) (rewriteT' kn s t1)
+  | Tquant (q, bf) ->
+    if (||) ((&&) (is_forall q) sign) ((&&) (is_exists q) (negb sign))
+    then let p,close = t_view_quant_cb bf in
+         let p0,f1 = p in
+         let vl,tr = p0 in
+         (@@) (fun tr0 ->
+           let av0 = fold_right Svs.add av vl in
+           (@@) (fun f2 ->
+             (@@) (fun c ->
+               (@@) (fun t1 -> (fun x -> x) (t_attr_copy f t1))
+                 ( (t_quant_simp1 q c))) ( (close vl tr0 f2)))
+             (rewriteF' kn s av0 sign f1))
+           (TermTFAlt.tr_map_errst (rewriteT' kn s)
+             (rewriteF' kn s Svs.empty sign) tr)
+    else TermTFAlt.t_map_sign_errst_unsafe (fun _ -> rewriteT' kn s)
+           (rewriteF' kn s Svs.empty) sign f
+  | Tbinop (o, _, _) ->
+    if (||) ((&&) (is_and o) sign) ((&&) (is_or o) (negb sign))
+    then TermTFAlt.t_map_sign_errst_unsafe (fun _ -> rewriteT' kn s)
+           (rewriteF' kn s av) sign f
+    else TermTFAlt.t_map_sign_errst_unsafe (fun _ -> rewriteT' kn s)
+           (rewriteF' kn s Svs.empty) sign f
+  | _ ->
+    TermTFAlt.t_map_sign_errst_unsafe (fun _ -> rewriteT' kn s)
+      (rewriteF' kn s Svs.empty) sign f
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -100,7 +453,7 @@ let is_infinite_ty inf_ts ma_map =
 
 (** Eliminate algebraic types and match statements *)
 
-type state = {
+(* type state = {
   mt_map : lsymbol Mts.t;       (* from type symbols to selector functions *)
   cc_map : lsymbol Mls.t;       (* from old constructors to new constructors *)
   cp_map : lsymbol list Mls.t;  (* from old constructors to new projections *)
@@ -120,11 +473,14 @@ type state = {
 let enc_ty state = function
   | Some({ ty_node = Tyapp (ts,_) } as ty) ->
     not (Sty.mem ty (Mts.find_def Sty.empty ts state.kept_m))
-  | _ -> assert false
+  | _ -> assert false *)
 
-let uncompiled = "eliminate_algebraic: compile_match required"
+(* let uncompiled = "eliminate_algebraic: compile_match required" *)
 
-let rec rewriteT kn state t = match t.t_node with
+let rewriteT = rewriteT'
+let rewriteF = rewriteF'
+
+(* let rec rewriteT kn state t = match t.t_node with
   | Tcase (t1,bl) when enc_ty state t1.t_ty ->
       let t1 = rewriteT kn state t1 in
       let mk_br (w,m) br =
@@ -228,7 +584,7 @@ and rewriteF kn state av sign f =
         (rewriteF kn state av) sign f
   | _ ->
       TermTF.t_map_sign (Util.const (rewriteT kn state))
-        (rewriteF kn state Svs.empty) sign f
+        (rewriteF kn state Svs.empty) sign f *)
 
 let add_selector (state,task) ts ty csl =
   if state.no_sel then state, task else

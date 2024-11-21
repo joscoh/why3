@@ -1444,16 +1444,16 @@ let decl_fold_errst fn acc d =
     hashcons_ty, unit) errState **)
 
 let check kn _ t0 =
-  tm_traverse (fun _ -> (fun x -> x) ()) (fun _ -> (fun x -> x) ())
-    (fun _ _ _ _ _ -> (fun x -> x) ()) (fun _ _ _ _ _ _ -> (fun x -> x) ())
-    (fun _ _ _ -> (fun x -> x) ()) (fun t1 _ tb ->
+  tm_traverse (fun _ _ -> (fun x -> x) ()) (fun _ _ -> (fun x -> x) ())
+    (fun _ _ _ _ _ _ -> (fun x -> x) ()) (fun _ _ _ _ _ _ _ ->
+    (fun x -> x) ()) (fun _ _ _ _ -> (fun x -> x) ()) (fun _ t1 _ tb ->
     let get_constructors = fun ts -> map fst (find_constructors kn ts) in
     let pl = map (fun b -> (fst (fst b))::[]) tb in
     (@@) (fun _ -> (fun x -> x) ())
-      (check_compile_aux get_constructors (t1::[]) pl)) (fun _ _ _ ->
-    (fun x -> x) ()) (fun _ _ _ _ _ _ -> (fun x -> x) ()) (fun _ _ _ _ _ ->
-    (fun x -> x) ()) (fun _ _ -> (fun x -> x) ()) ((fun x -> x) ())
-    ((fun x -> x) ()) t0
+      (check_compile_aux get_constructors (t1::[]) pl)) (fun _ _ _ _ ->
+    (fun x -> x) ()) (fun _ _ _ _ _ _ _ -> (fun x -> x) ())
+    (fun _ _ _ _ _ _ -> (fun x -> x) ()) (fun _ _ _ -> (fun x -> x) ())
+    (fun _ -> (fun x -> x) ()) (fun _ -> (fun x -> x) ()) t0
 
 (** val check_match :
     known_map -> decl -> (BigInt.t*ty_node_c ty_o hashcons_ty, unit) errState **)
