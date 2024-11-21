@@ -25,6 +25,9 @@ open CoqUtil
 
 
 
+
+
+
 (** val rewriteT :
     (term_node term_o) -> (BigInt.t*ty_node_c ty_o hashcons_ty,
     (term_node term_o)) errState **)
@@ -121,6 +124,14 @@ let no_inv s =
 
 let no_sel s =
   s.no_sel
+
+(** val state_with_mt_mat : state -> lsymbol Mts.t -> state **)
+
+let state_with_mt_mat s mt_map0 =
+  { mt_map = mt_map0; cc_map = s.cc_map; cp_map = s.cp_map; pp_map =
+    s.pp_map; kept_m = s.kept_m; tp_map = s.tp_map; inf_ts = s.inf_ts;
+    ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
+    s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
 
 (** val enc_ty : state -> ty_node_c ty_o option -> bool **)
 
@@ -387,6 +398,64 @@ and rewriteF' kn s av sign f =
   | _ ->
     TermTFAlt.t_map_sign_errst_unsafe (fun _ -> rewriteT' kn s)
       (rewriteF' kn s Svs.empty) sign f
+
+(** val add_selector :
+    (state*task) -> (ty_node_c ty_o) tysymbol_o -> ty_node_c ty_o ->
+    (lsymbol*'a1) list -> (BigInt.t*hashcons_full, state*task) errState **)
+
+let add_selector st ts ty csl =
+  let s = fst st in
+  let tsk = snd st in
+  if s.no_sel
+  then (fun x -> x) st
+  else let mt_id =
+         id_derive1 ((^) "match_" (ts_name ts).id_string) (ts_name ts)
+       in
+       (@@) (fun v ->
+         (@@) (fun mt_ty ->
+           let mt_al = ty::(rev_map (fun _ -> mt_ty) csl) in
+           (@@) (fun mt_ls ->
+             let mt_map0 = Mts.add ts mt_ls s.mt_map in
+             (@@) (fun task0 ->
+               let mt_vs = fun _ -> create_vsymbol (id_fresh1 "z") mt_ty in
+               (@@) (fun mt_vl ->
+                 let mt_tl = rev_map t_var mt_vl in
+                 let mt_add = fun tsk0 x t0 ->
+                   let cs = fst x in
+                   let id =
+                     (^) mt_ls.ls_name.id_string
+                       ((^) "_" cs.ls_name.id_string)
+                   in
+                   (@@) (fun pr ->
+                     (@@) (fun vl ->
+                       (@@) (fun newcs ->
+                         (@@) (fun v0 ->
+                           (@@) (fun hd ->
+                             (@@) (fun hd0 ->
+                               let vl0 = rev_append mt_vl (rev vl) in
+                               (@@) (fun e ->
+                                 (@@) (fun ax ->
+                                   add_prop_decl tsk0 Paxiom pr ax)
+                                   ( (t_forall_close vl0 [] e)))
+                                 ( ( (t_equ hd0 t0))))
+                               ( ( (fs_app mt_ls (hd::mt_tl) mt_ty))))
+                             ( ( (fs_app newcs (rev_map t_var vl) v0))))
+                           ( (option_get cs.ls_value)))
+                         ( (Mls.find cs s.cc_map)))
+                       (
+                         (
+                           (st_list
+                             (rev_map (create_vsymbol (id_fresh1 "u"))
+                               cs.ls_args)))))
+                     ( ( (create_prsymbol (id_derive1 id cs.ls_name))))
+                 in
+                 (@@) (fun task1 ->
+                   (fun x -> x) ((state_with_mt_mat s mt_map0),task1))
+                   (fold_left2_errst' mt_add task0 csl mt_tl))
+                 ( ( (st_list (rev_map mt_vs csl)))))
+               (add_param_decl tsk mt_ls))
+             ( ( (create_fsymbol1 mt_id mt_al mt_ty)))) ( ( ( (ty_var v)))))
+         ( ( (create_tvsymbol (id_fresh1 "a"))))
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -586,7 +655,7 @@ and rewriteF kn state av sign f =
       TermTF.t_map_sign (Util.const (rewriteT kn state))
         (rewriteF kn state Svs.empty) sign f *)
 
-let add_selector (state,task) ts ty csl =
+(* let add_selector (state,task) ts ty csl =
   if state.no_sel then state, task else
   (* declare the selector function *)
   let mt_id = id_derive ("match_" ^ ts.ts_name.id_string) ts.ts_name in
@@ -611,7 +680,7 @@ let add_selector (state,task) ts ty csl =
     add_prop_decl tsk Paxiom pr ax
   in
   let task = List.fold_left2 mt_add task csl mt_tl in
-  { state with mt_map }, task
+  { state with mt_map }, task *)
 
 let add_selector acc ts ty = function
   | [_] -> acc

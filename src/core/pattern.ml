@@ -17,17 +17,6 @@ exception NonExhaustive of pattern list
 
 
 
-(** val rev_map_aux : ('a1 -> 'a2) -> 'a2 list -> 'a1 list -> 'a2 list **)
-
-let rec rev_map_aux f accu = function
-| [] -> accu
-| a::l0 -> rev_map_aux f ((f a)::accu) l0
-
-(** val rev_map : ('a1 -> 'a2) -> 'a1 list -> 'a2 list **)
-
-let rev_map f l =
-  rev_map_aux f [] l
-
 (** val hd : 'a1 list -> 'a1 errorM **)
 
 let hd = function

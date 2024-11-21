@@ -41,4 +41,6 @@ val list_find_opt : ('a1 -> bool) -> 'a1 list -> 'a1 option
 
 type ('a, 'b, 'c) ocaml_tup3 = 'a * 'b * 'c
 
+val rev_map_aux : ('a1 -> 'a2) -> 'a2 list -> 'a1 list -> 'a2 list
 
+val rev_map : ('a1 -> 'a2) -> 'a1 list -> 'a2 list

@@ -132,6 +132,17 @@ let rec fold_left2_errst f accu l1 l2 =
      | [] ->  ( None)
      | a2::l4 -> (@@) (fun x -> fold_left2_errst f x l3 l4) (f accu a1 a2))
 
+(** val fold_left2_errst' :
+    ('a3 -> 'a1 -> 'a2 -> ('a4, 'a3) errState) -> 'a3 -> 'a1 list -> 'a2 list
+    -> ('a4, 'a3) errState **)
+
+let fold_left2_errst' f accu l1 l2 =
+  (@@) (fun l ->
+    match l with
+    | Some r -> (fun x -> x) r
+    | None ->  (raise (Invalid_argument "List.fold_left2")))
+    (fold_left2_errst f accu l1 l2)
+
 (** val map2_errst :
     ('a1 -> 'a2 -> ('a4, 'a3) errState) -> 'a1 list -> 'a2 list -> ('a4, 'a3
     list option) errState **)
