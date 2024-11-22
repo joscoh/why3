@@ -66,3 +66,8 @@ let big_nth l z =
     match l0 with
     | [] -> None
     | _::t -> rec0 t) z l
+
+(** val mapi : (BigInt.t -> 'a1 -> 'a2) -> 'a1 list -> 'a2 list **)
+
+let mapi f l =
+  map (fun x -> f (fst x) (snd x)) (combine (iota2 (int_length l)) l)

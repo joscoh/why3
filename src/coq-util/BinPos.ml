@@ -1,5 +1,6 @@
 open BinNums
 open Datatypes
+open Nat0
 
 module Pos =
  struct
@@ -108,6 +109,19 @@ module Pos =
     | Coq_xH -> (match q with
                  | Coq_xH -> true
                  | _ -> false)
+
+  (** val iter_op : ('a1 -> 'a1 -> 'a1) -> positive -> 'a1 -> 'a1 **)
+
+  let rec iter_op op p a =
+    match p with
+    | Coq_xI p0 -> op a (iter_op op p0 (op a a))
+    | Coq_xO p0 -> iter_op op p0 (op a a)
+    | Coq_xH -> a
+
+  (** val to_nat : positive -> nat **)
+
+  let to_nat x =
+    iter_op Nat0.add x (S O)
 
   (** val of_succ_nat : nat -> positive **)
 

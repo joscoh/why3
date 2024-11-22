@@ -22,3 +22,5 @@ val iota2 : BigInt.t -> BigInt.t list
 val lex_comp : Stdlib.Int.t -> Stdlib.Int.t -> Stdlib.Int.t
 
 val big_nth : 'a1 list -> BigInt.t -> 'a1 option
+
+val mapi : (BigInt.t -> 'a1 -> 'a2) -> 'a1 list -> 'a2 list

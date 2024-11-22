@@ -135,6 +135,22 @@ let state_with_mt_mat s mt_map0 =
     ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
     s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
 
+(** val state_with_cp_map : state -> lsymbol list Mls.t -> state **)
+
+let state_with_cp_map s cp_map0 =
+  { mt_map = s.mt_map; cc_map = s.cc_map; cp_map = cp_map0; pp_map =
+    s.pp_map; kept_m = s.kept_m; tp_map = s.tp_map; inf_ts = s.inf_ts;
+    ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
+    s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
+
+(** val state_with_pp_map : state -> lsymbol Mls.t -> state **)
+
+let state_with_pp_map s pp_map0 =
+  { mt_map = s.mt_map; cc_map = s.cc_map; cp_map = s.cp_map; pp_map =
+    pp_map0; kept_m = s.kept_m; tp_map = s.tp_map; inf_ts = s.inf_ts;
+    ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
+    s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
+
 (** val enc_ty : state -> ty_node_c ty_o option -> bool **)
 
 let enc_ty s = function
@@ -405,11 +421,11 @@ and rewriteF' kn s av sign f =
     (state*task) -> (ty_node_c ty_o) tysymbol_o -> ty_node_c ty_o ->
     (lsymbol*'a1) list -> (BigInt.t*hashcons_full, state*task) errState **)
 
-let add_selector_aux st ts ty csl =
-  let s = fst st in
-  let tsk = snd st in
+let add_selector_aux st0 ts ty csl =
+  let s = fst st0 in
+  let tsk = snd st0 in
   if s.no_sel
-  then (fun x -> x) st
+  then (fun x -> x) st0
   else let mt_id =
          id_derive1 ((^) "match_" (ts_name ts).id_string) (ts_name ts)
        in
@@ -470,13 +486,13 @@ let add_selector acc ts ty x = match x with
    | [] -> (fun x -> x) acc
    | _::_ -> add_selector_aux acc ts ty x)
 
-(** val add_indexer :
+(** val add_indexer_aux :
     (state*task) -> (ty_node_c ty_o) tysymbol_o -> ty_node_c ty_o ->
     (lsymbol*'a1) list -> (BigInt.t*hashcons_full, state*task) errState **)
 
-let add_indexer st ts ty csl =
-  let s = fst st in
-  let tsk = snd st in
+let add_indexer_aux st0 ts ty csl =
+  let s = fst st0 in
+  let tsk = snd st0 in
   let mt_id = id_derive1 ((^) "index_" (ts_name ts).id_string) (ts_name ts) in
   (@@) (fun mt_ls ->
     (@@) (fun task0 ->
@@ -511,9 +527,9 @@ let add_indexer st ts ty csl =
     (state*task) -> (ty_node_c ty_o) tysymbol_o -> ty_node_c ty_o ->
     (lsymbol*'a1) list -> (BigInt.t*hashcons_full, state*task) errState **)
 
-let add_discriminator st ts ty csl =
-  let s = fst st in
-  let tsk = snd st in
+let add_discriminator st0 ts ty csl =
+  let s = fst st0 in
+  let tsk = snd st0 in
   let d_add = fun x task0 y ->
     let c1 = fst x in
     let c2 = fst y in
@@ -546,6 +562,127 @@ let add_discriminator st ts ty csl =
     in dl_add
   in
   (@@) (fun t' -> (fun x -> x) (s,t')) (dl_add tsk csl)
+
+(** val add_indexer :
+    (state*task) -> (ty_node_c ty_o) tysymbol_o -> ty_node_c ty_o ->
+    (lsymbol*'a1) list -> (BigInt.t*hashcons_full, state*task) errState **)
+
+let add_indexer acc ts ty l = match l with
+| [] ->
+  if negb (fst acc).no_ind
+  then add_indexer_aux acc ts ty l
+  else if BigInt.lt (int_length l) (BigInt.of_int 16)
+       then add_discriminator acc ts ty l
+       else (fun x -> x) acc
+| _::l0 ->
+  (match l0 with
+   | [] -> (fun x -> x) acc
+   | _::_ ->
+     if negb (fst acc).no_ind
+     then add_indexer_aux acc ts ty l
+     else if BigInt.lt (int_length l) (BigInt.of_int 16)
+          then add_discriminator acc ts ty l
+          else (fun x -> x) acc)
+
+(** val complete_projections :
+    (lsymbol*lsymbol option list) list -> (BigInt.t, (lsymbol*lsymbol option
+    list) list) st **)
+
+let complete_projections csl =
+  let conv_c = fun x ->
+    let c = fst x in
+    let pjl = snd x in
+    let conv_p = fun i t0 ->
+      let pj,ty = t0 in
+      (match pj with
+       | Some _ -> (fun x -> x) pj
+       | None ->
+         let id =
+           (^) c.ls_name.id_string
+             ((^) "_proj_" (BigInt.to_string (BigInt.succ i)))
+         in
+         let id0 = id_derive1 id c.ls_name in
+         let v = match c.ls_value with
+                 | Some t1 -> t1
+                 | None -> ty_int in
+         (@@) (fun s -> (fun x -> x) (Some s))
+           (create_fsymbol2 BigInt.zero true id0 (v::[]) ty))
+    in
+    (@@) (fun l -> (fun x -> x) (c,l))
+      (st_list (mapi conv_p (combine pjl c.ls_args)))
+  in
+  st_list (map conv_c csl)
+
+(** val add_meta_model_projection :
+    task -> lsymbol -> (hashcons_full, task) errState **)
+
+let add_meta_model_projection tsk ls =
+  add_meta tsk meta_model_projection ((MAls ls)::[])
+
+(** val add_projections :
+    (state*task) -> 'a1 -> 'a2 -> (lsymbol*lsymbol option list) list ->
+    (BigInt.t*hashcons_full, state*task) errState **)
+
+let add_projections st0 _ _ csl =
+  let s = fst st0 in
+  let tsk = snd st0 in
+  let pj_add = fun x y ->
+    let y0,tsk0 = x in
+    let cp_map0,pp_map0 = y0 in
+    let cs,pl = y in
+    (@@) (fun vl ->
+      let tl = map t_var vl in
+      (@@) (fun cc ->
+        (@@) (fun v ->
+          (@@) (fun hd ->
+            let add0 = fun x0 t0 pj ->
+              let p,tsk1 = x0 in
+              let pjl,pp_map1 = p in
+              (@@) (fun pj0 ->
+                (@@) (fun lspp ->
+                  let ls,pp_map2 = lspp in
+                  (@@) (fun tsk2 ->
+                    let id =
+                      id_derive1 ((^) ls.ls_name.id_string "'def") ls.ls_name
+                    in
+                    (@@) (fun pr ->
+                      (@@) (fun hh ->
+                        (@@) (fun hht ->
+                          (@@) (fun ax ->
+                            (@@) (fun tsk3 ->
+                              (@@) (fun tsk4 ->
+                                (fun x -> x) (((ls::pjl),pp_map2),tsk4))
+                                ( (add_meta_model_projection tsk3 ls)))
+                              (add_prop_decl tsk2 Paxiom pr ax))
+                            ( (t_forall_close vl [] hht))) ( ( (t_equ hh t0))))
+                        ( ( (t_app ls (hd::[]) (t_ty t0)))))
+                      ( ( (create_prsymbol id)))) (add_param_decl tsk1 ls))
+                  (match Mls.find_opt pj0 pp_map1 with
+                   | Some pj1 -> (fun x -> x) (pj1,pp_map1)
+                   | None ->
+                     let id = id_clone1 None Sattr.empty pj0.ls_name in
+                     (@@) (fun ls ->
+                       (fun x -> x) (ls,(Mls.add pj0 ls pp_map1)))
+                       ( ( (create_lsymbol1 id pj0.ls_args pj0.ls_value)))))
+                ( (option_get pj))
+            in
+            (@@) (fun res ->
+              let y1,tsk1 = res in
+              let pjl,pp_map1 = y1 in
+              (fun x -> x) (((Mls.add cs (rev pjl) cp_map0),pp_map1),tsk1))
+              (fold_left2_errst' add0 (([],pp_map0),tsk0) tl pl))
+            ( ( (fs_app cc tl v)))) ( (option_get cs.ls_value)))
+        ( (Mls.find cs s.cc_map)))
+      ( ( (st_list (map (create_vsymbol (id_fresh1 "u")) cs.ls_args))))
+  in
+  (@@) (fun csl0 ->
+    (@@) (fun res ->
+      let y,tsk0 = res in
+      let cp_map0,pp_map0 = y in
+      (fun x -> x)
+        ((state_with_cp_map (state_with_pp_map s pp_map0) cp_map0),tsk0))
+      (foldl_errst pj_add csl0 ((s.cp_map,s.pp_map),tsk)))
+    ( ( (complete_projections csl)))
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -818,7 +955,7 @@ let add_indexer (state,task) ts ty csl =
   in
   state, dl_add task csl *)
 
-let add_indexer acc ts ty = function
+(* let add_indexer acc ts ty = function
   | [_] -> acc
   | csl when not (fst acc).no_ind -> add_indexer acc ts ty csl
   | csl when List.length csl <= 16 -> add_discriminator acc ts ty csl
@@ -835,16 +972,16 @@ let complete_projections csl =
     in
     (c, List.mapi conv_p (List.combine pjl c.ls_args))
   in
-  List.map conv_c csl
+  List.map conv_c csl *)
 
 (* Adding meta so that counterexamples consider this new projection as a
    counterexample projection. This allow counterexamples to appear for
    these values.
 *)
-let add_meta_model_projection tsk ls =
-  add_meta tsk meta_model_projection [MAls ls]
+(* let add_meta_model_projection tsk ls =
+  add_meta tsk meta_model_projection [MAls ls] *)
 
-let add_projections (state,task) _ts _ty csl =
+(* let add_projections (state,task) _ts _ty csl =
   (* declare and define the projection functions *)
   let pj_add (cp_map,pp_map,tsk) (cs,pl) =
     let vl = List.map (create_vsymbol (id_fresh "u")) cs.ls_args in
@@ -876,7 +1013,7 @@ let add_projections (state,task) _ts _ty csl =
   let cp_map, pp_map, task =
     List.fold_left pj_add (state.cp_map, state.pp_map, task) csl
   in
-  { state with cp_map; pp_map }, task
+  { state with cp_map; pp_map }, task *)
 
 let add_inversion (state,task) ts ty csl =
   if state.no_inv then state, task else

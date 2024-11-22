@@ -4,6 +4,11 @@ open Datatypes
 
 module Z =
  struct
+  (** val zero : coq_Z **)
+
+  let zero =
+    Z0
+
   (** val double : coq_Z -> coq_Z **)
 
   let double = function
@@ -168,6 +173,12 @@ module Z =
     match compare n m with
     | Gt -> m
     | _ -> n
+
+  (** val to_nat : coq_Z -> nat **)
+
+  let to_nat = function
+  | Zpos p -> Pos.to_nat p
+  | _ -> O
 
   (** val of_nat : nat -> coq_Z **)
 

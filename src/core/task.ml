@@ -275,6 +275,7 @@ exception GoalNotFound
 
 
 
+
 (** val find_goal : task -> (prsymbol*(term_node term_o)) option **)
 
 let find_goal t =
@@ -442,6 +443,12 @@ let add_tdecl tsk td =
     else  ( (new_clone tsk th td))
   | Clone (th, _) ->  ( (new_clone tsk th td))
   | Meta (t, _) ->  ( (new_meta tsk t td))
+
+(** val add_meta :
+    task -> meta -> meta_arg list -> (hashcons_full, task) errState **)
+
+let add_meta tsk t al =
+  (@@) (fun m ->  (new_meta tsk t m)) ( (create_meta t al))
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)

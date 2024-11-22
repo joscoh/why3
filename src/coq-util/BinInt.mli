@@ -4,6 +4,8 @@ open Datatypes
 
 module Z :
  sig
+  val zero : coq_Z
+
   val double : coq_Z -> coq_Z
 
   val succ_double : coq_Z -> coq_Z
@@ -39,6 +41,8 @@ module Z :
   val eqb : coq_Z -> coq_Z -> bool
 
   val min : coq_Z -> coq_Z -> coq_Z
+
+  val to_nat : coq_Z -> nat
 
   val of_nat : nat -> coq_Z
  end

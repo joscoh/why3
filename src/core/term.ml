@@ -188,20 +188,34 @@ let check_proj proj constr args value =
   then  proj
   else raise (Invalid_argument "Term.create_lsymbol")
 
+(** val create_lsymbol_gen :
+    BigInt.t -> bool -> preid -> ty_node_c ty_o list -> ty_node_c ty_o option
+    -> (BigInt.t, lsymbol) st **)
+
+let create_lsymbol_gen constr proj name args value =
+  (@@) (fun i ->
+    (fun x -> x) { ls_name = i; ls_args = args; ls_value = value; ls_constr =
+      constr; ls_proj = proj }) (id_register name)
+
 (** val create_lsymbol1 :
     preid -> ty_node_c ty_o list -> ty_node_c ty_o option -> (BigInt.t,
     lsymbol) st **)
 
 let create_lsymbol1 name args value =
-  (@@) (fun i ->
-    (fun x -> x) { ls_name = i; ls_args = args; ls_value = value; ls_constr =
-      BigInt.zero; ls_proj = false }) (id_register name)
+  create_lsymbol_gen BigInt.zero false name args value
 
 (** val create_fsymbol1 :
     preid -> ty_node_c ty_o list -> ty_node_c ty_o -> (BigInt.t, lsymbol) st **)
 
 let create_fsymbol1 nm al vl =
   create_lsymbol1 nm al (Some vl)
+
+(** val create_fsymbol2 :
+    BigInt.t -> bool -> preid -> ty_node_c ty_o list -> ty_node_c ty_o ->
+    (BigInt.t, lsymbol) st **)
+
+let create_fsymbol2 constr proj name args value =
+  create_lsymbol_gen constr proj name args (Some value)
 
 (** val create_psymbol :
     preid -> ty_node_c ty_o list -> (BigInt.t, lsymbol) st **)
