@@ -151,6 +151,14 @@ let state_with_pp_map s pp_map0 =
     ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
     s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
 
+(** val state_with_cc_map : state -> lsymbol Mls.t -> state **)
+
+let state_with_cc_map s cc_map0 =
+  { mt_map = s.mt_map; cc_map = cc_map0; cp_map = s.cp_map; pp_map =
+    s.pp_map; kept_m = s.kept_m; tp_map = s.tp_map; inf_ts = s.inf_ts;
+    ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
+    s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
+
 (** val enc_ty : state -> ty_node_c ty_o option -> bool **)
 
 let enc_ty s = function
@@ -683,6 +691,123 @@ let add_projections st0 _ _ csl =
         ((state_with_cp_map (state_with_pp_map s pp_map0) cp_map0),tsk0))
       (foldl_errst pj_add csl0 ((s.cp_map,s.pp_map),tsk)))
     ( ( (complete_projections csl)))
+
+(** val add_inversion :
+    (state*task) -> (ty_node_c ty_o) tysymbol_o -> ty_node_c ty_o ->
+    (lsymbol*'a1) list -> (BigInt.t*hashcons_full, state*task) errState **)
+
+let add_inversion st0 ts ty csl =
+  let s = fst st0 in
+  let tsk = snd st0 in
+  if s.no_inv
+  then (fun x -> x) (s,tsk)
+  else let ax_id = (^) (ts_name ts).id_string "_inversion" in
+       (@@) (fun ax_pr ->
+         (@@) (fun ax_vs ->
+           let ax_hd = t_var ax_vs in
+           let mk_cs = fun x ->
+             let cs = fst x in
+             (@@) (fun pjl ->
+               let app = fun pj -> t_app_infer pj (ax_hd::[]) in
+               (@@) (fun cs0 ->
+                 
+                   (
+                     ((@@) (fun pjl' ->
+                       (@@) (fun c -> t_equ ax_hd c) (fs_app cs0 pjl' ty))
+                       (errst_list (map app pjl))))) ( (Mls.find cs s.cc_map)))
+               ( (Mls.find cs s.cp_map))
+           in
+           (@@) (fun ax_f ->
+             (@@) (fun ax_f0 ->
+               (@@) (fun pd -> (fun x -> x) (s,pd))
+                 (add_prop_decl tsk Paxiom ax_pr ax_f0))
+               ( (t_forall_close (ax_vs::[]) [] ax_f)))
+             (map_join_left_errst t_true mk_cs (fun x y ->  (t_or x y)) csl))
+           ( ( (create_vsymbol (id_fresh1 "u") ty))))
+         ( ( (create_prsymbol (id_derive1 ax_id (ts_name ts)))))
+
+(** val kept_no_case :
+    Sid.t -> state -> ((ty_node_c ty_o) tysymbol_o*('a1*'a2 list) list) ->
+    bool **)
+
+let kept_no_case used s = function
+| ts,csl ->
+  (match csl with
+   | [] ->
+     (match ts_args ts with
+      | [] ->
+        (&&) ((&&) s.keep_e (forallb (fun x0 -> null (snd x0)) csl))
+          (negb (Mts.mem ts s.kept_m))
+      | _::_ -> false)
+   | p::l ->
+     let _,l0 = p in
+     (match l0 with
+      | [] ->
+        (match ts_args ts with
+         | [] ->
+           (&&) ((&&) s.keep_e (forallb (fun x0 -> null (snd x0)) csl))
+             (negb (Mts.mem ts s.kept_m))
+         | _::_ -> false)
+      | _::_ ->
+        (match l with
+         | [] -> (&&) s.keep_r (negb (Sid.mem (ts_name ts) used))
+         | _::_ ->
+           (match ts_args ts with
+            | [] ->
+              (&&) ((&&) s.keep_e (forallb (fun x0 -> null (snd x0)) csl))
+                (negb (Mts.mem ts s.kept_m))
+            | _::_ -> false))))
+
+(** val add_axioms :
+    Sid.t -> (state*task) -> ((ty_node_c ty_o) tysymbol_o*(lsymbol*lsymbol
+    option list) list) -> (BigInt.t*hashcons_full, state*task) errState **)
+
+let add_axioms used st0 d =
+  let s = fst st0 in
+  let tsk = snd st0 in
+  let ts = fst d in
+  let csl = snd d in
+  (@@) (fun l ->
+    (@@) (fun ty ->
+      if kept_no_case used s d
+      then (@@) (fun s0 -> add_selector (s0,tsk) ts ty csl)
+             (
+               (let fold_c = fun s0 x ->
+                  let c,pjs = x in
+                  (@@) (fun pjs0 ->
+                    let cc_map0 = Mls.add c c s0.cc_map in
+                    let cp_map0 = Mls.add c pjs0 s0.cp_map in
+                    let fold_pj = fun pp_map0 pj -> Mls.add pj pj pp_map0 in
+                    let pp_map0 = fold_left fold_pj pjs0 s0.pp_map in
+                    
+                      (state_with_pp_map
+                        (state_with_cp_map (state_with_cc_map s0 cc_map0)
+                          cp_map0) pp_map0))
+                    (errorM_list (map option_get pjs))
+                in
+                foldl_err fold_c csl s))
+      else if (||) (negb (null (ts_args ts))) (negb (Mts.mem ts s.kept_m))
+           then let cs_add = fun x y ->
+                  let s0,tsk0 = x in
+                  let cs = fst y in
+                  let id = id_clone1 None Sattr.empty cs.ls_name in
+                  (@@) (fun ls ->
+                    (@@) (fun d0 ->
+                      (fun x -> x)
+                        ((state_with_cc_map s0 (Mls.add cs ls s0.cc_map)),d0))
+                      (add_param_decl tsk0 ls))
+                    ( ( (create_lsymbol1 id cs.ls_args cs.ls_value)))
+                in
+                (@@) (fun st1 ->
+                  (@@) (fun st2 ->
+                    (@@) (fun st3 ->
+                      (@@) (fun st4 -> add_inversion st4 ts ty csl)
+                        (add_projections st3 ts ty csl))
+                      (add_indexer st2 ts ty csl))
+                    (add_selector st1 ts ty csl))
+                  (foldl_errst cs_add csl (s,tsk))
+           else (fun x -> x) (s,tsk)) ( ( (ty_app ts l))))
+    ( ( ( (st_list (map ty_var (ts_args ts))))))
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -1015,7 +1140,7 @@ let complete_projections csl =
   in
   { state with cp_map; pp_map }, task *)
 
-let add_inversion (state,task) ts ty csl =
+(* let add_inversion (state,task) ts ty csl =
   if state.no_inv then state, task else
   (* add the inversion axiom *)
   let ax_id = ts.ts_name.id_string ^ "_inversion" in
@@ -1029,16 +1154,16 @@ let add_inversion (state,task) ts ty csl =
     t_equ ax_hd (fs_app cs (List.map app pjl) ty) in
   let ax_f = Lists.map_join_left mk_cs t_or csl in
   let ax_f = t_forall_close [ax_vs] [] ax_f in
-  state, add_prop_decl task Paxiom ax_pr ax_f
+  state, add_prop_decl task Paxiom ax_pr ax_f *)
 
-let kept_no_case used state = function
+(* let kept_no_case used state = function
   | ts, [_,_::_] -> state.keep_r && not (Sid.mem ts.ts_name used)
   | { ts_args = [] } as ts, csl ->
      state.keep_e && List.for_all (fun (_,l) -> l = []) csl &&
        not (Mts.mem ts state.kept_m)
-  | _ -> false
+  | _ -> false *)
 
-let add_axioms used (state,task) ((ts,csl) as d) =
+(* let add_axioms used (state,task) ((ts,csl) as d) =
   let ty = ty_app ts (List.map ty_var ts.ts_args) in
   if kept_no_case used state d then
     (* for kept enums and records, we still use the selector function, but
@@ -1069,7 +1194,7 @@ let add_axioms used (state,task) ((ts,csl) as d) =
     let state,task = add_projections (state,task) ts ty csl in
     let state,task = add_inversion (state,task) ts ty csl in
     state, task
-  else state,task
+  else state,task *)
 
 let add_tags mts (state,task) (ts,csl) =
   let rec mat_ts sts ts csl =
