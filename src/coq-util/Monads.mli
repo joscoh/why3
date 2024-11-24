@@ -29,6 +29,10 @@ val fold_left2_err :
   ('a3 -> 'a1 -> 'a2 -> 'a3 errorM) -> 'a3 -> 'a1 list -> 'a2 list -> 'a3
   option errorM
 
+val fold_left2_err' :
+  ('a3 -> 'a1 -> 'a2 -> 'a3 errorM) -> 'a3 -> 'a1 list -> 'a2 list -> 'a3
+  errorM
+
 val iter_err : ('a1 -> unit errorM) -> 'a1 list -> unit errorM
 
 val iter2_err :

@@ -11,6 +11,19 @@ open Monads
 open Datatypes
 open CoqUtil
 open IntFuncs
+(* a type constructor generates an infinite type if either it is tagged by
+   meta_infinite or one of its "material" arguments is an infinite type *)
+
+let meta_infinite = register_meta "infinite_type" [MTtysymbol]
+  ~desc:"Specify@ that@ the@ given@ type@ has@ always@ an@ infinite@ \
+         cardinality."
+
+let meta_material = register_meta "material_type_arg" [MTtysymbol;MTint]
+  ~desc:"If@ the@ given@ type@ argument@ is@ instantiated@ by@ an@ infinite@ \
+         type@ then@ the@ associated@ type@ constructor@ is@ infinite"
+
+let meta_alg_kept = register_meta "algebraic:kept" [MTty]
+  ~desc:"Keep@ primitive@ operations@ over@ this@ algebraic@ type."
 
 
 
@@ -156,6 +169,22 @@ let state_with_pp_map s pp_map0 =
 let state_with_cc_map s cc_map0 =
   { mt_map = s.mt_map; cc_map = cc_map0; cp_map = s.cp_map; pp_map =
     s.pp_map; kept_m = s.kept_m; tp_map = s.tp_map; inf_ts = s.inf_ts;
+    ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
+    s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
+
+(** val state_with_ma_map : state -> bool list Mts.t -> state **)
+
+let state_with_ma_map s ma_map0 =
+  { mt_map = s.mt_map; cc_map = s.cc_map; cp_map = s.cp_map; pp_map =
+    s.pp_map; kept_m = s.kept_m; tp_map = s.tp_map; inf_ts = s.inf_ts;
+    ma_map = ma_map0; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
+    s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
+
+(** val state_with_inf_ts : state -> Sts.t -> state **)
+
+let state_with_inf_ts s inf_ts0 =
+  { mt_map = s.mt_map; cc_map = s.cc_map; cp_map = s.cp_map; pp_map =
+    s.pp_map; kept_m = s.kept_m; tp_map = s.tp_map; inf_ts = inf_ts0;
     ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
     s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
 
@@ -808,6 +837,63 @@ let add_axioms used st0 d =
                   (foldl_errst cs_add csl (s,tsk))
            else (fun x -> x) (s,tsk)) ( ( (ty_app ts l))))
     ( ( ( (st_list (map ty_var (ts_args ts))))))
+
+(** val mat_ts :
+    (lsymbol*'a1) list Mts.t -> state -> Sts.t -> Sts.M.key -> (lsymbol*'a1)
+    list -> BigInt.t -> bool list errorM **)
+
+let mat_ts mts s sts ts csl z =
+  int_rect (fun _ _ _ _ _ -> raise Exit) (fun _ _ _ -> raise Exit)
+    (fun _ _ _ rec0 sts0 _ _ ->
+    let mat_ty =
+      let rec mat_ty sts1 stv ty =
+        match ty_node ty with
+        | Tyvar tv ->  (Stv.add tv stv)
+        | Tyapp (ts0, tl) ->
+          if Sts.mem ts0 sts1
+          then raise Exit
+          else (@@) (fun matl ->
+                 let add0 = fun s0 ty0 mat ->
+                   if mat then mat_ty sts1 s0 ty0 else  s0
+                 in
+                 fold_left2_err' add0 stv tl matl)
+                 (match Mts.find_opt ts0 s.ma_map with
+                  | Some y ->  y
+                  | None -> rec0 sts1 ts0 (Mts.find_def [] ts0 mts))
+      in mat_ty
+    in
+    let sts1 = Sts.add ts sts0 in
+    let add0 = fun s0 x -> foldl_err (mat_ty sts1) (fst x).ls_args s0 in
+    (@@) (fun stv ->  (map (Stv.contains stv) (ts_args ts)))
+      (foldl_err add0 csl Stv.empty)) z sts ts csl
+
+(** val add_tags :
+    (lsymbol*'a1) list Mts.t -> (state*task) ->
+    ((ty_node_c ty_o) tysymbol_o*(lsymbol*'a1) list) -> (hashcons_full,
+    state*task) errState **)
+
+let add_tags mts st0 x =
+  let s = fst st0 in
+  let tsk = snd st0 in
+  let ts = fst x in
+  let csl = snd x in
+  (fun x e ret ->
+  try x ()
+  with | e1 -> if e = e1 then ret () else raise e1)
+    (fun _ ->
+    (@@) (fun matl ->
+      let s0 = state_with_ma_map s (Mts.add ts matl s.ma_map) in
+      let add_material = fun tsk0 m c ->
+        if m
+        then add_meta tsk0 meta_material ((MAts ts)::((MAint c)::[]))
+        else (fun x -> x) tsk0
+      in
+      (@@) (fun l -> (fun x -> x) (s0,l))
+        (fold_left2_errst' add_material tsk matl (iota2 (int_length matl))))
+      ( (mat_ts mts s s.inf_ts ts csl (BigInt.of_int 16)))) Exit (fun _ ->
+    let s0 = state_with_inf_ts s (Sts.add ts s.inf_ts) in
+    (@@) (fun l -> (fun x -> x) (s0,l))
+      (add_meta tsk meta_infinite ((MAts ts)::[])))
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -819,29 +905,13 @@ let add_axioms used st0 d =
 (*                                                                  *)
 (********************************************************************)
 
-
-
-(* a type constructor generates an infinite type if either it is tagged by
-   meta_infinite or one of its "material" arguments is an infinite type *)
-
-let meta_infinite = register_meta "infinite_type" [MTtysymbol]
-  ~desc:"Specify@ that@ the@ given@ type@ has@ always@ an@ infinite@ \
-         cardinality."
-
-let meta_material = register_meta "material_type_arg" [MTtysymbol;MTint]
-  ~desc:"If@ the@ given@ type@ argument@ is@ instantiated@ by@ an@ infinite@ \
-         type@ then@ the@ associated@ type@ constructor@ is@ infinite"
-
-let meta_alg_kept = register_meta "algebraic:kept" [MTty]
-  ~desc:"Keep@ primitive@ operations@ over@ this@ algebraic@ type."
-
 let get_material_args matl =
   let add_arg acc = function
     | [MAts ts; MAint i] ->
         let acc, mat = try acc, Mts.find ts acc with Not_found ->
           let mat = Array.make (List.length ts.ts_args) false in
           Mts.add ts mat acc, mat in
-        Array.set mat i true;
+        Array.set mat (BigInt.to_int i) true; (*JOSH to_int*)
         acc
     | _ -> assert false
   in
@@ -1196,8 +1266,33 @@ let complete_projections csl =
     state, task
   else state,task *)
 
-let add_tags mts (state,task) (ts,csl) =
-  let rec mat_ts sts ts csl =
+(* let rec mat_ts (st: state) mts (sts : Sts.t) (ts : tysymbol) (csl : (lsymbol * 'a) list) (z: BigInt.t) : bool list =
+  if BigInt.le z BigInt.zero then raise Exit else
+  let rec mat_ty (st: state) mts (sts : Sts.t) (stv : Stv.t) (ty : ty) : Stv.t = match ty.ty_node with
+  | Tyvar tv -> Stv.add tv stv
+  | Tyapp (ts,tl) ->
+      if Sts.mem ts sts then raise Exit; (* infinite type *)
+      let matl = try Mts.find ts st.ma_map with
+        Not_found -> mat_ts st mts sts ts (Mts.find_def [] ts mts) (BigInt.pred z) in
+      let add s mat ty = if mat then mat_ty st mts sts s ty else s in
+      List.fold_left2 add stv matl tl
+  in
+
+  let sts = Sts.add ts sts in
+  let add s (ls,_) = List.fold_left (mat_ty st mts sts) s ls.ls_args in
+  let stv = List.fold_left add Stv.empty csl in
+  List.map (Stv.contains stv) ts.ts_args *)
+(* and mat_ty (st: state) mts (sts : Sts.t) (stv : Stv.t) (ty : ty) : Stv.t = match ty.ty_node with
+  | Tyvar tv -> Stv.add tv stv
+  | Tyapp (ts,tl) ->
+      if Sts.mem ts sts then raise Exit; (* infinite type *)
+      let matl = try Mts.find ts st.ma_map with
+        Not_found -> mat_ts st mts sts ts (Mts.find_def [] ts mts) in
+      let add s mat ty = if mat then mat_ty st mts sts s ty else s in
+      List.fold_left2 add stv matl tl *)
+
+(* let add_tags mts (s,task) (ts,csl) =
+  (* let rec mat_ts sts ts csl =
     let sts = Sts.add ts sts in
     let add s (ls,_) = List.fold_left (mat_ty sts) s ls.ls_args in
     let stv = List.fold_left add Stv.empty csl in
@@ -1210,9 +1305,10 @@ let add_tags mts (state,task) (ts,csl) =
           Not_found -> mat_ts sts ts (Mts.find_def [] ts mts) in
         let add s mat ty = if mat then mat_ty sts s ty else s in
         List.fold_left2 add stv matl tl
-  in try
-    let matl = mat_ts state.inf_ts ts csl in
-    let state = { state with ma_map = Mts.add ts matl state.ma_map } in
+  in try *)
+  try
+    let matl = mat_ts mts s s.inf_ts ts csl (BigInt.of_int 16) in
+    let state = { s with ma_map = Mts.add ts matl s.ma_map } in
     let c = ref (-1) in
     let add_material task m =
       incr c;
@@ -1220,8 +1316,8 @@ let add_tags mts (state,task) (ts,csl) =
     in
     state, List.fold_left add_material task matl
   with Exit ->
-    let state = { state with inf_ts = Sts.add ts state.inf_ts } in
-    state, add_meta task meta_infinite [MAts ts]
+    let state = { s with inf_ts = Sts.add ts s.inf_ts } in
+    state, add_meta task meta_infinite [MAts ts] *)
 
 let has_nested_use sts csl =
   let check_c (c, _) =
@@ -1247,7 +1343,7 @@ let comp t (state,task) = match t.task_decl.td_node with
       (* add projections to records with keep_recs *)
       let conv_t ((ts, csl) as d) =
         (* complete_projections can only be called on records or enums, so it
-           won't introduced ill-formed projections *)
+            won't introduced ill-formed projections *)
         if kept_no_case used state d then (ts, complete_projections csl) else d
       in
       let dl = List.map conv_t dl in
@@ -1298,6 +1394,21 @@ let fold_comp st =
   let init = Task.add_param_decl init ps_equ in
   Trans.fold comp (st,init)
 
+let rec change_nth (l: 'a list) (i: BigInt.t) (x: 'a) : 'a list =
+  if BigInt.le i BigInt.zero then 
+    begin match l with
+    | [] -> []
+    | y :: tl -> x :: tl
+  end
+else 
+  begin match l with
+  | [] -> []
+  | y :: tl -> y :: change_nth tl (BigInt.pred i) x
+end
+
+
+
+
 let on_empty_state t =
   Trans.on_tagged_ts meta_infinite (fun inf_ts ->
   Trans.on_meta meta_material (fun ml ->
@@ -1305,11 +1416,12 @@ let on_empty_state t =
     let fold ma_map = function
       | [MAts ts; MAint i] ->
         let ma = match Mts.find ts ma_map with
-        | l -> Array.of_list l
-        | exception Not_found -> Array.make (List.length ts.ts_args) false
+        | l -> (*Array.of_list*) l
+        | exception Not_found -> List.init  (List.length ts.ts_args) (fun _ -> false)
         in
-        ma.(i) <- true;
-        Mts.add ts (Array.to_list ma) ma_map
+        let ma = change_nth ma i true in
+        (* ma.(i) <- true; *)
+        Mts.add ts (*(Array.to_list ma)*) ma ma_map
       | _ -> assert false
     in
     let ma_map = List.fold_left fold Mts.empty ml in
@@ -1321,7 +1433,7 @@ let on_empty_state t =
     } in t empty_state))
 
 (* We need to rewrite metas *after* the main pass, because we need to know the
-   final state. Some metas may mention symbols declared after the meta. *)
+    final state. Some metas may mention symbols declared after the meta. *)
 let fold_rewrite_metas state t task = match t.task_decl.td_node with
   | Meta (m, mal) ->
     let map_arg ma = match ma with
@@ -1341,7 +1453,7 @@ let rewrite_metas st = Trans.fold (fold_rewrite_metas st) None
 
 let eliminate_match =
   Trans.bind (Trans.compose compile_match (on_empty_state fold_comp))
-             (fun (state, task) -> Trans.seq [Trans.return task; rewrite_metas state])
+              (fun (state, task) -> Trans.seq [Trans.return task; rewrite_metas state])
 let meta_elim = register_meta "eliminate_algebraic" [MTstring]
   ~desc:"@[<hov 2>Configure the 'eliminate_algebraic' transformation:@\n\
     - keep_enums:   @[keep monomorphic enumeration types (do not use with polymorphism encoding)@]@\n\
@@ -1386,10 +1498,10 @@ let eliminate_algebraic =
     Trans.add_tdecls (Mts.fold (fun _ -> Sty.fold add) kept_m [])
   in
   Trans.bind (Trans.compose compile_match (fold_comp st))
-             (fun (state, task) ->
+              (fun (state, task) ->
               Trans.seq [Trans.return task;
-                         rewrite_metas state;
-                         add_meta_decls state.kept_m]))))
+                          rewrite_metas state;
+                          add_meta_decls state.kept_m]))))
 
 (** Eliminate user-supplied projection functions *)
 
@@ -1430,20 +1542,20 @@ let elim_proj keep_rec t (map,task) = match t.task_decl.td_node with
       match csl with
       | [_] when keep_rec -> (map,task)
       | _ ->
-         let (cs,pjl) = List.hd csl in
-         let ty = Option.get cs.ls_value in
-         let vs = create_vsymbol (id_fresh "v") ty in
-         let pjl = List.filter_map Fun.id pjl in
-         List.fold_left (add vs csl) (map,task) pjl
+          let (cs,pjl) = List.hd csl in
+          let ty = Option.get cs.ls_value in
+          let vs = create_vsymbol (id_fresh "v") ty in
+          let pjl = List.filter_map Fun.id pjl in
+          List.fold_left (add vs csl) (map,task) pjl
     in
     List.fold_left add (map,task) dl
   | Decl d -> map, add_decl task (Decl.decl_map (rewrite map) d)
   | Meta (m, args) ->
-     let conv = function
-       | MAls p when p.ls_proj -> MAls (Mls.find_def p p map)
-       | m -> m
-     in
-     map, add_meta task m (List.map conv args)
+      let conv = function
+        | MAls p when p.ls_proj -> MAls (Mls.find_def p p map)
+        | m -> m
+      in
+      map, add_meta task m (List.map conv args)
   | _ -> map, add_tdecl task t.task_decl
 
 let eliminate_projections = Trans.fold_map (elim_proj false) Mls.empty None

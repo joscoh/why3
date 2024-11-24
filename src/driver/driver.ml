@@ -225,7 +225,7 @@ let load_driver_raw =
           | PMAps q  -> MAls (find_ps th q)
           | PMApr q  -> MApr (find_pr th q)
           | PMAstr s -> MAstr s
-          | PMAint i -> MAint i
+          | PMAint i -> MAint (BigInt.of_int i) (*JOSH*)
         in
         let m = lookup_meta s in
         let td = create_meta m (List.map convert al) in

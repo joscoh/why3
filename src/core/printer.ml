@@ -446,15 +446,15 @@ let check_syntax_type ts s = check_syntax s (List.length ts.ts_args)
 
 let syntax_type ts s b =
   check_syntax_type ts s;
-  create_meta meta_syntax_type [MAts ts; MAstr s; MAint (if b then 1 else 0)]
+  create_meta meta_syntax_type [MAts ts; MAstr s; MAint (BigInt.of_int (if b then 1 else 0))]
 
 let syntax_logic ls s b =
   check_syntax_logic ls s;
-  create_meta meta_syntax_logic [MAls ls; MAstr s; MAint (if b then 1 else 0)]
+  create_meta meta_syntax_logic [MAls ls; MAstr s; MAint (BigInt.of_int (if b then 1 else 0))]
 
 let syntax_literal ts s b =
   check_syntax_literal ts s;
-  create_meta meta_syntax_literal [MAts ts; MAstr s; MAint (if b then 1 else 0)]
+  create_meta meta_syntax_literal [MAts ts; MAstr s; MAint (BigInt.of_int (if b then 1 else 0))]
 
 let remove_prop pr =
   create_meta meta_remove_prop [MApr pr]
@@ -482,14 +482,14 @@ let sm_add_ts sm = function
   | [MAts ts; MAstr rs; MAint ov] ->
     Mid.change
       (change_override (KnownTypeSyntax ts) (TooManyTypeOverride ts)
-         rs ov) ts.ts_name sm
+         rs (BigInt.to_int ov)) ts.ts_name sm (*JOSH to_int*)
   | _ -> assert false
 
 let sm_add_ls sm = function
   | [MAls ls; MAstr rs; MAint ov] ->
     Mid.change
       (change_override (KnownLogicSyntax ls) (TooManyLogicOverride ls)
-         rs ov) ls.ls_name sm
+         rs (BigInt.to_int ov)) ls.ls_name sm (*JOSH to_int*)
   | _ -> assert false
 
 let sm_add_pr sm = function

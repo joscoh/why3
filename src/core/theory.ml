@@ -106,7 +106,7 @@ type meta_arg =
 | MAls of lsymbol
 | MApr of prsymbol
 | MAstr of string
-| MAint of Stdlib.Int.t
+| MAint of BigInt.t
 | MAid of ident
 
 type meta = { meta_name : string; meta_type : meta_arg_type list;
@@ -346,10 +346,9 @@ let meta_arg_eqb m1 m2 =
   | MAstr s1 -> (match m2 with
                  | MAstr s2 -> (=) s1 s2
                  | _ -> false)
-  | MAint i1 ->
-    (match m2 with
-     | MAint i2 -> Stdlib.Int.equal i1 i2
-     | _ -> false)
+  | MAint i1 -> (match m2 with
+                 | MAint i2 -> BigInt.eq i1 i2
+                 | _ -> false)
   | MAid i1 -> (match m2 with
                 | MAid i2 -> id_equal i1 i2
                 | _ -> false)
@@ -544,10 +543,9 @@ module TdeclHash =
     | MAstr s1 -> (match m2 with
                    | MAstr s2 -> (=) s1 s2
                    | _ -> false)
-    | MAint i1 ->
-      (match m2 with
-       | MAint i2 -> Stdlib.Int.equal i1 i2
-       | _ -> false)
+    | MAint i1 -> (match m2 with
+                   | MAint i2 -> BigInt.eq i1 i2
+                   | _ -> false)
     | MAid _ -> false
 
   (** val eq_smap : symbol_map -> symbol_map -> bool **)
@@ -608,7 +606,7 @@ module TdeclHash =
   | MAls ls -> ls_hash ls
   | MApr pr -> pr_hash pr
   | MAstr s -> (fun s -> (BigInt.of_int (Hashtbl.hash s))) s
-  | MAint i -> BigInt.of_int i
+  | MAint i -> i
   | MAid i -> id_hash i
 
   (** val hs_smap : symbol_map -> BigInt.t -> BigInt.t **)

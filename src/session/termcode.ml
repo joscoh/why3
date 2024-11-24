@@ -804,7 +804,7 @@ module Checksum = struct
     | Theory.MAls ls -> char b 'l'; ident b ls.ls_name
     | Theory.MApr pr -> char b 'p'; ident b pr.Decl.pr_name
     | Theory.MAstr s -> char b 's'; string b s
-    | Theory.MAint i -> char b 'i'; int b i
+    | Theory.MAint i -> char b 'i'; int b (BigInt.to_int i) (*JOSH to_int*)
     | Theory.MAid i -> char b 'd'; ident b i
 
   let tdecl b d = match d.Theory.td_node with

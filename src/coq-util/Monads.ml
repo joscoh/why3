@@ -72,6 +72,17 @@ let rec fold_left2_err f accu l1 l2 =
      | [] ->  None
      | a2::l4 -> (@@) (fun x -> fold_left2_err f x l3 l4) (f accu a1 a2))
 
+(** val fold_left2_err' :
+    ('a3 -> 'a1 -> 'a2 -> 'a3 errorM) -> 'a3 -> 'a1 list -> 'a2 list -> 'a3
+    errorM **)
+
+let fold_left2_err' f accu l1 l2 =
+  (@@) (fun l ->
+    match l with
+    | Some r ->  r
+    | None -> raise (Invalid_argument "List.fold_left2"))
+    (fold_left2_err f accu l1 l2)
+
 (** val iter_err : ('a1 -> unit errorM) -> 'a1 list -> unit errorM **)
 
 let iter_err f l =

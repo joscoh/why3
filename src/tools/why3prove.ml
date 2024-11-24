@@ -261,7 +261,7 @@ let () = try
     let meta = lookup_meta meta in
     let args = match meta.meta_type, s with
       | [MTstring], Some s -> [MAstr s]
-      | [MTint], Some s -> [MAint (int_of_string s)]
+      | [MTint], Some s -> [MAint (BigInt.of_int (int_of_string s))] (*JOSH*)
       | [], None -> []
       | _ -> failwith "meta argument not implemented"
     in

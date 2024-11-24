@@ -102,13 +102,13 @@ let normalize_goal_transf ?pr_norm ?step_limit p env : 'a Trans.trans =
   let tr = Trans.on_meta_excl meta_compute_max_quantifier_domain @@ function
       | None -> Trans.return p
       | Some [Theory.MAint n] ->
-          Trans.return {p with compute_max_quantifier_domain = n}
+          Trans.return {p with compute_max_quantifier_domain = (BigInt.to_int n)} (*JOSH to_int*)
       | _ ->  assert false in
   let tr = Trans.bind tr (fun p -> collect_rules_trans p env) in
   let tr = Trans.on_meta_excl meta_compute_max_steps @@ function
       | None ->
           Trans.bind tr (fun engine -> normalize_hyp_or_goal ?pr_norm ?step_limit engine)
-      | Some [Theory.MAint n] -> compute_max_steps := n;
+      | Some [Theory.MAint n] -> compute_max_steps := (BigInt.to_int n); (*JOSH to_int*)
           Trans.bind tr (fun engine -> normalize_hyp_or_goal ?pr_norm ?step_limit engine)
       | _ ->  assert false in
   tr

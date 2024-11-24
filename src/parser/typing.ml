@@ -1698,7 +1698,7 @@ let rec add_decl muc env file d =
         | Ptree.Mgl q  -> MApr (find_prop_of_kind Pgoal  tuc q)
         | Ptree.Mval q -> MAid (find_rsymbol muc q).rs_name
         | Ptree.Mstr s -> MAstr s
-        | Ptree.Mint i -> MAint i in
+        | Ptree.Mint i -> MAint (BigInt.of_int i) in (*JOSH*)
       add_meta muc (lookup_meta id.id_str) (List.map convert al)
   | Ptree.Dlet (id, gh, kind, e) ->
       let e = update_any kind e in
