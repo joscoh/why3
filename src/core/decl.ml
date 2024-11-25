@@ -1313,6 +1313,19 @@ let decl_map fn d =
     let k,pr = p in (@@) (fun f1 ->  (create_prop_decl k pr f1)) (fn f)
   | _ -> (fun x -> x) d
 
+module DeclTFAlt =
+ struct
+  (** val decl_map :
+      ((term_node term_o) -> (('a1*ty_node_c ty_o hashcons_ty)*decl
+      hashcons_ty, (term_node term_o)) errState) -> ((term_node term_o) ->
+      (('a1*ty_node_c ty_o hashcons_ty)*decl hashcons_ty, (term_node term_o))
+      errState) -> decl -> (('a1*ty_node_c ty_o hashcons_ty)*decl
+      hashcons_ty, decl) errState **)
+
+  let decl_map fnT fnF =
+    decl_map (TermTFAlt.t_select fnT fnF)
+ end
+
 type known_map = decl Mid.t
 
 (** val known_id : known_map -> ident -> unit errorM **)

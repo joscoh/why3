@@ -188,6 +188,14 @@ let state_with_inf_ts s inf_ts0 =
     ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
     s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
 
+(** val state_with_kept_m : state -> Sty.t Mts.t -> state **)
+
+let state_with_kept_m s kept_m0 =
+  { mt_map = s.mt_map; cc_map = s.cc_map; cp_map = s.cp_map; pp_map =
+    s.pp_map; kept_m = kept_m0; tp_map = s.tp_map; inf_ts = s.inf_ts;
+    ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
+    s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
+
 (** val enc_ty : state -> ty_node_c ty_o option -> bool **)
 
 let enc_ty s = function
@@ -894,6 +902,88 @@ let add_tags mts st0 x =
     let s0 = state_with_inf_ts s (Sts.add ts s.inf_ts) in
     (@@) (fun l -> (fun x -> x) (s0,l))
       (add_meta tsk meta_infinite ((MAts ts)::[])))
+
+(** val fun_flip : ('a1 -> 'a2 -> 'a3) -> 'a2 -> 'a1 -> 'a3 **)
+
+let fun_flip f x y =
+  f y x
+
+(** val has_nested_use : Sts.t -> (lsymbol*'a1) list -> bool **)
+
+let has_nested_use sts csl =
+  let check_c = fun x ->
+    let check_arg = fun ty ->
+      match ty_node ty with
+      | Tyvar _ -> false
+      | Tyapp (_, tl) -> existsb (ty_s_any (fun_flip Sts.mem sts)) tl
+    in
+    existsb check_arg (fst x).ls_args
+  in
+  existsb check_c csl
+
+(** val comp_aux :
+    task_hd -> (state*task) -> (BigInt.t*hashcons_full, state*task) errState **)
+
+let comp_aux t0 st0 =
+  let s = fst st0 in
+  let tsk = snd st0 in
+  (match td_node t0.task_decl with
+   | Decl d ->
+     (match d.d_node with
+      | Ddata dl ->
+        let used = get_used_syms_decl d in
+        let sts = fold_left (fun acc x -> Sts.add (fst x) acc) dl Sts.empty in
+        let fold_kept_m = fun s0 d0 ->
+          let ts,csl = d0 in
+          if has_nested_use sts csl
+          then (fun x -> x) (state_with_kept_m s0 (Mts.remove ts s0.kept_m))
+          else if (&&) ((&&) (null (ts_args ts)) s0.keep_m)
+                    (negb (kept_no_case used s0 d0))
+               then (@@) (fun t1 ->
+                      (fun x -> x)
+                        (state_with_kept_m s0
+                          (Mts.add ts (Sty.singleton t1) s0.kept_m)))
+                      (ty_app ts [])
+               else (fun x -> x) s0
+        in
+        (@@) (fun s0 ->
+          let conv_t = fun d0 ->
+            let ts,csl = d0 in
+            if kept_no_case used s0 d0
+            then (@@) (fun r -> (fun x -> x) (ts,r))
+                   (complete_projections csl)
+            else (fun x -> x) d0
+          in
+          (@@) (fun dl0 ->
+            let concrete = fun d0 ->
+              (||) (Mts.mem (fst d0) s0.kept_m) (kept_no_case used s0 d0)
+            in
+            let dl_concr,dl_abs = partition concrete dl0 in
+            (@@) (fun tsk0 ->
+              (@@) (fun tsk1 ->
+                (@@) (fun r1 ->
+                  let mts =
+                    fold_right (fun x acc -> Mts.add (fst x) (snd x) acc)
+                      Mts.empty dl0
+                  in
+                   (foldl_errst (add_tags mts) dl0 r1))
+                  (foldl_errst (add_axioms used) dl0 (s0,tsk1)))
+                (if null dl_concr
+                 then (fun x -> x) tsk0
+                 else add_data_decl tsk0 dl_concr))
+              (foldl_errst (fun t1 x -> add_ty_decl t1 (fst x)) dl_abs tsk))
+            ( ( (st_list (map conv_t dl)))))
+          ( ( (foldl_errst fold_kept_m dl s)))
+      | _ ->
+        let fnT = rewriteT' t0.task_known s in
+        let fnF = rewriteF' t0.task_known s Svs.empty true in
+        (@@) (fun d1 ->
+          (@@) (fun d2 -> (fun x -> x) (s,d2)) (add_decl tsk d1))
+          (
+            (
+              (
+                (DeclTFAlt.decl_map (fun x ->  (fnT x)) (fun x ->  (fnF x)) d)))))
+   | _ -> (@@) (fun d1 -> (fun x -> x) (s,d1)) (add_tdecl tsk t0.task_decl))
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -1319,7 +1409,7 @@ let complete_projections csl =
     let state = { s with inf_ts = Sts.add ts s.inf_ts } in
     state, add_meta task meta_infinite [MAts ts] *)
 
-let has_nested_use sts csl =
+(* let has_nested_use sts csl =
   let check_c (c, _) =
     let check_arg ty = match ty.ty_node with
     | Tyapp (_, tl) -> List.exists (ty_s_any (Fun.flip Sts.mem sts)) tl
@@ -1327,9 +1417,9 @@ let has_nested_use sts csl =
     in
     List.exists check_arg c.ls_args
   in
-  List.exists check_c csl
+  List.exists check_c csl *)
 
-let comp t (state,task) = match t.task_decl.td_node with
+(* let comp t (state,task) = match t.task_decl.td_node with
   | Decl ({ d_node = Ddata dl } as d) ->
       let used = get_used_syms_decl d in
       let sts = List.fold_left (fun acc (ts, _) -> Sts.add ts acc) Sts.empty dl in
@@ -1364,7 +1454,7 @@ let comp t (state,task) = match t.task_decl.td_node with
       let fnF = rewriteF t.task_known state Svs.empty true in
       state, add_decl task (DeclTF.decl_map fnT fnF d)
   | _ ->
-      state, add_tdecl task t.task_decl
+      state, add_tdecl task t.task_decl *)
 
 let comp t (state,task) = match t.task_decl.td_node with
   | Use {th_decls = [{td_node = Decl ({d_node = Ddata [ts,_]})}]}
@@ -1378,14 +1468,14 @@ let comp t (state,task) = match t.task_decl.td_node with
       let rstate,rtask = ref state, ref task in
       let add _ (d,th) () =
         let t = Option.get (add_decl None d) in
-        let state,task = comp t (!rstate,!rtask) in
+        let state,task = comp_aux t (!rstate,!rtask) in
         let task = add_tdecl task (create_use th) in
         rstate := state ; rtask := task ; None
       in
       let tp_map = Mid.diff add state.tp_map (get_used_syms_decl d) in
-      comp t ({ !rstate with tp_map = tp_map }, !rtask)
+      comp_aux t ({ !rstate with tp_map = tp_map }, !rtask)
   | _ ->
-      comp t (state,task)
+    comp_aux t (state,task)
 
 let fold_comp st =
   let init = Task.add_meta None meta_infinite [MAts ts_int] in

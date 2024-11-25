@@ -67,6 +67,12 @@ let rec find f = function
 | [] -> None
 | x::tl -> if f x then Some x else find f tl
 
+(** val partition : ('a1 -> bool) -> 'a1 list -> 'a1 list*'a1 list **)
+
+let rec partition f = function
+| [] -> [],[]
+| x::tl -> let g,d = partition f tl in if f x then (x::g),d else g,(x::d)
+
 (** val combine : 'a1 list -> 'a2 list -> ('a1*'a2) list **)
 
 let rec combine l l' =
