@@ -246,7 +246,7 @@ module CtrStart =
   (** val coq_val : BigInt.t **)
 
   let coq_val =
-    (BigInt.of_int 13)
+    (BigInt.of_int 44)
  end
 
 module IdCtr = MakeCtr(CtrStart)
@@ -347,6 +347,166 @@ let id_clone1 loc attrs i =
 
 let id_derive1 nm i =
   create_ident nm i.id_attrs i.id_loc
+
+(** val id_tup0 : ident **)
+
+let id_tup0 =
+  id_builtin "tuple0" (create_tag (BigInt.of_int 12))
+
+(** val id_tup1 : ident **)
+
+let id_tup1 =
+  id_builtin "tuple1" (create_tag (BigInt.of_int 13))
+
+(** val id_tup2 : ident **)
+
+let id_tup2 =
+  id_builtin "tuple2" (create_tag (BigInt.of_int 14))
+
+(** val id_tup3 : ident **)
+
+let id_tup3 =
+  id_builtin "tuple3" (create_tag (BigInt.of_int 15))
+
+(** val id_tup4 : ident **)
+
+let id_tup4 =
+  id_builtin "tuple4" (create_tag (BigInt.of_int 16))
+
+(** val id_tup5 : ident **)
+
+let id_tup5 =
+  id_builtin "tuple5" (create_tag (BigInt.of_int 17))
+
+(** val id_tup6 : ident **)
+
+let id_tup6 =
+  id_builtin "tuple6" (create_tag (BigInt.of_int 18))
+
+(** val id_tup7 : ident **)
+
+let id_tup7 =
+  id_builtin "tuple7" (create_tag (BigInt.of_int 19))
+
+(** val id_tup8 : ident **)
+
+let id_tup8 =
+  id_builtin "tuple8" (create_tag (BigInt.of_int 20))
+
+(** val id_tup9 : ident **)
+
+let id_tup9 =
+  id_builtin "tuple9" (create_tag (BigInt.of_int 21))
+
+(** val id_tup10 : ident **)
+
+let id_tup10 =
+  id_builtin "tuple10" (create_tag (BigInt.of_int 22))
+
+(** val id_tup11 : ident **)
+
+let id_tup11 =
+  id_builtin "tuple11" (create_tag (BigInt.of_int 23))
+
+(** val id_tup12 : ident **)
+
+let id_tup12 =
+  id_builtin "tuple12" (create_tag (BigInt.of_int 24))
+
+(** val id_tup13 : ident **)
+
+let id_tup13 =
+  id_builtin "tuple13" (create_tag (BigInt.of_int 25))
+
+(** val id_tup14 : ident **)
+
+let id_tup14 =
+  id_builtin "tuple14" (create_tag (BigInt.of_int 26))
+
+(** val id_tup15 : ident **)
+
+let id_tup15 =
+  id_builtin "tuple15" (create_tag (BigInt.of_int 27))
+
+(** val id_tup16 : ident **)
+
+let id_tup16 =
+  id_builtin "tuple16" (create_tag (BigInt.of_int 28))
+
+(** val id_tup_list : ident list **)
+
+let id_tup_list =
+  id_tup0::(id_tup1::(id_tup2::(id_tup3::(id_tup4::(id_tup5::(id_tup6::(id_tup7::(id_tup8::(id_tup9::(id_tup10::(id_tup11::(id_tup12::(id_tup13::(id_tup14::(id_tup15::(id_tup16::[]))))))))))))))))
+
+(** val id_c : ident **)
+
+let id_c =
+  id_builtin "c" (create_tag (BigInt.of_int 29))
+
+(** val id_d : ident **)
+
+let id_d =
+  id_builtin "d" (create_tag (BigInt.of_int 30))
+
+(** val id_e : ident **)
+
+let id_e =
+  id_builtin "e" (create_tag (BigInt.of_int 31))
+
+(** val id_f : ident **)
+
+let id_f =
+  id_builtin "f" (create_tag (BigInt.of_int 32))
+
+(** val id_g : ident **)
+
+let id_g =
+  id_builtin "g" (create_tag (BigInt.of_int 33))
+
+(** val id_h : ident **)
+
+let id_h =
+  id_builtin "h" (create_tag (BigInt.of_int 34))
+
+(** val id_i : ident **)
+
+let id_i =
+  id_builtin "i" (create_tag (BigInt.of_int 35))
+
+(** val id_j : ident **)
+
+let id_j =
+  id_builtin "j" (create_tag (BigInt.of_int 36))
+
+(** val id_k : ident **)
+
+let id_k =
+  id_builtin "k" (create_tag (BigInt.of_int 37))
+
+(** val id_l : ident **)
+
+let id_l =
+  id_builtin "l" (create_tag (BigInt.of_int 38))
+
+(** val id_m : ident **)
+
+let id_m =
+  id_builtin "m" (create_tag (BigInt.of_int 39))
+
+(** val id_n : ident **)
+
+let id_n =
+  id_builtin "n" (create_tag (BigInt.of_int 40))
+
+(** val id_o : ident **)
+
+let id_o =
+  id_builtin "o" (create_tag (BigInt.of_int 41))
+
+(** val id_p : ident **)
+
+let id_p =
+  id_builtin "p" (create_tag (BigInt.of_int 42))
 module Hsattr = Hashcons.Make (struct
   type t = attribute
   let equal a1 a2 = a1.attr_string = a2.attr_string

@@ -98,14 +98,6 @@ let iter2_err f l1 l2 =
     | None -> raise (Invalid_argument "iter2"))
     (fold_left2_err (fun _ -> f) () l1 l2)
 
-(** val foldl_st :
-    ('a2 -> 'a3 -> ('a1, 'a2) st) -> 'a3 list -> 'a2 -> ('a1, 'a2) st **)
-
-let rec foldl_st f l x =
-  match l with
-  | [] -> (fun x -> x) x
-  | h::t -> (@@) (fun j -> foldl_st f t j) (f x h)
-
 (** val foldr_errst :
     ('a3 -> 'a2 -> ('a1, 'a2) errState) -> 'a2 -> 'a3 list -> ('a1, 'a2)
     errState **)

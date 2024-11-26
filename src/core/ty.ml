@@ -355,10 +355,6 @@ exception TypeMismatch of ty * ty
 
 
 
-
-
-
-
 (** val ty_var_builtin : tvsymbol -> tag -> ty_node_c ty_o **)
 
 let ty_var_builtin n tag0 =
@@ -439,6 +435,76 @@ let vs_a =
 
 let vs_b =
   create_tvsymbol_builtin id_b
+
+(** val vs_c : tvsymbol **)
+
+let vs_c =
+  create_tvsymbol_builtin id_c
+
+(** val vs_d : tvsymbol **)
+
+let vs_d =
+  create_tvsymbol_builtin id_d
+
+(** val vs_e : tvsymbol **)
+
+let vs_e =
+  create_tvsymbol_builtin id_e
+
+(** val vs_f : tvsymbol **)
+
+let vs_f =
+  create_tvsymbol_builtin id_f
+
+(** val vs_g : tvsymbol **)
+
+let vs_g =
+  create_tvsymbol_builtin id_g
+
+(** val vs_h : tvsymbol **)
+
+let vs_h =
+  create_tvsymbol_builtin id_h
+
+(** val vs_i : tvsymbol **)
+
+let vs_i =
+  create_tvsymbol_builtin id_i
+
+(** val vs_j : tvsymbol **)
+
+let vs_j =
+  create_tvsymbol_builtin id_j
+
+(** val vs_k : tvsymbol **)
+
+let vs_k =
+  create_tvsymbol_builtin id_k
+
+(** val vs_l : tvsymbol **)
+
+let vs_l =
+  create_tvsymbol_builtin id_l
+
+(** val vs_m : tvsymbol **)
+
+let vs_m =
+  create_tvsymbol_builtin id_m
+
+(** val vs_n : tvsymbol **)
+
+let vs_n =
+  create_tvsymbol_builtin id_n
+
+(** val vs_o : tvsymbol **)
+
+let vs_o =
+  create_tvsymbol_builtin id_o
+
+(** val vs_p : tvsymbol **)
+
+let vs_p =
+  create_tvsymbol_builtin id_p
 
 (** val ty_a : ty_node_c ty_o **)
 
@@ -790,79 +856,138 @@ let ty_func ty_a0 ty_b0 =
 let ty_pred ty_a0 =
   ty_app1 ts_func (ty_a0::(ty_bool::[]))
 
-module TysymbolT =
- struct
-  type t = (ty_node_c ty_o) tysymbol_o
- end
+(** val ts_tuple0 : (ty_node_c ty_o) tysymbol_o **)
 
-module BigIntT =
- struct
-  type t = BigInt.t
- end
+let ts_tuple0 =
+  mk_ts_builtin id_tup0 [] NoDef
 
-module IdentTag2 = MakeTagged(IdentTag)
+(** val ts_tuple1 : (ty_node_c ty_o) tysymbol_o **)
 
-module TupIds = MakeExthtbl(BigIntTag)(TysymbolT)
+let ts_tuple1 =
+  mk_ts_builtin id_tup1 (vs_a::[]) NoDef
 
-module TupNames = MakeExthtbl(IdentTag2)(BigIntT)
+(** val ts_tuple2 : (ty_node_c ty_o) tysymbol_o **)
 
-(** val ts_tuple_ids : ((TupNames.key, TupNames.value) hashtbl, unit) st **)
+let ts_tuple2 =
+  mk_ts_builtin id_tup2 (vs_a::(vs_b::[])) NoDef
 
-let ts_tuple_ids =
-  TupNames.create Stdlib.Int.one
+(** val ts_tuple3 : (ty_node_c ty_o) tysymbol_o **)
 
-(** val tuple_memo : ((TupIds.key, TupIds.value) hashtbl, unit) st **)
+let ts_tuple3 =
+  mk_ts_builtin id_tup3 (vs_a::(vs_b::(vs_c::[]))) NoDef
 
-let tuple_memo =
-  TupIds.create Stdlib.Int.one
+(** val ts_tuple4 : (ty_node_c ty_o) tysymbol_o **)
 
-(** val ts_tuple :
-    BigInt.t -> (BigInt.t*((TupNames.key, TupNames.value)
-    hashtbl*(TupIds.key, TupIds.value) hashtbl), (ty_node_c ty_o) tysymbol_o)
-    st **)
+let ts_tuple4 =
+  mk_ts_builtin id_tup4 (vs_a::(vs_b::(vs_c::(vs_d::[])))) NoDef
+
+(** val ts_tuple5 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple5 =
+  mk_ts_builtin id_tup5 (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::[]))))) NoDef
+
+(** val ts_tuple6 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple6 =
+  mk_ts_builtin id_tup6 (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::[]))))))
+    NoDef
+
+(** val ts_tuple7 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple7 =
+  mk_ts_builtin id_tup7
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::[]))))))) NoDef
+
+(** val ts_tuple8 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple8 =
+  mk_ts_builtin id_tup8
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::[])))))))) NoDef
+
+(** val ts_tuple9 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple9 =
+  mk_ts_builtin id_tup9
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::[])))))))))
+    NoDef
+
+(** val ts_tuple10 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple10 =
+  mk_ts_builtin id_tup10
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::[]))))))))))
+    NoDef
+
+(** val ts_tuple11 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple11 =
+  mk_ts_builtin id_tup11
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::[])))))))))))
+    NoDef
+
+(** val ts_tuple12 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple12 =
+  mk_ts_builtin id_tup12
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::[]))))))))))))
+    NoDef
+
+(** val ts_tuple13 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple13 =
+  mk_ts_builtin id_tup13
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::(vs_m::[])))))))))))))
+    NoDef
+
+(** val ts_tuple14 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple14 =
+  mk_ts_builtin id_tup14
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::(vs_m::(vs_n::[]))))))))))))))
+    NoDef
+
+(** val ts_tuple15 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple15 =
+  mk_ts_builtin id_tup15
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::(vs_m::(vs_n::(vs_o::[])))))))))))))))
+    NoDef
+
+(** val ts_tuple16 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple16 =
+  mk_ts_builtin id_tup16
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::(vs_m::(vs_n::(vs_o::(vs_p::[]))))))))))))))))
+    NoDef
+
+(** val ts_tuple_list : (ty_node_c ty_o) tysymbol_o list **)
+
+let ts_tuple_list =
+  ts_tuple0::(ts_tuple1::(ts_tuple2::(ts_tuple3::(ts_tuple4::(ts_tuple5::(ts_tuple6::(ts_tuple7::(ts_tuple8::(ts_tuple9::(ts_tuple10::(ts_tuple11::(ts_tuple12::(ts_tuple13::(ts_tuple14::(ts_tuple15::(ts_tuple16::[]))))))))))))))))
+
+(** val ts_tuple : BigInt.t -> (ty_node_c ty_o) tysymbol_o errorM **)
 
 let ts_tuple n =
-  (@@) (fun o ->
-    match o with
-    | Some v -> (fun x -> x) v
-    | None ->
-      let vl =
-        foldl_st (fun l _ ->
-          (@@) (fun h -> (fun x -> x) (h::l))
-            (create_tvsymbol (id_fresh1 "a"))) (iota n) []
-      in
-      (@@) (fun l ->
-        (@@) (fun i ->
-          let ts = mk_ts_builtin i l NoDef in
-          (@@) (fun _ ->
-            (@@) (fun _ -> (fun x -> x) ts) ( ( (TupIds.add n ts))))
-            ( ( (TupNames.add (ts_name ts) n))))
-          ( (id_register (id_fresh1 ((^) "tuple" (BigInt.to_string n))))))
-        ( vl)) ( ( (TupIds.find_opt n)))
+  match big_nth ts_tuple_list n with
+  | Some x ->  x
+  | None -> raise (Invalid_argument "Tuple cannot be larger than 16")
 
 (** val ty_tuple :
-    ty_node_c ty_o list -> ((BigInt.t*((TupNames.key, TupNames.value)
-    hashtbl*(TupIds.key, TupIds.value) hashtbl))*TyHash.t hashcons_ty,
-    ty_node_c ty_o) st **)
+    ty_node_c ty_o list -> (ty_node_c ty_o hashcons_ty, ty_node_c ty_o)
+    errState **)
 
-let ty_tuple l =
-  (@@) (fun s ->  (ty_app1 s l)) ( (ts_tuple (int_length l)))
+let ty_tuple tyl =
+  (@@) (fun ts ->  (ty_app1 ts tyl)) ( (ts_tuple (int_length tyl)))
 
-(** val is_ts_tuple :
-    (ty_node_c ty_o) tysymbol_o -> ((BigInt.t, (ty_node_c ty_o) tysymbol_o)
-    hashtbl, bool) st **)
+(** val is_ts_tuple : (ty_node_c ty_o) tysymbol_o -> bool errorM **)
 
 let is_ts_tuple ts =
-  (@@) (fun o ->
-    match o with
-    | Some t0 -> (fun x -> x) (tysymbol_eqb t0 ts)
-    | None -> (fun x -> x) false) (TupIds.find_opt (int_length (ts_args ts)))
+  (@@) (fun ts1 ->  (ts_equal ts ts1)) (ts_tuple (int_length (ts_args ts)))
 
-(** val is_ts_tuple_id :
-    ident -> ((ident, BigInt.t) hashtbl, BigInt.t option) st **)
+(** val is_ts_tuple_id : ident -> BigInt.t option **)
 
 let is_ts_tuple_id i =
-  (@@) (fun x -> x) (TupNames.find_opt i)
+  find_index id_equal id_tup_list i
 
 (** val oty_type : ty_node_c ty_o option -> ty_node_c ty_o errorM **)
 

@@ -38,9 +38,6 @@ val iter_err : ('a1 -> unit errorM) -> 'a1 list -> unit errorM
 val iter2_err :
   ('a1 -> 'a2 -> unit errorM) -> 'a1 list -> 'a2 list -> unit errorM
 
-val foldl_st :
-  ('a2 -> 'a3 -> ('a1, 'a2) st) -> 'a3 list -> 'a2 -> ('a1, 'a2) st
-
 val foldr_errst :
   ('a3 -> 'a2 -> ('a1, 'a2) errState) -> 'a2 -> 'a3 list -> ('a1, 'a2)
   errState

@@ -1,3 +1,4 @@
+open Datatypes
 open List0
 
 type __ = Obj.t
@@ -24,3 +25,5 @@ val lex_comp : Stdlib.Int.t -> Stdlib.Int.t -> Stdlib.Int.t
 val big_nth : 'a1 list -> BigInt.t -> 'a1 option
 
 val mapi : (BigInt.t -> 'a1 -> 'a2) -> 'a1 list -> 'a2 list
+
+val find_index : ('a1 -> 'a1 -> bool) -> 'a1 list -> 'a1 -> BigInt.t option

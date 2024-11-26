@@ -1,3 +1,4 @@
+open Datatypes
 open List0
 
 type __ = Obj.t
@@ -71,3 +72,14 @@ let big_nth l z =
 
 let mapi f l =
   map (fun x -> f (fst x) (snd x)) (combine (iota2 (int_length l)) l)
+
+(** val find_index :
+    ('a1 -> 'a1 -> bool) -> 'a1 list -> 'a1 -> BigInt.t option **)
+
+let rec find_index eqb l x =
+  match l with
+  | [] -> None
+  | h::t ->
+    if eqb h x
+    then Some BigInt.zero
+    else option_map BigInt.succ (find_index eqb t x)
