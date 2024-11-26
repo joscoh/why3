@@ -484,7 +484,7 @@ let tuple_module = Hint.memo 17 (fun n ->
   let uc = empty_module dummy_env (id_fresh nm) ["why3";nm] in
   let uc = add_pdecl_no_logic uc (pd_tuple n) in
   let m = close_module uc in
-  { m with mod_theory = tuple_theory n })
+  { m with mod_theory = tuple_theory (BigInt.of_int n) }) (*JOSH of_int*)
 
 let unit_module =
   let uc = empty_module dummy_env (id_fresh "Unit") ["why3";"Unit"] in

@@ -682,7 +682,7 @@ let pd_bool = match bool_theory.th_decls with
   | _ -> assert false
 
 let pd_tuple = Wstdlib.Hint.memo 17 (fun n ->
-  match (tuple_theory n).th_decls with
+  match (tuple_theory (BigInt.of_int n)).th_decls with (*JOSH of_int*)
   | [{td_node = Decl dt}] ->
       mk_decl (PDtype [mk_itd (its_tuple n) [] [rs_tuple n] [] None]) [dt]
   | _ -> assert false)

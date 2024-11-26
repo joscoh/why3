@@ -43,6 +43,7 @@ let meta_alg_kept = register_meta "algebraic:kept" [MTty]
 
 
 
+
 (** val rewriteT :
     (term_node term_o) -> (BigInt.t*ty_node_c ty_o hashcons_ty,
     (term_node term_o)) errState **)
@@ -65,10 +66,11 @@ let compile_match =
 
 type state = { mt_map : lsymbol Mts.t; cc_map : lsymbol Mls.t;
                cp_map : lsymbol list Mls.t; pp_map : lsymbol Mls.t;
-               kept_m : Sty.t Mts.t; tp_map : (decl*theory) Mid.t;
-               inf_ts : Sts.t; ma_map : bool list Mts.t; keep_e : bool;
-               keep_r : bool; keep_m : bool; no_ind : bool; no_inv : 
-               bool; no_sel : bool }
+               kept_m : Sty.t Mts.t;
+               tp_map : (decl*tdecl_node theory_o) Mid.t; inf_ts : Sts.t;
+               ma_map : bool list Mts.t; keep_e : bool; keep_r : bool;
+               keep_m : bool; no_ind : bool; no_inv : bool; no_sel : 
+               bool }
 
 (** val mt_map : state -> lsymbol Mts.t **)
 
@@ -95,7 +97,7 @@ let pp_map s =
 let kept_m s =
   s.kept_m
 
-(** val tp_map : state -> (decl*theory) Mid.t **)
+(** val tp_map : state -> (decl*tdecl_node theory_o) Mid.t **)
 
 let tp_map s =
   s.tp_map
@@ -193,6 +195,15 @@ let state_with_inf_ts s inf_ts0 =
 let state_with_kept_m s kept_m0 =
   { mt_map = s.mt_map; cc_map = s.cc_map; cp_map = s.cp_map; pp_map =
     s.pp_map; kept_m = kept_m0; tp_map = s.tp_map; inf_ts = s.inf_ts;
+    ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
+    s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
+
+(** val state_with_tp_map :
+    state -> (decl*tdecl_node theory_o) Mid.t -> state **)
+
+let state_with_tp_map s tp_map0 =
+  { mt_map = s.mt_map; cc_map = s.cc_map; cp_map = s.cp_map; pp_map =
+    s.pp_map; kept_m = s.kept_m; tp_map = tp_map0; inf_ts = s.inf_ts;
     ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
     s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
 
@@ -984,6 +995,86 @@ let comp_aux t0 st0 =
               (
                 (DeclTFAlt.decl_map (fun x ->  (fnT x)) (fun x ->  (fnF x)) d)))))
    | _ -> (@@) (fun d1 -> (fun x -> x) (s,d1)) (add_tdecl tsk t0.task_decl))
+
+(** val comp :
+    task_hd -> (state*task) -> (BigInt.t*hashcons_full, state*task) errState **)
+
+let comp t0 st0 =
+  let s = fst st0 in
+  let tsk = snd st0 in
+  (@@) (fun b ->
+    if b
+    then (fun x -> x) (s,tsk)
+    else (match td_node t0.task_decl with
+          | Decl d ->
+            (@@) (fun b0 ->
+              match b0 with
+              | Some ts ->
+                let th = Theory.tuple_theory (int_length (ts_args ts)) in
+                let tp_map0 = Mid.add (ts_name ts) (d,th) s.tp_map in
+                (fun x -> x) ((state_with_tp_map s tp_map0),tsk)
+              | None ->
+                let m =
+                  Mid.inter (fun _ x _ -> Some x) s.tp_map
+                    (get_used_syms_decl d)
+                in
+                (@@) (fun f ->
+                  let rstate,rtask = f in
+                  let tp_map0 =
+                    Mid.diff (fun _ _ _ -> None) s.tp_map
+                      (get_used_syms_decl d)
+                  in
+                  comp_aux t0 ((state_with_tp_map rstate tp_map0),rtask))
+                  (foldl_errst (fun x y ->
+                    let _,y1 = y in
+                    let d0,th = y1 in
+                    (@@) (fun t1 ->
+                      (@@) (fun t2 ->
+                        (@@) (fun c ->
+                          let s0,tsk0 = c in
+                          (@@) (fun u ->
+                            (@@) (fun tsk1 -> (fun x -> x) (s0,tsk1))
+                              (add_tdecl tsk0 u)) ( ( ( (create_use th)))))
+                          (comp_aux t2 x)) ( (option_get t1)))
+                      (add_decl None d0)) (Mid.bindings m) (s,tsk)))
+              (
+                (match d.d_node with
+                 | Dtype _ ->  None
+                 | Ddata l ->
+                   (match l with
+                    | [] ->  None
+                    | d0::l0 ->
+                      let ts,_ = d0 in
+                      (match l0 with
+                       | [] ->
+                         (@@) (fun b0 -> if b0 then  (Some ts) else  None)
+                           (is_ts_tuple ts)
+                       | _::_ ->  None))
+                 | _ ->  None))
+          | _ -> comp_aux t0 (s,tsk)))
+    (
+      (match td_node t0.task_decl with
+       | Use th ->
+         (match th_decls th with
+          | [] ->  false
+          | x::l ->
+            (match l with
+             | [] ->
+               (match td_node x with
+                | Decl d ->
+                  (match d.d_node with
+                   | Ddata l0 ->
+                     (match l0 with
+                      | [] ->  false
+                      | d0::l1 ->
+                        let ts,_ = d0 in
+                        (match l1 with
+                         | [] -> is_ts_tuple ts
+                         | _::_ ->  false))
+                   | _ ->  false)
+                | _ ->  false)
+             | _::_ ->  false))
+       | _ ->  false))
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -1456,7 +1547,7 @@ let complete_projections csl =
   | _ ->
       state, add_tdecl task t.task_decl *)
 
-let comp t (state,task) = match t.task_decl.td_node with
+(* let comp t (state,task) = match t.task_decl.td_node with
 | Use {th_decls = [{td_node = Decl ({d_node = Ddata [ts,_]})}]}
   when is_ts_tuple ts ->
     state, task
@@ -1486,7 +1577,7 @@ let comp t (state,task) = match t.task_decl.td_node with
     let tp_map = Mid.diff (fun _ _  _ -> None) state.tp_map (get_used_syms_decl d) in
     comp_aux t ({ rstate with tp_map = tp_map }, rtask)
 | _ ->
-  comp_aux t (state,task)
+  comp_aux t (state,task) *)
 
 let fold_comp st =
   let init = Task.add_meta None meta_infinite [MAts ts_int] in
