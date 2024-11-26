@@ -1080,13 +1080,55 @@ let comp t0 st0 =
 
 let fold_comp st0 =
   trans_bind
-    ((@@) (fun init ->
-      (@@) (fun init0 ->
-        (@@) (fun init1 -> add_param_decl init1 ps_equ)
-          ( (add_meta init0 meta_infinite ((MAts ts_str)::[]))))
-        ( (add_meta init meta_infinite ((MAts ts_real)::[]))))
-      ( (add_meta None meta_infinite ((MAts ts_int)::[])))) (fun init ->
-    fold_errst comp (st0,init))
+    ((@@) (fun init0 ->
+      (@@) (fun init1 ->
+        (@@) (fun init2 -> add_param_decl init2 ps_equ)
+          ( (add_meta init1 meta_infinite ((MAts ts_str)::[]))))
+        ( (add_meta init0 meta_infinite ((MAts ts_real)::[]))))
+      ( (add_meta None meta_infinite ((MAts ts_int)::[])))) (fun init0 ->
+    fold_errst comp (st0,init0))
+
+(** val on_empty_state : (state -> 'a1 trans_errst) -> 'a1 trans_errst **)
+
+let on_empty_state t0 =
+  on_tagged_ts meta_infinite (fun inf_ts0 ->
+    on_meta meta_material (fun ml ->
+      let inf_ts1 =
+        Sts.union inf_ts0 (Sts.of_list (ts_real::(ts_int::(ts_str::[]))))
+      in
+      let fold = fun ma_map0 x ->
+        match x with
+        | [] -> assert_false "on_empty_state"
+        | y::l ->
+          (match y with
+           | MAts ts ->
+             (match l with
+              | [] -> assert_false "on_empty_state"
+              | m::l0 ->
+                (match m with
+                 | MAint i ->
+                   (match l0 with
+                    | [] ->
+                      let ma =
+                        match Mts.find_opt ts ma_map0 with
+                        | Some l1 -> l1
+                        | None ->
+                          init (int_length (ts_args ts)) (fun _ -> false)
+                      in
+                      let ma0 = change_nth ma true i in
+                       (Mts.add ts ma0 ma_map0)
+                    | _::_ -> assert_false "on_empty_state")
+                 | _ -> assert_false "on_empty_state"))
+           | _ -> assert_false "on_empty_state")
+      in
+      trans_bind ( (foldl_err fold ml Mts.empty)) (fun ma_map0 ->
+        let empty_state = { mt_map = Mts.empty; cc_map = Mls.empty; cp_map =
+          Mls.empty; pp_map = Mls.empty; kept_m = Mts.empty; tp_map =
+          Mid.empty; inf_ts = inf_ts1; ma_map = ma_map0; keep_e = false;
+          keep_r = false; keep_m = false; no_ind = false; no_inv = false;
+          no_sel = false }
+        in
+        t0 empty_state)))
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -1598,7 +1640,7 @@ let complete_projections csl =
   let init = Task.add_param_decl init ps_equ in
   Trans.fold comp (st,init) *)
 
-let rec change_nth (l: 'a list) (i: BigInt.t) (x: 'a) : 'a list =
+(* let rec change_nth (l: 'a list) (i: BigInt.t) (x: 'a) : 'a list =
   if BigInt.le i BigInt.zero then 
     begin match l with
     | [] -> []
@@ -1608,12 +1650,12 @@ else
   begin match l with
   | [] -> []
   | y :: tl -> y :: change_nth tl (BigInt.pred i) x
-end
+end *)
 
 
 
 
-let on_empty_state t =
+(* let on_empty_state t =
   Trans.on_tagged_ts meta_infinite (fun inf_ts ->
   Trans.on_meta meta_material (fun ml ->
     let inf_ts = Sts.union inf_ts (Sts.of_list [ts_real; ts_int; ts_str]) in
@@ -1623,7 +1665,7 @@ let on_empty_state t =
         | l -> (*Array.of_list*) l
         | exception Not_found -> List.init  (List.length ts.ts_args) (fun _ -> false)
         in
-        let ma = change_nth ma i true in
+        let ma = change_nth ma true i in
         (* ma.(i) <- true; *)
         Mts.add ts (*(Array.to_list ma)*) ma ma_map
       | _ -> assert false
@@ -1634,7 +1676,7 @@ let on_empty_state t =
       pp_map = Mls.empty; kept_m = Mts.empty; tp_map = Mid.empty;
       inf_ts; ma_map; keep_e = false; keep_r = false; keep_m = false;
       no_ind = false; no_inv = false; no_sel = false
-    } in t empty_state))
+    } in t empty_state)) *)
 
 (* We need to rewrite metas *after* the main pass, because we need to know the
     final state. Some metas may mention symbols declared after the meta. *)

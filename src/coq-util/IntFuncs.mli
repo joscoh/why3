@@ -27,3 +27,7 @@ val big_nth : 'a1 list -> BigInt.t -> 'a1 option
 val mapi : (BigInt.t -> 'a1 -> 'a2) -> 'a1 list -> 'a2 list
 
 val find_index : ('a1 -> 'a1 -> bool) -> 'a1 list -> 'a1 -> BigInt.t option
+
+val change_nth : 'a1 list -> 'a1 -> BigInt.t -> 'a1 list
+
+val init : BigInt.t -> (BigInt.t -> 'a1) -> 'a1 list

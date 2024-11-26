@@ -83,3 +83,19 @@ let rec find_index eqb l x =
     if eqb h x
     then Some BigInt.zero
     else option_map BigInt.succ (find_index eqb t x)
+
+(** val change_nth : 'a1 list -> 'a1 -> BigInt.t -> 'a1 list **)
+
+let change_nth l x z =
+  int_rect (fun _ _ _ _ -> []) (fun l0 x0 ->
+    match l0 with
+    | [] -> []
+    | _::tl -> x0::tl) (fun _ _ _ rec0 l0 x0 ->
+    match l0 with
+    | [] -> []
+    | y::tl -> y::(rec0 tl x0)) z l x
+
+(** val init : BigInt.t -> (BigInt.t -> 'a1) -> 'a1 list **)
+
+let init z f =
+  map f (iota2 z)

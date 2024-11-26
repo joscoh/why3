@@ -14,6 +14,8 @@ open Env
 
 
 
+
+
 type 'a trans = task -> 'a
 
 type 'a trans_errst = task -> (BigInt.t*unit, 'a) errState
@@ -24,36 +26,36 @@ type 'a tlist = 'a list trans
     (BigInt.t*unit, 'a1) errState -> ('a1 -> 'a2 trans_errst) -> 'a2
     trans_errst **)
 
-let trans_bind y t1 t =
-  (@@) (fun x -> t1 x t) y
+let trans_bind y t1 t0 =
+  (@@) (fun x -> t1 x t0) y
 
 (** val task_list : task -> task_hd list **)
 
-let task_list t =
+let task_list t0 =
   let acc = [] in
-  task_rect (fun acc0 -> acc0) (fun thd rec0 acc0 -> rec0 (thd::acc0)) t acc
+  task_rect (fun acc0 -> acc0) (fun thd rec0 acc0 -> rec0 (thd::acc0)) t0 acc
 
 (** val fold : (task_hd -> 'a1 -> 'a1) -> 'a1 -> 'a1 trans **)
 
-let fold fn v t =
-  fold_left (fun x y -> fn y x) (task_list t) v
+let fold fn v t0 =
+  fold_left (fun x y -> fn y x) (task_list t0) v
 
 (** val fold_errst :
     (task_hd -> 'a1 -> (BigInt.t*unit, 'a1) errState) -> 'a1 -> 'a1
     trans_errst **)
 
-let fold_errst fn v t =
-  foldl_errst (fun x y -> fn y x) (task_list t) v
+let fold_errst fn v t0 =
+  foldl_errst (fun x y -> fn y x) (task_list t0) v
 
 (** val gen_decl1 :
     (task -> 'a1 -> (BigInt.t*unit, task) errState) -> (decl ->
     (BigInt.t*unit, 'a1 list) errState) -> task -> task -> (BigInt.t*unit,
     task) errState **)
 
-let gen_decl1 add fn =
+let gen_decl1 add0 fn =
   let fn0 = fun tsk acc ->
     match td_node tsk.task_decl with
-    | Decl d -> (@@) (fun l -> foldl_errst add l acc) (fn d)
+    | Decl d -> (@@) (fun l -> foldl_errst add0 l acc) (fn d)
     | _ -> add_tdecl acc tsk.task_decl
   in
   fold_errst fn0
@@ -71,6 +73,54 @@ let decl_errst f t1 t2 =
 
 let tdecl_errst f t1 t2 =
   gen_decl1 add_tdecl f t1 t2
+
+(** val on_meta_tds : meta -> (tdecl_set -> task -> 'a1) -> task -> 'a1 **)
+
+let on_meta_tds t0 fn task0 =
+  fn (find_meta_tds task0 t0) task0
+
+(** val on_meta :
+    meta -> (meta_arg list list -> task -> ('a1, 'a2) errState) -> task ->
+    ('a1, 'a2) errState **)
+
+let on_meta t0 fn tsk =
+  let add0 = fun td acc ->
+    match td_node td with
+    | Meta (_, ma) ->  (ma::acc)
+    | _ -> assert_false "on_meta"
+  in
+  on_meta_tds t0 (fun tds t1 ->
+    (@@) (fun x -> fn x t1)
+      ( (foldl_err (fun x y -> add0 y x) (HStdecl.elements tds) []))) tsk
+
+(** val on_tagged_ts :
+    meta -> (Sts.t -> task -> ('a1, 'a2) errState) -> task -> ('a1, 'a2)
+    errState **)
+
+let on_tagged_ts t0 fn tsk =
+  (@@) (fun _ ->
+    let add0 = fun td acc ->
+      match td_node td with
+      | Meta (_, l) ->
+        (match l with
+         | [] -> assert_false "on_tagged_ts"
+         | m0::_ ->
+           (match m0 with
+            | MAts ts ->  (Sts.add ts acc)
+            | _ -> assert_false "on_tagged_ts"))
+      | _ -> assert_false "on_tagged_ts"
+    in
+    on_meta_tds t0 (fun tds t1 ->
+      (@@) (fun x -> fn x t1)
+        ( (foldl_err (fun x y -> add0 y x) (HStdecl.elements tds) Sts.empty)))
+      tsk)
+    (
+      (match t0.meta_type with
+       | [] -> raise (NotTaggingMeta t0)
+       | m::_ ->
+         (match m with
+          | MTtysymbol ->  ()
+          | _ -> raise (NotTaggingMeta t0))))
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -303,12 +353,12 @@ let add_tdecls = gen_add_decl add_tdecl
 (** dependent transformations *)
 
 let on_theory_tds th fn =
-  (* let fn = Wtds.memoize 17 fn in *)
+  let fn = Wtds.memoize 17 fn in
   fun task -> fn (find_clone_tds task th) task
 
-let on_meta_tds t fn =
-  (* let fn = Wtds.memoize 17 fn in *)
-  fun task -> fn (find_meta_tds task t) task
+(* let on_meta_tds t fn =
+  let fn = Wtds.memoize 17 fn in
+  fun task -> fn (find_meta_tds task t) task *)
 
 let on_cloned_theory th fn =
   let add td acc = match td.td_node with
@@ -318,12 +368,12 @@ let on_cloned_theory th fn =
   in
   on_theory_tds th (fun tds -> fn (HStdecl.fold add tds []))
 
-let on_meta t fn =
+(* let on_meta t fn =
   let add td acc = match td.td_node with
     | Meta (_,ma) -> ma::acc
     | _ -> assert false
   in
-  on_meta_tds t (fun tds -> fn (HStdecl.fold add tds []))
+  on_meta_tds t (fun tds -> fn (HStdecl.fold add tds [])) *)
 
 let on_used_theory th fn =
   let check td = match td.td_node with
@@ -352,7 +402,7 @@ let on_tagged_ty t fn =
   in
   on_meta_tds t (fun tds -> fn (HStdecl.fold add tds Sty.empty))
 
-let on_tagged_ts t fn =
+(* let on_tagged_ts t fn =
   begin match t.meta_type with
     | MTtysymbol :: _ -> ()
     | _ -> raise (NotTaggingMeta t)
@@ -361,7 +411,7 @@ let on_tagged_ts t fn =
     | Meta (_, MAts ts :: _) -> Sts.add ts acc
     | _ -> assert false
   in
-  on_meta_tds t (fun tds -> fn (HStdecl.fold add tds Sts.empty))
+  on_meta_tds t (fun tds -> fn (HStdecl.fold add tds Sts.empty)) *)
 
 let on_tagged_ls t fn =
   begin match t.meta_type with
