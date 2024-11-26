@@ -49,7 +49,7 @@ let rec t_insert hd t0 =
 (** val add_ld :
     (lsymbol -> bool) -> unit Sls.M.t -> (lsymbol*ls_defn) -> (((decl
     list*logic_decl list)*decl list)*tdecl_node tdecl_o list) ->
-    (BigInt.t*hashcons_full, ((decl list*logic_decl list)*decl
+    (BigInt.t*unit, ((decl list*logic_decl list)*decl
     list)*tdecl_node tdecl_o list) errState **)
 
 let add_ld which md x ds =
@@ -92,8 +92,8 @@ let rev_map f l =
   in rmap_f [] l
 
 (** val elim_decl :
-    (lsymbol -> bool) -> unit Sls.M.t -> logic_decl list ->
-    (BigInt.t*hashcons_full, tdecl_node tdecl_o list) errState **)
+    (lsymbol -> bool) -> unit Sls.M.t -> logic_decl list -> (BigInt.t*unit,
+    tdecl_node tdecl_o list) errState **)
 
 let elim_decl which meta_rewrite_def l =
   (@@) (fun x ->
@@ -112,13 +112,13 @@ let elim_decl which meta_rewrite_def l =
     (foldr_errst (add_ld which meta_rewrite_def) ((([],[]),[]),[]) l)
 
 (** val create_decl_list :
-    decl -> (BigInt.t*hashcons_full, tdecl_node tdecl_o list) errState **)
+    decl -> (BigInt.t*unit, tdecl_node tdecl_o list) errState **)
 
 let create_decl_list d =
   (@@) (fun d1 -> (fun x -> x) (d1::[])) ( ( ( (create_decl d))))
 
 (** val elim :
-    (lsymbol -> bool) -> unit Sls.M.t -> decl -> (BigInt.t*hashcons_full,
+    (lsymbol -> bool) -> unit Sls.M.t -> decl -> (BigInt.t*unit,
     tdecl_node tdecl_o list) errState **)
 
 let elim which meta_rewrite_def d =
@@ -127,7 +127,7 @@ let elim which meta_rewrite_def d =
   | _ -> create_decl_list d
 
 (** val elim_recursion :
-    decl -> (BigInt.t*hashcons_full, tdecl_node tdecl_o list) errState **)
+    decl -> (BigInt.t*unit, tdecl_node tdecl_o list) errState **)
 
 let elim_recursion d =
   match d.d_node with
@@ -152,7 +152,7 @@ let is_struct dl =
     BigInt.eq (int_length (ls_defn_decrease_aux ld)) BigInt.one) dl
 
 (** val elim_mutual :
-    decl -> (BigInt.t*hashcons_full, tdecl_node tdecl_o list) errState **)
+    decl -> (BigInt.t*unit, tdecl_node tdecl_o list) errState **)
 
 let elim_mutual d =
   match d.d_node with
@@ -162,14 +162,13 @@ let elim_mutual d =
     else create_decl_list d
   | _ -> create_decl_list d
 
-(** val eliminate_recursion :
-    task -> (BigInt.t*hashcons_full, task) errState **)
+(** val eliminate_recursion : task -> (BigInt.t*unit, task) errState **)
 
 let eliminate_recursion =
   tdecl_errst elim_recursion None
 
 (** val eliminate_mutual_recursion :
-    task -> (BigInt.t*hashcons_full, task) errState **)
+    task -> (BigInt.t*unit, task) errState **)
 
 let eliminate_mutual_recursion =
   tdecl_errst elim_mutual None

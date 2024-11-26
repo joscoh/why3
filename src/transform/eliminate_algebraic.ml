@@ -56,7 +56,7 @@ let rewriteT t0 =
         (map (fun x -> ((fst (fst x))::[]),(snd x)) tb))) tmap_eps_default
     tmap_quant_default tmap_binop_default tmap_not_default t0
 
-(** val compile_match : task -> (BigInt.t*hashcons_full, task) errState **)
+(** val compile_match : task -> (BigInt.t*unit, task) errState **)
 
 let compile_match =
   decl_errst (fun d ->
@@ -475,7 +475,7 @@ and rewriteF' kn s av sign f =
 
 (** val add_selector_aux :
     (state*task) -> (ty_node_c ty_o) tysymbol_o -> ty_node_c ty_o ->
-    (lsymbol*'a1) list -> (BigInt.t*hashcons_full, state*task) errState **)
+    (lsymbol*'a1) list -> (BigInt.t*unit, state*task) errState **)
 
 let add_selector_aux st0 ts ty csl =
   let s = fst st0 in
@@ -533,7 +533,7 @@ let add_selector_aux st0 ts ty csl =
 
 (** val add_selector :
     (state*task) -> (ty_node_c ty_o) tysymbol_o -> ty_node_c ty_o ->
-    (lsymbol*'a1) list -> (BigInt.t*hashcons_full, state*task) errState **)
+    (lsymbol*'a1) list -> (BigInt.t*unit, state*task) errState **)
 
 let add_selector acc ts ty x = match x with
 | [] -> add_selector_aux acc ts ty x
@@ -544,7 +544,7 @@ let add_selector acc ts ty x = match x with
 
 (** val add_indexer_aux :
     (state*task) -> (ty_node_c ty_o) tysymbol_o -> ty_node_c ty_o ->
-    (lsymbol*'a1) list -> (BigInt.t*hashcons_full, state*task) errState **)
+    (lsymbol*'a1) list -> (BigInt.t*unit, state*task) errState **)
 
 let add_indexer_aux st0 ts ty csl =
   let s = fst st0 in
@@ -581,7 +581,7 @@ let add_indexer_aux st0 ts ty csl =
 
 (** val add_discriminator :
     (state*task) -> (ty_node_c ty_o) tysymbol_o -> ty_node_c ty_o ->
-    (lsymbol*'a1) list -> (BigInt.t*hashcons_full, state*task) errState **)
+    (lsymbol*'a1) list -> (BigInt.t*unit, state*task) errState **)
 
 let add_discriminator st0 ts ty csl =
   let s = fst st0 in
@@ -621,7 +621,7 @@ let add_discriminator st0 ts ty csl =
 
 (** val add_indexer :
     (state*task) -> (ty_node_c ty_o) tysymbol_o -> ty_node_c ty_o ->
-    (lsymbol*'a1) list -> (BigInt.t*hashcons_full, state*task) errState **)
+    (lsymbol*'a1) list -> (BigInt.t*unit, state*task) errState **)
 
 let add_indexer acc ts ty l = match l with
 | [] ->
@@ -670,14 +670,14 @@ let complete_projections csl =
   st_list (map conv_c csl)
 
 (** val add_meta_model_projection :
-    task -> lsymbol -> (hashcons_full, task) errState **)
+    task -> lsymbol -> (unit, task) errState **)
 
 let add_meta_model_projection tsk ls =
   add_meta tsk meta_model_projection ((MAls ls)::[])
 
 (** val add_projections :
     (state*task) -> 'a1 -> 'a2 -> (lsymbol*lsymbol option list) list ->
-    (BigInt.t*hashcons_full, state*task) errState **)
+    (BigInt.t*unit, state*task) errState **)
 
 let add_projections st0 _ _ csl =
   let s = fst st0 in
@@ -742,7 +742,7 @@ let add_projections st0 _ _ csl =
 
 (** val add_inversion :
     (state*task) -> (ty_node_c ty_o) tysymbol_o -> ty_node_c ty_o ->
-    (lsymbol*'a1) list -> (BigInt.t*hashcons_full, state*task) errState **)
+    (lsymbol*'a1) list -> (BigInt.t*unit, state*task) errState **)
 
 let add_inversion st0 ts ty csl =
   let s = fst st0 in
@@ -808,7 +808,7 @@ let kept_no_case used s = function
 
 (** val add_axioms :
     Sid.t -> (state*task) -> ((ty_node_c ty_o) tysymbol_o*(lsymbol*lsymbol
-    option list) list) -> (BigInt.t*hashcons_full, state*task) errState **)
+    option list) list) -> (BigInt.t*unit, state*task) errState **)
 
 let add_axioms used st0 d =
   let s = fst st0 in
@@ -888,8 +888,8 @@ let mat_ts mts s sts ts csl z =
 
 (** val add_tags :
     (lsymbol*'a1) list Mts.t -> (state*task) ->
-    ((ty_node_c ty_o) tysymbol_o*(lsymbol*'a1) list) -> (hashcons_full,
-    state*task) errState **)
+    ((ty_node_c ty_o) tysymbol_o*(lsymbol*'a1) list) -> (unit, state*task)
+    errState **)
 
 let add_tags mts st0 x =
   let s = fst st0 in
@@ -933,7 +933,7 @@ let has_nested_use sts csl =
   existsb check_c csl
 
 (** val comp_aux :
-    task_hd -> (state*task) -> (BigInt.t*hashcons_full, state*task) errState **)
+    task_hd -> (state*task) -> (BigInt.t*unit, state*task) errState **)
 
 let comp_aux t0 st0 =
   let s = fst st0 in
@@ -997,7 +997,7 @@ let comp_aux t0 st0 =
    | _ -> (@@) (fun d1 -> (fun x -> x) (s,d1)) (add_tdecl tsk t0.task_decl))
 
 (** val comp :
-    task_hd -> (state*task) -> (BigInt.t*hashcons_full, state*task) errState **)
+    task_hd -> (state*task) -> (BigInt.t*unit, state*task) errState **)
 
 let comp t0 st0 =
   let s = fst st0 in
@@ -1075,6 +1075,18 @@ let comp t0 st0 =
                 | _ ->  false)
              | _::_ ->  false))
        | _ ->  false))
+
+(** val fold_comp : state -> (state*task) trans_errst **)
+
+let fold_comp st0 =
+  trans_bind
+    ((@@) (fun init ->
+      (@@) (fun init0 ->
+        (@@) (fun init1 -> add_param_decl init1 ps_equ)
+          ( (add_meta init0 meta_infinite ((MAts ts_str)::[]))))
+        ( (add_meta init meta_infinite ((MAts ts_real)::[]))))
+      ( (add_meta None meta_infinite ((MAts ts_int)::[])))) (fun init ->
+    fold_errst comp (st0,init))
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -1579,12 +1591,12 @@ let complete_projections csl =
 | _ ->
   comp_aux t (state,task) *)
 
-let fold_comp st =
+(* let fold_comp st =
   let init = Task.add_meta None meta_infinite [MAts ts_int] in
   let init = Task.add_meta init meta_infinite [MAts ts_real] in
   let init = Task.add_meta init meta_infinite [MAts ts_str] in
   let init = Task.add_param_decl init ps_equ in
-  Trans.fold comp (st,init)
+  Trans.fold comp (st,init) *)
 
 let rec change_nth (l: 'a list) (i: BigInt.t) (x: 'a) : 'a list =
   if BigInt.le i BigInt.zero then 

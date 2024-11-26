@@ -16,7 +16,16 @@ open Env
 
 type 'a trans = task -> 'a
 
+type 'a trans_errst = task -> (BigInt.t*unit, 'a) errState
+
 type 'a tlist = 'a list trans
+
+(** val trans_bind :
+    (BigInt.t*unit, 'a1) errState -> ('a1 -> 'a2 trans_errst) -> 'a2
+    trans_errst **)
+
+let trans_bind y t1 t =
+  (@@) (fun x -> t1 x t) y
 
 (** val task_list : task -> task_hd list **)
 
@@ -30,16 +39,16 @@ let fold fn v t =
   fold_left (fun x y -> fn y x) (task_list t) v
 
 (** val fold_errst :
-    (task_hd -> 'a2 -> ('a1, 'a2) errState) -> 'a2 -> task -> ('a1, 'a2)
-    errState **)
+    (task_hd -> 'a1 -> (BigInt.t*unit, 'a1) errState) -> 'a1 -> 'a1
+    trans_errst **)
 
 let fold_errst fn v t =
   foldl_errst (fun x y -> fn y x) (task_list t) v
 
 (** val gen_decl1 :
-    (task -> 'a1 -> (BigInt.t*hashcons_full, task) errState) -> (decl ->
-    (BigInt.t*hashcons_full, 'a1 list) errState) -> task -> task ->
-    (BigInt.t*hashcons_full, task) errState **)
+    (task -> 'a1 -> (BigInt.t*unit, task) errState) -> (decl ->
+    (BigInt.t*unit, 'a1 list) errState) -> task -> task -> (BigInt.t*unit,
+    task) errState **)
 
 let gen_decl1 add fn =
   let fn0 = fun tsk acc ->
@@ -50,15 +59,15 @@ let gen_decl1 add fn =
   fold_errst fn0
 
 (** val decl_errst :
-    (decl -> (BigInt.t*hashcons_full, decl list) errState) -> task -> task ->
-    (BigInt.t*hashcons_full, task) errState **)
+    (decl -> (BigInt.t*unit, decl list) errState) -> task -> task ->
+    (BigInt.t*unit, task) errState **)
 
 let decl_errst f t1 t2 =
   gen_decl1 add_decl f t1 t2
 
 (** val tdecl_errst :
-    (decl -> (BigInt.t*hashcons_full, tdecl_node tdecl_o list) errState) ->
-    task -> task -> (BigInt.t*hashcons_full, task) errState **)
+    (decl -> (BigInt.t*unit, tdecl_node tdecl_o list) errState) -> task ->
+    task -> (BigInt.t*unit, task) errState **)
 
 let tdecl_errst f t1 t2 =
   gen_decl1 add_tdecl f t1 t2
@@ -294,11 +303,11 @@ let add_tdecls = gen_add_decl add_tdecl
 (** dependent transformations *)
 
 let on_theory_tds th fn =
-  let fn = Wtds.memoize 17 fn in
+  (* let fn = Wtds.memoize 17 fn in *)
   fun task -> fn (find_clone_tds task th) task
 
 let on_meta_tds t fn =
-  let fn = Wtds.memoize 17 fn in
+  (* let fn = Wtds.memoize 17 fn in *)
   fun task -> fn (find_meta_tds task t) task
 
 let on_cloned_theory th fn =

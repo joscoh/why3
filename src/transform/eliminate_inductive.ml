@@ -108,13 +108,12 @@ let elim d =
         ( ( (foldl_errst imp il dl)))) ( ( (foldl_errst log il [])))
   | _ -> (fun x -> x) (d::[])
 
-(** val elim_lift : decl -> (BigInt.t*hashcons_full, decl list) errState **)
+(** val elim_lift : decl -> (BigInt.t*unit, decl list) errState **)
 
 let elim_lift d =
     (elim d)
 
-(** val eliminate_inductive :
-    task -> (BigInt.t*hashcons_full, task) errState **)
+(** val eliminate_inductive : task -> (BigInt.t*unit, task) errState **)
 
 let eliminate_inductive =
   decl_errst elim_lift None
