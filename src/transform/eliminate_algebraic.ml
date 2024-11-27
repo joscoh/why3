@@ -25,6 +25,15 @@ let meta_material = register_meta "material_type_arg" [MTtysymbol;MTint]
 let meta_alg_kept = register_meta "algebraic:kept" [MTty]
   ~desc:"Keep@ primitive@ operations@ over@ this@ algebraic@ type."
 
+let meta_elim = register_meta "eliminate_algebraic" [MTstring]
+  ~desc:"@[<hov 2>Configure the 'eliminate_algebraic' transformation:@\n\
+    - keep_enums:   @[keep monomorphic enumeration types (do not use with polymorphism encoding)@]@\n\
+    - keep_recs:    @[keep non-recursive records (do not use with polymorphism encoding)@]@\n\
+    - keep_mono:    @[keep monomorphic algebraic datatypes@]@\n\
+    - no_index:     @[do not generate indexing functions@]@\n\
+    - no_inversion: @[do not generate inversion axioms@]@\n\
+    - no_selector:  @[do not generate selector@]@]"
+
 
 
 
@@ -142,10 +151,18 @@ let no_inv s =
 let no_sel s =
   s.no_sel
 
-(** val state_with_mt_mat : state -> lsymbol Mts.t -> state **)
+(** val state_with_mt_map : state -> lsymbol Mts.t -> state **)
 
-let state_with_mt_mat s mt_map0 =
+let state_with_mt_map s mt_map0 =
   { mt_map = mt_map0; cc_map = s.cc_map; cp_map = s.cp_map; pp_map =
+    s.pp_map; kept_m = s.kept_m; tp_map = s.tp_map; inf_ts = s.inf_ts;
+    ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
+    s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
+
+(** val state_with_cc_map : state -> lsymbol Mls.t -> state **)
+
+let state_with_cc_map s cc_map0 =
+  { mt_map = s.mt_map; cc_map = cc_map0; cp_map = s.cp_map; pp_map =
     s.pp_map; kept_m = s.kept_m; tp_map = s.tp_map; inf_ts = s.inf_ts;
     ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
     s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
@@ -166,30 +183,6 @@ let state_with_pp_map s pp_map0 =
     ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
     s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
 
-(** val state_with_cc_map : state -> lsymbol Mls.t -> state **)
-
-let state_with_cc_map s cc_map0 =
-  { mt_map = s.mt_map; cc_map = cc_map0; cp_map = s.cp_map; pp_map =
-    s.pp_map; kept_m = s.kept_m; tp_map = s.tp_map; inf_ts = s.inf_ts;
-    ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
-    s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
-
-(** val state_with_ma_map : state -> bool list Mts.t -> state **)
-
-let state_with_ma_map s ma_map0 =
-  { mt_map = s.mt_map; cc_map = s.cc_map; cp_map = s.cp_map; pp_map =
-    s.pp_map; kept_m = s.kept_m; tp_map = s.tp_map; inf_ts = s.inf_ts;
-    ma_map = ma_map0; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
-    s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
-
-(** val state_with_inf_ts : state -> Sts.t -> state **)
-
-let state_with_inf_ts s inf_ts0 =
-  { mt_map = s.mt_map; cc_map = s.cc_map; cp_map = s.cp_map; pp_map =
-    s.pp_map; kept_m = s.kept_m; tp_map = s.tp_map; inf_ts = inf_ts0;
-    ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
-    s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
-
 (** val state_with_kept_m : state -> Sty.t Mts.t -> state **)
 
 let state_with_kept_m s kept_m0 =
@@ -206,6 +199,70 @@ let state_with_tp_map s tp_map0 =
     s.pp_map; kept_m = s.kept_m; tp_map = tp_map0; inf_ts = s.inf_ts;
     ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
     s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
+
+(** val state_with_inf_ts : state -> Sts.t -> state **)
+
+let state_with_inf_ts s inf_ts0 =
+  { mt_map = s.mt_map; cc_map = s.cc_map; cp_map = s.cp_map; pp_map =
+    s.pp_map; kept_m = s.kept_m; tp_map = s.tp_map; inf_ts = inf_ts0;
+    ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
+    s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
+
+(** val state_with_ma_map : state -> bool list Mts.t -> state **)
+
+let state_with_ma_map s ma_map0 =
+  { mt_map = s.mt_map; cc_map = s.cc_map; cp_map = s.cp_map; pp_map =
+    s.pp_map; kept_m = s.kept_m; tp_map = s.tp_map; inf_ts = s.inf_ts;
+    ma_map = ma_map0; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
+    s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
+
+(** val state_with_keep_e : state -> bool -> state **)
+
+let state_with_keep_e s keep_e0 =
+  { mt_map = s.mt_map; cc_map = s.cc_map; cp_map = s.cp_map; pp_map =
+    s.pp_map; kept_m = s.kept_m; tp_map = s.tp_map; inf_ts = s.inf_ts;
+    ma_map = s.ma_map; keep_e = keep_e0; keep_r = s.keep_r; keep_m =
+    s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
+
+(** val state_with_keep_r : state -> bool -> state **)
+
+let state_with_keep_r s keep_r0 =
+  { mt_map = s.mt_map; cc_map = s.cc_map; cp_map = s.cp_map; pp_map =
+    s.pp_map; kept_m = s.kept_m; tp_map = s.tp_map; inf_ts = s.inf_ts;
+    ma_map = s.ma_map; keep_e = s.keep_e; keep_r = keep_r0; keep_m =
+    s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
+
+(** val state_with_keep_m : state -> bool -> state **)
+
+let state_with_keep_m s keep_m0 =
+  { mt_map = s.mt_map; cc_map = s.cc_map; cp_map = s.cp_map; pp_map =
+    s.pp_map; kept_m = s.kept_m; tp_map = s.tp_map; inf_ts = s.inf_ts;
+    ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
+    keep_m0; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = s.no_sel }
+
+(** val state_with_no_ind : state -> bool -> state **)
+
+let state_with_no_ind s no_ind0 =
+  { mt_map = s.mt_map; cc_map = s.cc_map; cp_map = s.cp_map; pp_map =
+    s.pp_map; kept_m = s.kept_m; tp_map = s.tp_map; inf_ts = s.inf_ts;
+    ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
+    s.keep_m; no_ind = no_ind0; no_inv = s.no_inv; no_sel = s.no_sel }
+
+(** val state_with_no_inv : state -> bool -> state **)
+
+let state_with_no_inv s no_inv0 =
+  { mt_map = s.mt_map; cc_map = s.cc_map; cp_map = s.cp_map; pp_map =
+    s.pp_map; kept_m = s.kept_m; tp_map = s.tp_map; inf_ts = s.inf_ts;
+    ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
+    s.keep_m; no_ind = s.no_ind; no_inv = no_inv0; no_sel = s.no_sel }
+
+(** val state_with_no_sel : state -> bool -> state **)
+
+let state_with_no_sel s no_sel0 =
+  { mt_map = s.mt_map; cc_map = s.cc_map; cp_map = s.cp_map; pp_map =
+    s.pp_map; kept_m = s.kept_m; tp_map = s.tp_map; inf_ts = s.inf_ts;
+    ma_map = s.ma_map; keep_e = s.keep_e; keep_r = s.keep_r; keep_m =
+    s.keep_m; no_ind = s.no_ind; no_inv = s.no_inv; no_sel = no_sel0 }
 
 (** val enc_ty : state -> ty_node_c ty_o option -> bool **)
 
@@ -524,7 +581,7 @@ let add_selector_aux st0 ts ty csl =
                      ( ( (create_prsymbol (id_derive1 id cs.ls_name))))
                  in
                  (@@) (fun task1 ->
-                   (fun x -> x) ((state_with_mt_mat s mt_map0),task1))
+                   (fun x -> x) ((state_with_mt_map s mt_map0),task1))
                    (fold_left2_errst' mt_add task0 csl mt_tl))
                  ( ( (st_list (rev_map mt_vs csl)))))
                (add_param_decl tsk mt_ls))
@@ -1096,7 +1153,7 @@ let on_empty_state t0 =
       let inf_ts1 =
         Sts.union inf_ts0 (Sts.of_list (ts_real::(ts_int::(ts_str::[]))))
       in
-      let fold = fun ma_map0 x ->
+      let fold0 = fun ma_map0 x ->
         match x with
         | [] -> assert_false "on_empty_state"
         | y::l ->
@@ -1121,7 +1178,7 @@ let on_empty_state t0 =
                  | _ -> assert_false "on_empty_state"))
            | _ -> assert_false "on_empty_state")
       in
-      trans_bind ( (foldl_err fold ml Mts.empty)) (fun ma_map0 ->
+      trans_bind ( (foldl_err fold0 ml Mts.empty)) (fun ma_map0 ->
         let empty_state = { mt_map = Mts.empty; cc_map = Mls.empty; cp_map =
           Mls.empty; pp_map = Mls.empty; kept_m = Mts.empty; tp_map =
           Mid.empty; inf_ts = inf_ts1; ma_map = ma_map0; keep_e = false;
@@ -1129,6 +1186,162 @@ let on_empty_state t0 =
           no_sel = false }
         in
         t0 empty_state)))
+
+(** val meta_constr_case :
+    state -> lsymbol -> (ty_node_c ty_o) tysymbol_o option **)
+
+let meta_constr_case s ls =
+  match ls.ls_value with
+  | Some t0 ->
+    (match ty_node t0 with
+     | Tyvar _ -> None
+     | Tyapp (ts, _) ->
+       if (&&) (BigInt.pos ls.ls_constr) (negb (Mts.mem ts s.kept_m))
+       then Some ts
+       else None)
+  | None -> None
+
+(** val meta_proj_case :
+    state -> lsymbol -> (ty_node_c ty_o) tysymbol_o option **)
+
+let meta_proj_case s ls =
+  if ls.ls_proj
+  then (match ls.ls_args with
+        | [] -> None
+        | t0::l ->
+          (match l with
+           | [] ->
+             (match ty_node t0 with
+              | Tyvar _ -> None
+              | Tyapp (ts, _) ->
+                if negb (Mts.mem ts s.kept_m) then Some ts else None)
+           | _::_ -> None))
+  else None
+
+(** val fold_rewrite_metas :
+    state -> task_hd -> task -> (BigInt.t*unit, task) errState **)
+
+let fold_rewrite_metas s t0 tsk =
+  match td_node t0.task_decl with
+  | Meta (m, mal) ->
+    let map_arg = fun ma ->
+      match ma with
+      | MAls ls ->
+        (match meta_constr_case s ls with
+         | Some _ -> MAls (Mls.find_def ls ls s.cc_map)
+         | None ->
+           (match meta_proj_case s ls with
+            | Some _ -> MAls (Mls.find_def ls ls s.pp_map)
+            | None -> ma))
+      | _ -> ma
+    in
+     (add_meta tsk m (map map_arg mal))
+  | _ -> add_tdecl tsk t0.task_decl
+
+(** val rewrite_metas : state -> task trans_errst **)
+
+let rewrite_metas st0 =
+  fold_errst (fold_rewrite_metas st0) None
+
+(** val eliminate_match : task trans_errst **)
+
+let eliminate_match =
+  bind_errst (compose_errst compile_match (on_empty_state fold_comp))
+    (fun pat ->
+    let state0,task0 = pat in
+    seq_errst ((return_errst task0)::((rewrite_metas state0)::[])))
+
+(** val quote : string **)
+
+let quote =
+  "\""
+
+(** val sty_fold_errst :
+    (ty_node_c ty_o -> 'a1 -> ('a2, 'a1) errState) -> Sty.t -> 'a1 -> ('a2,
+    'a1) errState **)
+
+let sty_fold_errst f l acc =
+  foldl_errst (fun x y -> f y x) (Sty.elements l) acc
+
+(** val mts_fold_errst :
+    ((ty_node_c ty_o) tysymbol_o -> 'a1 -> 'a2 -> ('a3, 'a2) errState) -> 'a1
+    Mts.t -> 'a2 -> ('a3, 'a2) errState **)
+
+let mts_fold_errst f l acc =
+  foldl_errst (fun x y -> f (fst y) (snd y) x) (Mts.bindings l) acc
+
+(** val eliminate_algebraic : task trans_errst **)
+
+let eliminate_algebraic =
+  on_meta meta_elim (fun ml ->
+    on_tagged_ty meta_alg_kept (fun kept ->
+      on_empty_state (fun st0 ->
+        let check = fun st1 x ->
+          match x with
+          | [] ->
+            raise
+              (Invalid_argument
+                ((^) "meta eliminate_algebraic, nb arg = "
+                  ((^) (BigInt.to_string (int_length x)) "")))
+          | y::l0 ->
+            (match y with
+             | MAstr s ->
+               (match l0 with
+                | [] ->
+                  if (=) s "keep_enums"
+                  then  (state_with_keep_e st1 true)
+                  else if (=) s "keep_recs"
+                       then  (state_with_keep_r st1 true)
+                       else if (=) s "keep_mono"
+                            then  (state_with_keep_m st1 true)
+                            else if (=) s "no_index"
+                                 then  (state_with_no_ind st1 true)
+                                 else if (=) s "no_inversion"
+                                      then  (state_with_no_inv st1 true)
+                                      else if (=) s "no_selector"
+                                           then  (state_with_no_sel st1 true)
+                                           else raise
+                                                  (Invalid_argument
+                                                    ((^)
+                                                      "meta eliminate_algebraic, arg = "
+                                                      ((^) quote
+                                                        ((^) s quote))))
+                | _::_ ->
+                  raise
+                    (Invalid_argument
+                      ((^) "meta eliminate_algebraic, nb arg = "
+                        ((^) (BigInt.to_string (int_length x)) ""))))
+             | _ ->
+               raise
+                 (Invalid_argument
+                   ((^) "meta eliminate_algebraic, nb arg = "
+                     ((^) (BigInt.to_string (int_length x)) ""))))
+        in
+        trans_bind ( (foldl_err check ml st0)) (fun st1 ->
+          let kept_fold = fun ty m ->
+            match ty_node ty with
+            | Tyvar _ -> m
+            | Tyapp (ts, _) ->
+              let s = Mts.find_def Sty.empty ts m in
+              Mts.add ts (Sty.add ty s) m
+          in
+          let st2 = state_with_kept_m st1 (Sty.fold kept_fold kept Mts.empty)
+          in
+          let add0 = fun ty decls ->
+            (@@) (fun m -> (fun x -> x) (m::decls))
+              ( ( (create_meta Libencoding.meta_kept ((MAty ty)::[]))))
+          in
+          let add_meta_decls = fun kept_m0 ->
+            trans_bind
+              (mts_fold_errst (fun _ -> sty_fold_errst add0) kept_m0 [])
+              add_tdecls_errst
+          in
+          bind_errst (compose_errst compile_match (fold_comp st2))
+            (fun pat ->
+            let s,tsk = pat in
+            seq_errst
+              ((return_errst tsk)::((rewrite_metas s)::((add_meta_decls
+                                                          s.kept_m)::[]))))))))
 (********************************************************************)
 (*                                                                  *)
 (*  The Why3 Verification Platform   /   The Why3 Development Team  *)
@@ -1680,11 +1893,11 @@ end *)
 
 (* We need to rewrite metas *after* the main pass, because we need to know the
     final state. Some metas may mention symbols declared after the meta. *)
-let fold_rewrite_metas state t task = match t.task_decl.td_node with
+(* let fold_rewrite_metas state t task = match t.task_decl.td_node with
   | Meta (m, mal) ->
     let map_arg ma = match ma with
     | MAls ({ ls_value = Some({ty_node = Tyapp(ts, _)}) } as ls)
-        when BigInt.pos ls.ls_constr && not (Mts.mem ts state.kept_m) ->
+        when BigInt.posa ls.ls_constr && not (Mts.mem ts state.kept_m) ->
       MAls (Mls.find_def ls ls state.cc_map)
     | MAls ({ ls_proj = true; ls_args = [{ty_node = Tyapp(ts, _)}] } as ls)
         when not (Mts.mem ts state.kept_m) ->
@@ -1693,23 +1906,15 @@ let fold_rewrite_metas state t task = match t.task_decl.td_node with
     in
     add_meta task m (List.map map_arg mal)
   | _ ->
-    add_tdecl task t.task_decl
+    add_tdecl task t.task_decl *)
 
-let rewrite_metas st = Trans.fold (fold_rewrite_metas st) None
+(* let rewrite_metas st = Trans.fold (fold_rewrite_metas st) None *)
 
-let eliminate_match =
+(* let eliminate_match =
   Trans.bind (Trans.compose compile_match (on_empty_state fold_comp))
-              (fun (state, task) -> Trans.seq [Trans.return task; rewrite_metas state])
-let meta_elim = register_meta "eliminate_algebraic" [MTstring]
-  ~desc:"@[<hov 2>Configure the 'eliminate_algebraic' transformation:@\n\
-    - keep_enums:   @[keep monomorphic enumeration types (do not use with polymorphism encoding)@]@\n\
-    - keep_recs:    @[keep non-recursive records (do not use with polymorphism encoding)@]@\n\
-    - keep_mono:    @[keep monomorphic algebraic datatypes@]@\n\
-    - no_index:     @[do not generate indexing functions@]@\n\
-    - no_inversion: @[do not generate inversion axioms@]@\n\
-    - no_selector:  @[do not generate selector@]@]"
+              (fun (state, task) -> Trans.seq [Trans.return task; rewrite_metas state]) *)
 
-let eliminate_algebraic =
+(* let eliminate_algebraic =
   Trans.on_meta meta_elim (fun ml ->
   Trans.on_tagged_ty meta_alg_kept (fun kept ->
   on_empty_state (fun st ->
@@ -1747,7 +1952,7 @@ let eliminate_algebraic =
               (fun (state, task) ->
               Trans.seq [Trans.return task;
                           rewrite_metas state;
-                          add_meta_decls state.kept_m]))))
+                          add_meta_decls state.kept_m])))) *)
 
 (** Eliminate user-supplied projection functions *)
 

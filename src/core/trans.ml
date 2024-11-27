@@ -22,6 +22,28 @@ type 'a trans_errst = task -> (BigInt.t*unit, 'a) errState
 
 type 'a tlist = 'a list trans
 
+(** val return_errst : 'a1 -> 'a1 trans_errst **)
+
+let return_errst x _ =
+  (fun x -> x) x
+
+(** val compose_errst :
+    task trans_errst -> 'a1 trans_errst -> 'a1 trans_errst **)
+
+let compose_errst f g x =
+  (@@) g (f x)
+
+(** val seq_errst : task trans_errst list -> task trans_errst **)
+
+let seq_errst l x =
+  foldl_errst (fun x0 f -> f x0) l x
+
+(** val bind_errst :
+    'a1 trans_errst -> ('a1 -> 'a2 trans_errst) -> 'a2 trans_errst **)
+
+let bind_errst f g tsk =
+  (@@) (fun y -> g y tsk) (f tsk)
+
 (** val trans_bind :
     (BigInt.t*unit, 'a1) errState -> ('a1 -> 'a2 trans_errst) -> 'a2
     trans_errst **)
@@ -74,6 +96,23 @@ let decl_errst f t1 t2 =
 let tdecl_errst f t1 t2 =
   gen_decl1 add_tdecl f t1 t2
 
+(** val gen_add_decl_errst :
+    (task -> 'a1 -> (BigInt.t*unit, task) errState) -> 'a1 list -> task ->
+    (BigInt.t*unit, task) errState **)
+
+let gen_add_decl_errst add0 decls = function
+| Some t1 ->
+  (match td_node t1.task_decl with
+   | Decl d ->
+     (@@) (fun t2 -> add_decl t2 d) (foldl_errst add0 decls t1.task_prev)
+   | _ ->  (assert_false "gen_add_decl"))
+| None ->  (assert_false "gen_add_decl")
+
+(** val add_tdecls_errst : tdecl_node tdecl_o list -> task trans_errst **)
+
+let add_tdecls_errst =
+  gen_add_decl_errst add_tdecl
+
 (** val on_meta_tds : meta -> (tdecl_set -> task -> 'a1) -> task -> 'a1 **)
 
 let on_meta_tds t0 fn task0 =
@@ -92,6 +131,34 @@ let on_meta t0 fn tsk =
   on_meta_tds t0 (fun tds t1 ->
     (@@) (fun x -> fn x t1)
       ( (foldl_err (fun x y -> add0 y x) (HStdecl.elements tds) []))) tsk
+
+(** val on_tagged_ty :
+    meta -> (Sty.t -> task -> ('a1, 'a2) errState) -> task -> ('a1, 'a2)
+    errState **)
+
+let on_tagged_ty t0 fn tsk =
+  (@@) (fun _ ->
+    let add0 = fun td acc ->
+      match td_node td with
+      | Meta (_, l) ->
+        (match l with
+         | [] -> assert_false "on_tagged_ty"
+         | m0::_ ->
+           (match m0 with
+            | MAty ty ->  (Sty.add ty acc)
+            | _ -> assert_false "on_tagged_ty"))
+      | _ -> assert_false "on_tagged_ty"
+    in
+    on_meta_tds t0 (fun tds t1 ->
+      (@@) (fun x -> fn x t1)
+        ( (foldl_err (fun x y -> add0 y x) (HStdecl.elements tds) Sty.empty)))
+      tsk)
+    (
+      (match t0.meta_type with
+       | [] -> raise (NotTaggingMeta t0)
+       | m::_ -> (match m with
+                  | MTty ->  ()
+                  | _ -> raise (NotTaggingMeta t0))))
 
 (** val on_tagged_ts :
     meta -> (Sts.t -> task -> ('a1, 'a2) errState) -> task -> ('a1, 'a2)
