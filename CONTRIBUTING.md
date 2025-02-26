@@ -1,20 +1,19 @@
 Welcome, contributor, to the Why3 verification platform!
 
-If you wish to contribute, open an issue or otherwise interact with our [Gitlab](https://gitlab.inria.fr/why3/why3), you will need to have an INRIA account.
-External users can file bug reports using our [mailing list](mailto:why3-club@lists.gforge.inria.fr). We're sorry for the inconvenience.
+If you wish to contribute, open an issue or otherwise interact with our [Gitlab](https://gitlab.inria.fr/why3/why3), you will need to have an Inria account.
+External users can file bug reports using our [mailing list](mailto:why3-club@groupes.renater.fr). We are sorry for the inconvenience.
 
 # Building
 
-To build Why3 locally you will need a functional installation of OCaml (at least 4.08), `menhir`, `num` and `autoconf`. You can set up your developer build using the following commands:
+To build Why3 locally you will need a functional installation of OCaml (at
+least 4.09), `menhir`, `zarith`, and `autoconf`. You can set up your developer
+build using the following commands:
 
 ```
 autoconf
 ./configure --enable-local # stores the built binaries under ./bin
 make
 ```
-
-Note: there can be issues around Num, recall and document those.
-
 
 ## Building Documentation
 
@@ -36,12 +35,13 @@ To execute the Why3 tests run:
 
 ## Running specific tests
 
-You may run specific classes of tests through the `-only` flag, the full listing of classes can be obtained from `-help`.
+You may run specific classes of tests by specifying them on the command line.
+The full listing of classes can be obtained from `-help`.
 
-For example to run the 'good file' tests, use:
+For example to run the 'good file' and 'bad file' tests, use:
 
 ```
-./bench/bench -only goodfiles
+./bench/bench goodfiles badfiles
 ```
 
 ## Gitlab CI
@@ -75,6 +75,7 @@ While code review is not strictly enforced it is *highly* encouraged.
 ## Commits
 
 Every commit should:
+
 - Compile, and pass CI.
 - Be stripped of trailing whitespace.
 - Use appropriate indentation.
@@ -102,6 +103,7 @@ So, as mentioned above, an example of a `raw_model_parser`, for SMTv2
 solvers, is `Smtv2_model_parser.parse`, which makes use of another
 data type `Smtv2_model_defs.function_def`.  This specific
 `Smtv2_model_parser.parse` function proceeds in 2 main phases:
+
 - first transforms the textual output into an S-expression,
 - then the latter S-expression is transformed into a
   `Model_parser.model_element list`.
@@ -114,7 +116,7 @@ function that recovers the original Why3 name from the
 type `Printer.printer_args`.  The field `printing_info` is supposed to
 be modified in place by printers.
 
-# profiling
+# Profiling
 
 Profiling execution of Why3 can be performed out-of-the-box using
 under Linux using `perf`. A typical usage is
@@ -123,12 +125,18 @@ under Linux using `perf`. A typical usage is
 perf record --call-graph=dwarf -- why3 command <options> <arguments>
 perf report
 ```
-Note that perf may complain you don't have enough priviledges. A typical configuration change required is, for the session only, execute
+
+Note that `perf` may complain you don't have enough privileges. To change
+your configuration for the current session only, execute
+
 ```
 sysctl kernel.perf_event_paranoid=2
 ```
+
 or, to make this setting permanent, add the line
+
 ```
 kernel.perf_event_paranoid = 2
 ```
-to `sys/sysctl.conf`.
+
+to `/etc/sysctl.conf`.
