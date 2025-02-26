@@ -83,14 +83,6 @@ let add_ld which md x ds =
          ( (open_ls_defn ld))
   else (fun x -> x) (((abst,((ls,ld)::defn)),axl),metas)
 
-(** val rev_map : ('a1 -> 'a2) -> 'a1 list -> 'a2 list **)
-
-let rev_map f l =
-  let rec rmap_f accu = function
-  | [] -> accu
-  | a::l0 -> rmap_f ((f a)::accu) l0
-  in rmap_f [] l
-
 (** val elim_decl :
     (lsymbol -> bool) -> unit Sls.M.t -> logic_decl list -> (BigInt.t*unit,
     tdecl_node tdecl_o list) errState **)

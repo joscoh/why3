@@ -15,6 +15,9 @@ open State
 open Hashcons
 open Pmap
 open Zmap
+open CommonList
+open CommonOption
+
 
 
 
@@ -345,6 +348,7 @@ exception BadFloatSpec
 exception EmptyRange
 exception UnexpectedProp
 exception TypeMismatch of ty * ty
+
 
 
 

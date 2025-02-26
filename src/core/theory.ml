@@ -2,6 +2,7 @@ open BinNums
 open Bool0
 open Coercion
 open Common
+open CommonList
 open CoqUtil
 open Weakhtbl
 open Wstdlib
@@ -647,6 +648,7 @@ let create_decl d =
   mk_tdecl (Decl d)
 exception BadMetaArity of meta * BigInt.t
 exception MetaTypeMismatch of meta * meta_arg_type * meta_arg_type
+
 
 
 

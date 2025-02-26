@@ -1,4 +1,6 @@
 open BinNums
+open CommonOption
+open CommonList
 open Common
 open CoqUtil
 open Weakhtbl
@@ -16,6 +18,8 @@ open Zmap
 open IntFuncs
 open List0
 open Pattern
+
+
 
 
 
@@ -437,6 +441,8 @@ exception NonFoundedTypeDecl of tysymbol
 
 
 
+
+
 (** val check_fvs : (term_node term_o) -> (term_node term_o) errorM **)
 
 let check_fvs f =
@@ -449,22 +455,6 @@ let check_fvs f =
 
 let check_vl t0 v =
   ty_equal_check t0 v.vs_ty
-
-(** val map2_opt :
-    ('a1 -> 'a2 -> 'a3) -> 'a1 list -> 'a2 list -> 'a3 list option **)
-
-let rec map2_opt f l1 l2 =
-  match l1 with
-  | [] -> (match l2 with
-           | [] -> Some []
-           | _::_ -> None)
-  | x1::t1 ->
-    (match l2 with
-     | [] -> None
-     | x2::t2 ->
-       (match map2_opt f t1 t2 with
-        | Some l3 -> Some ((f x1 x2)::l3)
-        | None -> None))
 
 (** val make_ls_defn :
     lsymbol -> vsymbol list -> (term_node term_o) -> (ty_node_c ty_o
@@ -577,6 +567,11 @@ let get_ctx_tys kn =
       let ms,mp = acc in
       (m::ms),(fold_right (fun t0 ts -> Mts.add t0 m ts) mp (map fst m))
     | _ -> acc) kn ([],Mts.empty)
+
+(** val mut_in_ctx : mut_adt -> decl Mid.t -> bool **)
+
+let mut_in_ctx m kn =
+  list_inb mut_adt_eqb m (fst (get_ctx_tys kn))
 
 (** val is_vty_adt :
     mut_info -> ty_node_c ty_o ->
@@ -828,16 +823,6 @@ let find_idx_list l m vs candidates =
          check_decrease_fun (combine (map fst l) il) Svs.empty (Some x) m vs
            t0
        | None -> false)) (combine l il)) candidates
-
-(** val list_inb : ('a1 -> 'a1 -> bool) -> 'a1 -> 'a1 list -> bool **)
-
-let list_inb eq x l =
-  existsb (fun y -> eq x y) l
-
-(** val mut_in_ctx : mut_adt -> decl Mid.t -> bool **)
-
-let mut_in_ctx m kn =
-  list_inb mut_adt_eqb m (fst (get_ctx_tys kn))
 
 (** val find_elt : ('a1 -> 'a2 option) -> 'a1 list -> ('a1*'a2) option **)
 

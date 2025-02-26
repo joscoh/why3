@@ -971,11 +971,6 @@ let add_tags mts st0 x =
     (@@) (fun l -> (fun x -> x) (s0,l))
       (add_meta tsk meta_infinite ((MAts ts)::[])))
 
-(** val fun_flip : ('a1 -> 'a2 -> 'a3) -> 'a2 -> 'a1 -> 'a3 **)
-
-let fun_flip f x y =
-  f y x
-
 (** val has_nested_use : Sts.t -> (lsymbol*'a1) list -> bool **)
 
 let has_nested_use sts csl =

@@ -1,5 +1,5 @@
 open CoqUtil
-open Common
+open CommonOption
 open Weakhtbl
 open Datatypes
 open Monads
@@ -12,6 +12,7 @@ open Ty
 open Term
 open Decl
 open Theory
+
 
 
 

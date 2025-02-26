@@ -1,6 +1,6 @@
 open BinNums
 open Byte
-open Common
+open CommonList
 open Datatypes
 open List0
 
@@ -35,41 +35,6 @@ let str_to_pos s =
       (map byte_to_bits
         ((fun s -> List.init (String.length s) (fun i -> s.[i])) s)))
 
-(** val list_eqb : ('a1 -> 'a1 -> bool) -> 'a1 list -> 'a1 list -> bool **)
-
-let rec list_eqb eq l1 l2 =
-  match l1 with
-  | [] -> (match l2 with
-           | [] -> true
-           | _::_ -> false)
-  | x1::t1 ->
-    (match l2 with
-     | [] -> false
-     | x2::t2 -> (&&) (eq x1 x2) (list_eqb eq t1 t2))
-
-(** val isSome : 'a1 option -> bool **)
-
-let isSome = function
-| Some _ -> true
-| None -> false
-
-(** val isNone : 'a1 option -> bool **)
-
-let isNone x =
-  negb (isSome x)
-
-(** val option_eqb :
-    ('a1 -> 'a1 -> bool) -> 'a1 option -> 'a1 option -> bool **)
-
-let option_eqb eq o1 o2 =
-  match o1 with
-  | Some x -> (match o2 with
-               | Some y -> eq x y
-               | None -> false)
-  | None -> (match o2 with
-             | Some _ -> false
-             | None -> true)
-
 (** val map2 : ('a1 -> 'a2 -> 'a3) -> 'a1 list -> 'a2 list -> 'a3 list **)
 
 let map2 =
@@ -88,18 +53,15 @@ let rec fold_right2 f l1 l2 x =
      | [] -> None
      | x2::t2 -> option_map (f x1 x2) (fold_right2 f t1 t2 x))
 
-(** val fold_left2 :
-    ('a3 -> 'a1 -> 'a2 -> 'a3) -> 'a1 list -> 'a2 list -> 'a3 -> 'a3 option **)
+(** val map_fold_left :
+    ('a1 -> 'a2 -> 'a1*'a3) -> 'a1 -> 'a2 list -> 'a1*'a3 list **)
 
-let rec fold_left2 f l1 l2 accu =
-  match l1 with
-  | [] -> (match l2 with
-           | [] -> Some accu
-           | _::_ -> None)
-  | a1::l3 ->
-    (match l2 with
-     | [] -> None
-     | a2::l4 -> fold_left2 f l3 l4 (f accu a1 a2))
+let map_fold_left f acc l =
+  let res =
+    fold_left (fun x e -> let y = f (fst x) e in (fst y),((snd y)::(snd x)))
+      l (acc,[])
+  in
+  (fst res),(rev' (snd res))
 
 (** val null : 'a1 list -> bool **)
 
@@ -117,20 +79,15 @@ let opt_fold f d = function
 let option_fold none some o =
   opt_fold (fun _ -> some) none o
 
-(** val map_fold_left :
-    ('a1 -> 'a2 -> 'a1*'a3) -> 'a1 -> 'a2 list -> 'a1*'a3 list **)
-
-let map_fold_left f acc l =
-  let res =
-    fold_left (fun x e -> let y = f (fst x) e in (fst y),((snd y)::(snd x)))
-      l (acc,[])
-  in
-  (fst res),(rev' (snd res))
-
 (** val list_find_opt : ('a1 -> bool) -> 'a1 list -> 'a1 option **)
 
 let list_find_opt p l =
   fold_right (fun x acc -> if p x then Some x else acc) None l
+
+(** val list_inb : ('a1 -> 'a1 -> bool) -> 'a1 -> 'a1 list -> bool **)
+
+let list_inb eq x l =
+  existsb (fun y -> eq x y) l
 
 type ('a, 'b, 'c) ocaml_tup3 = 'a * 'b * 'c
 
@@ -144,3 +101,8 @@ let rec rev_map_aux f accu = function
 
 let rev_map f l =
   rev_map_aux f [] l
+
+(** val fun_flip : ('a1 -> 'a2 -> 'a3) -> 'a2 -> 'a1 -> 'a3 **)
+
+let fun_flip f x y =
+  f y x

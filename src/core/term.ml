@@ -16,7 +16,10 @@ open Pmap
 open Zmap
 open Number
 open Hashcons
-open Common
+open CommonList
+open CommonOption
+
+
 
 
 
@@ -567,6 +570,8 @@ exception InvalidRealLiteralType of ty
 exception InvalidStringLiteralType of ty
 
 exception EmptyCase
+
+
 
 
 
