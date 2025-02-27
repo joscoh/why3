@@ -327,7 +327,7 @@ let rec rewriteT' kn s t0 =
           | arg::l ->
             (match l with
              | [] ->
-               if (&&) ls.ls_proj (enc_ty s (t_ty t0))
+               if (&&) ls.ls_proj (enc_ty s (t_ty arg))
                then (@@) (fun arg0 ->
                       (@@) (fun pp ->
                         (@@) (fun t1 -> (fun x -> x) (t_attr_copy t0 t1))

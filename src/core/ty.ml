@@ -510,6 +510,106 @@ let vs_o =
 let vs_p =
   create_tvsymbol_builtin id_p
 
+(** val vs_q : tvsymbol **)
+
+let vs_q =
+  create_tvsymbol_builtin id_q
+
+(** val vs_r : tvsymbol **)
+
+let vs_r =
+  create_tvsymbol_builtin id_r
+
+(** val vs_s : tvsymbol **)
+
+let vs_s =
+  create_tvsymbol_builtin id_s
+
+(** val vs_t : tvsymbol **)
+
+let vs_t =
+  create_tvsymbol_builtin id_t
+
+(** val vs_a1 : tvsymbol **)
+
+let vs_a1 =
+  create_tvsymbol_builtin id_a1
+
+(** val vs_a2 : tvsymbol **)
+
+let vs_a2 =
+  create_tvsymbol_builtin id_a2
+
+(** val vs_a3 : tvsymbol **)
+
+let vs_a3 =
+  create_tvsymbol_builtin id_a3
+
+(** val vs_a4 : tvsymbol **)
+
+let vs_a4 =
+  create_tvsymbol_builtin id_a4
+
+(** val vs_a5 : tvsymbol **)
+
+let vs_a5 =
+  create_tvsymbol_builtin id_a5
+
+(** val vs_a6 : tvsymbol **)
+
+let vs_a6 =
+  create_tvsymbol_builtin id_a6
+
+(** val vs_a7 : tvsymbol **)
+
+let vs_a7 =
+  create_tvsymbol_builtin id_a7
+
+(** val vs_a8 : tvsymbol **)
+
+let vs_a8 =
+  create_tvsymbol_builtin id_a8
+
+(** val vs_a9 : tvsymbol **)
+
+let vs_a9 =
+  create_tvsymbol_builtin id_a9
+
+(** val vs_b0 : tvsymbol **)
+
+let vs_b0 =
+  create_tvsymbol_builtin id_b0
+
+(** val vs_b1 : tvsymbol **)
+
+let vs_b1 =
+  create_tvsymbol_builtin id_b1
+
+(** val vs_b2 : tvsymbol **)
+
+let vs_b2 =
+  create_tvsymbol_builtin id_b2
+
+(** val vs_b3 : tvsymbol **)
+
+let vs_b3 =
+  create_tvsymbol_builtin id_b3
+
+(** val vs_b4 : tvsymbol **)
+
+let vs_b4 =
+  create_tvsymbol_builtin id_b4
+
+(** val vs_b5 : tvsymbol **)
+
+let vs_b5 =
+  create_tvsymbol_builtin id_b5
+
+(** val vs_b6 : tvsymbol **)
+
+let vs_b6 =
+  create_tvsymbol_builtin id_b6
+
 (** val ty_a : ty_node_c ty_o **)
 
 let ty_a =
@@ -964,17 +1064,146 @@ let ts_tuple16 =
     (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::(vs_m::(vs_n::(vs_o::(vs_p::[]))))))))))))))))
     NoDef
 
+(** val ts_tuple17 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple17 =
+  mk_ts_builtin id_tup17
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::(vs_m::(vs_n::(vs_o::(vs_p::(vs_q::[])))))))))))))))))
+    NoDef
+
+(** val ts_tuple18 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple18 =
+  mk_ts_builtin id_tup18
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::(vs_m::(vs_n::(vs_o::(vs_p::(vs_q::(vs_r::[]))))))))))))))))))
+    NoDef
+
+(** val ts_tuple19 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple19 =
+  mk_ts_builtin id_tup19
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::(vs_m::(vs_n::(vs_o::(vs_p::(vs_q::(vs_r::(vs_s::[])))))))))))))))))))
+    NoDef
+
+(** val ts_tuple20 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple20 =
+  mk_ts_builtin id_tup20
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::(vs_m::(vs_n::(vs_o::(vs_p::(vs_q::(vs_r::(vs_s::(vs_t::[]))))))))))))))))))))
+    NoDef
+
+(** val ts_tuple21 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple21 =
+  mk_ts_builtin id_tup21
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::(vs_m::(vs_n::(vs_o::(vs_p::(vs_q::(vs_r::(vs_s::(vs_t::(vs_a1::[])))))))))))))))))))))
+    NoDef
+
+(** val ts_tuple22 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple22 =
+  mk_ts_builtin id_tup22
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::(vs_m::(vs_n::(vs_o::(vs_p::(vs_q::(vs_r::(vs_s::(vs_t::(vs_a1::(vs_a2::[]))))))))))))))))))))))
+    NoDef
+
+(** val ts_tuple23 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple23 =
+  mk_ts_builtin id_tup23
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::(vs_m::(vs_n::(vs_o::(vs_p::(vs_q::(vs_r::(vs_s::(vs_t::(vs_a1::(vs_a2::(vs_a3::[])))))))))))))))))))))))
+    NoDef
+
+(** val ts_tuple24 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple24 =
+  mk_ts_builtin id_tup24
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::(vs_m::(vs_n::(vs_o::(vs_p::(vs_q::(vs_r::(vs_s::(vs_t::(vs_a1::(vs_a2::(vs_a3::(vs_a4::[]))))))))))))))))))))))))
+    NoDef
+
+(** val ts_tuple25 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple25 =
+  mk_ts_builtin id_tup25
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::(vs_m::(vs_n::(vs_o::(vs_p::(vs_q::(vs_r::(vs_s::(vs_t::(vs_a1::(vs_a2::(vs_a3::(vs_a4::(vs_a5::[])))))))))))))))))))))))))
+    NoDef
+
+(** val ts_tuple26 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple26 =
+  mk_ts_builtin id_tup26
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::(vs_m::(vs_n::(vs_o::(vs_p::(vs_q::(vs_r::(vs_s::(vs_t::(vs_a1::(vs_a2::(vs_a3::(vs_a4::(vs_a5::(vs_a6::[]))))))))))))))))))))))))))
+    NoDef
+
+(** val ts_tuple27 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple27 =
+  mk_ts_builtin id_tup27
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::(vs_m::(vs_n::(vs_o::(vs_p::(vs_q::(vs_r::(vs_s::(vs_t::(vs_a1::(vs_a2::(vs_a3::(vs_a4::(vs_a5::(vs_a6::(vs_a7::[])))))))))))))))))))))))))))
+    NoDef
+
+(** val ts_tuple28 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple28 =
+  mk_ts_builtin id_tup28
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::(vs_m::(vs_n::(vs_o::(vs_p::(vs_q::(vs_r::(vs_s::(vs_t::(vs_a1::(vs_a2::(vs_a3::(vs_a4::(vs_a5::(vs_a6::(vs_a7::(vs_a8::[]))))))))))))))))))))))))))))
+    NoDef
+
+(** val ts_tuple29 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple29 =
+  mk_ts_builtin id_tup29
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::(vs_m::(vs_n::(vs_o::(vs_p::(vs_q::(vs_r::(vs_s::(vs_t::(vs_a1::(vs_a2::(vs_a3::(vs_a4::(vs_a5::(vs_a6::(vs_a7::(vs_a8::(vs_a9::[])))))))))))))))))))))))))))))
+    NoDef
+
+(** val ts_tuple30 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple30 =
+  mk_ts_builtin id_tup30
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::(vs_m::(vs_n::(vs_o::(vs_p::(vs_q::(vs_r::(vs_s::(vs_t::(vs_a1::(vs_a2::(vs_a3::(vs_a4::(vs_a5::(vs_a6::(vs_a7::(vs_a8::(vs_a9::(vs_b0::[]))))))))))))))))))))))))))))))
+    NoDef
+
+(** val ts_tuple31 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple31 =
+  mk_ts_builtin id_tup31
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::(vs_m::(vs_n::(vs_o::(vs_p::(vs_q::(vs_r::(vs_s::(vs_t::(vs_a1::(vs_a2::(vs_a3::(vs_a4::(vs_a5::(vs_a6::(vs_a7::(vs_a8::(vs_a9::(vs_b0::(vs_b1::[])))))))))))))))))))))))))))))))
+    NoDef
+
+(** val ts_tuple33 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple33 =
+  mk_ts_builtin id_tup33
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::(vs_m::(vs_n::(vs_o::(vs_p::(vs_q::(vs_r::(vs_s::(vs_t::(vs_a1::(vs_a2::(vs_a3::(vs_a4::(vs_a5::(vs_a6::(vs_a7::(vs_a8::(vs_a9::(vs_b0::(vs_b1::(vs_b2::(vs_b3::[])))))))))))))))))))))))))))))))))
+    NoDef
+
+(** val ts_tuple36 : (ty_node_c ty_o) tysymbol_o **)
+
+let ts_tuple36 =
+  mk_ts_builtin id_tup36
+    (vs_a::(vs_b::(vs_c::(vs_d::(vs_e::(vs_f::(vs_g::(vs_h::(vs_i::(vs_j::(vs_k::(vs_l::(vs_m::(vs_n::(vs_o::(vs_p::(vs_q::(vs_r::(vs_s::(vs_t::(vs_a1::(vs_a2::(vs_a3::(vs_a4::(vs_a5::(vs_a6::(vs_a7::(vs_a8::(vs_a9::(vs_b0::(vs_b1::(vs_b2::(vs_b3::(vs_b4::(vs_b5::(vs_b6::[]))))))))))))))))))))))))))))))))))))
+    NoDef
+
 (** val ts_tuple_list : (ty_node_c ty_o) tysymbol_o list **)
 
 let ts_tuple_list =
-  ts_tuple0::(ts_tuple1::(ts_tuple2::(ts_tuple3::(ts_tuple4::(ts_tuple5::(ts_tuple6::(ts_tuple7::(ts_tuple8::(ts_tuple9::(ts_tuple10::(ts_tuple11::(ts_tuple12::(ts_tuple13::(ts_tuple14::(ts_tuple15::(ts_tuple16::[]))))))))))))))))
+  ts_tuple0::(ts_tuple1::(ts_tuple2::(ts_tuple3::(ts_tuple4::(ts_tuple5::(ts_tuple6::(ts_tuple7::(ts_tuple8::(ts_tuple9::(ts_tuple10::(ts_tuple11::(ts_tuple12::(ts_tuple13::(ts_tuple14::(ts_tuple15::(ts_tuple16::(ts_tuple17::(ts_tuple18::(ts_tuple19::(ts_tuple20::(ts_tuple21::(ts_tuple22::(ts_tuple23::(ts_tuple24::(ts_tuple25::(ts_tuple26::(ts_tuple27::(ts_tuple28::(ts_tuple29::(ts_tuple30::[]))))))))))))))))))))))))))))))
 
 (** val ts_tuple : BigInt.t -> (ty_node_c ty_o) tysymbol_o errorM **)
 
 let ts_tuple n =
   match big_nth ts_tuple_list n with
   | Some x ->  x
-  | None -> raise (Invalid_argument "Tuple cannot be larger than 16")
+  | None ->
+    if BigInt.eq n (BigInt.of_int 31)
+    then  ts_tuple31
+    else if BigInt.eq n (BigInt.of_int 33)
+         then  ts_tuple33
+         else if BigInt.eq n (BigInt.of_int 36)
+              then  ts_tuple36
+              else raise
+                     (Invalid_argument
+                       ((^) "Tuple cannot be larger than 30, it is "
+                         (BigInt.to_string n)))
 
 (** val ty_tuple :
     ty_node_c ty_o list -> (ty_node_c ty_o hashcons_ty, ty_node_c ty_o)
